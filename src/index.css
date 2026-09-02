@@ -1,0 +1,43 @@
+:root {
+  --bg: #10131a;
+  --panel: #1a1e28;
+  --panel-alt: #212635;
+  --border: #2c3140;
+  --text: #e8eaf0;
+  --text-dim: #8b91a3;
+  --accent: #2ea043;
+  --accent-dim: rgba(46, 160, 67, 0.18);
+  --danger: #e5484d;
+  --danger-dim: rgba(229, 72, 77, 0.18);
+  --warning: #d29922;
+  --own: #2ea043;
+  --rival: #e5484d;
+
+  font: 16px/1.3 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  /* Evita el zoom/selección accidental al tocar repetidamente en tablet */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+button {
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+#root {
+  min-height: 100svh;
+}

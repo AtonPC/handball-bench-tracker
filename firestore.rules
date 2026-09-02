@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+      return isSignedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
+    }
+
+    function isAdmin() {
+      return myRole() == 'admin';
+    }
+
+    function isRoleManager() {
+      return myRole() in ['admin', 'team_admin'];
+    }
+
+    function isBenchWriter() {
+      return myRole() in ['admin', 'team_admin', 'coach', 'staff'];
+    }
+
+    // Perfiles de usuario y roles.
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isRoleManager());
+
+      // Alta propia: solo puede autoasignarse un rol de bajo privilegio,
+      // salvo la cuenta propietaria que se autoasigna 'admin'.
+      allow create: if isSignedIn() && request.auth.uid == uid && (
+        request.resource.data.role in ['family', 'player'] ||
+        (request.resource.data.role == 'admin' && request.auth.token.email == 'aperlesc@gmail.com')
+      );
+
+      allow update: if isSignedIn() && (
+        // el propio usuario puede editar su perfil, pero no su rol
+        (request.auth.uid == uid && request.resource.data.role == resource.data.role) ||
+        // un admin puede cambiar el rol de cualquier otra cuenta
+        (isAdmin() && request.auth.uid != uid) ||
+        // un team_admin solo mueve entre entrenador/staff/jugador/familia,
+        // nunca puede tocar cuentas admin o team_admin
+        (myRole() == 'team_admin' &&
+          resource.data.role in ['coach', 'staff', 'player', 'family'] &&
+          request.resource.data.role in ['coach', 'staff', 'player', 'family'])
+      );
+
+      allow delete: if false;
+    }
+
+    // Plantilla del club: la gestionan los administradores; todos la leen
+    // (hace falta para armar convocatorias y ver nombres/dorsales).
+    match /players/{playerId} {
+      allow read: if isSignedIn();
+      allow write: if isRoleManager();
+    }
+
+    // Ajustes del club (p. ej. nombre del equipo propio).
+    match /club/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isRoleManager();
+    }
+
+    // Equipos conocidos (el propio y rivales): nombre y lugar habitual.
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow write: if isRoleManager();
+    }
+
+    // Partido: cualquier usuario autenticado puede ver el marcador y los minutos.
+    // Crear un partido (convocatoria) es cosa de administradores; una vez creado,
+    // cualquier entrenador/staff puede iniciarlo y registrar eventos en directo.
+    match /matches/{matchId} {
+      allow read: if isSignedIn();
+      allow create: if isRoleManager();
+      allow update: if isBenchWriter();
+      allow delete: if isRoleManager();
+
+      match /players/{playerId} {
+        allow read: if isSignedIn();
+        allow write: if isBenchWriter();
+      }
+
+      match /events/{eventId} {
+        allow read: if isSignedIn();
+        allow write: if isBenchWriter();
+      }
+    }
+  }
+}

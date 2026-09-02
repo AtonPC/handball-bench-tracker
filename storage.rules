@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Fotos de jugadores: cualquiera autenticado puede verlas; solo quien
+    // puede escribir en Firestore (comprobado en la app) sube/cambia fotos.
+    // La validación fuerte de rol vive en las reglas de Firestore; aquí solo
+    // exigimos estar autenticado y limitamos tamaño/tipo de archivo.
+    match /players/{playerId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+}
