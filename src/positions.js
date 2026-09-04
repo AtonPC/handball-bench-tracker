@@ -6,6 +6,7 @@ export const POSITIONS = [
   'Lateral Derecho',
   'Central',
   'Pivote',
+  'Sin posición definida',
 ];
 
 export const POSITION_ABBR = {
@@ -16,4 +17,5 @@ export const POSITION_ABBR = {
   'Lateral Derecho': 'LD',
   'Central': 'C',
   'Pivote': 'PV',
+  'Sin posición definida': 'S/P',
 };

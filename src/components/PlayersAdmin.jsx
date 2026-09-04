@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { usePlayers } from '../hooks/usePlayers';
+import { useClubs } from '../hooks/useClubs';
+import { useTeams } from '../hooks/useTeams';
 import { POSITIONS, POSITION_ABBR } from '../positions';
 
 const emptyForm = {
@@ -77,6 +79,11 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkPosition, setBulkPosition] = useState('');
   const [bulkPositionBusy, setBulkPositionBusy] = useState(false);
+  const [moveClubId, setMoveClubId] = useState('');
+  const [moveTeamId, setMoveTeamId] = useState('');
+  const [moveBusy, setMoveBusy] = useState(false);
+  const { clubs: allClubs } = useClubs(true);
+  const { teams: moveClubTeams } = useTeams(moveClubId || clubId);
 
   const visiblePlayers = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -149,6 +156,17 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
     setBulkPositionBusy(false);
     setSelectedIds([]);
     setBulkPosition('');
+  }
+
+  async function applyBulkMove() {
+    if (!moveTeamId) return;
+    setMoveBusy(true);
+    for (const id of selectedIds) {
+      await updatePlayer(id, { clubId: moveClubId || clubId, teamId: moveTeamId });
+    }
+    setMoveBusy(false);
+    setSelectedIds([]);
+    setMoveTeamId('');
   }
 
   async function handleSubmit(e) {
@@ -330,6 +348,38 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
             {bulkPositionBusy ? 'APLICANDO…' : 'APLICAR'}
           </button>
           <button type="button" className="modal-cancel" onClick={() => setSelectedIds([])}>Cancelar selección</button>
+        </div>
+      )}
+
+      {selectedIds.length > 0 && (
+        <div className="player-form" style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="modal-hint" style={{ margin: 0 }}>Mover {selectedIds.length} jugador{selectedIds.length === 1 ? '' : 'es'} a otro equipo:</span>
+          <select
+            className="player-form-input"
+            value={moveClubId || clubId}
+            onChange={(e) => {
+              setMoveClubId(e.target.value);
+              setMoveTeamId('');
+            }}
+          >
+            {allClubs.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <select className="player-form-input" value={moveTeamId} onChange={(e) => setMoveTeamId(e.target.value)}>
+            <option value="" disabled>Selecciona equipo…</option>
+            {moveClubTeams.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn btn-clock btn-start"
+            disabled={!moveTeamId || moveBusy}
+            onClick={applyBulkMove}
+          >
+            {moveBusy ? 'MOVIENDO…' : 'MOVER'}
+          </button>
         </div>
       )}
 
