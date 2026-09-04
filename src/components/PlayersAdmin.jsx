@@ -8,7 +8,7 @@ const emptyForm = {
   displayName: '',
   number: '',
   photoUrl: '',
-  position: POSITIONS[0],
+  position: '',
   imageAuthorized: true,
 };
 
@@ -43,7 +43,7 @@ function parseBulkLine(line, lineNumber) {
   if (!Number.isFinite(number)) {
     return { error: `Línea ${lineNumber}: dorsal no numérico ("${numberText}")` };
   }
-  const position = findPosition(positionText) || POSITIONS[0];
+  const position = findPosition(positionText) || '';
   return {
     player: {
       firstName,
@@ -74,6 +74,9 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
   const [bulkText, setBulkText] = useState('');
   const [bulkResult, setBulkResult] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkPosition, setBulkPosition] = useState('');
+  const [bulkPositionBusy, setBulkPositionBusy] = useState(false);
 
   const visiblePlayers = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -94,7 +97,7 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
       displayName: p.displayName || '',
       number: p.number ?? '',
       photoUrl: p.photoUrl || '',
-      position: p.position || POSITIONS[0],
+      position: p.position || '',
       imageAuthorized: p.imageAuthorized !== false,
     });
   }
@@ -128,9 +131,29 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
     }
   }
 
+  function toggleSelected(id) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function toggleSelectAllVisible() {
+    const visibleIds = visiblePlayers.map((p) => p.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+    setSelectedIds(allSelected ? [] : visibleIds);
+  }
+
+  async function applyBulkPosition() {
+    setBulkPositionBusy(true);
+    for (const id of selectedIds) {
+      await updatePlayer(id, { position: bulkPosition, isGK: bulkPosition === 'Portero' });
+    }
+    setBulkPositionBusy(false);
+    setSelectedIds([]);
+    setBulkPosition('');
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.firstName.trim() || !form.lastName.trim() || form.number === '') return;
+    if (!form.firstName.trim() || !form.lastName.trim() || form.number === '' || !form.position) return;
     const data = {
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
@@ -239,7 +262,9 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
           className="player-form-input"
           value={form.position}
           onChange={(e) => setForm({ ...form, position: e.target.value })}
+          required
         >
+          <option value="" disabled>Selecciona posición…</option>
           {POSITIONS.map((pos) => (
             <option key={pos} value={pos}>{pos}</option>
           ))}
@@ -276,9 +301,46 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
         </select>
       </div>
 
+      {visiblePlayers.length > 0 && (
+        <label className="player-form-checkbox" style={{ marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={visiblePlayers.length > 0 && visiblePlayers.every((p) => selectedIds.includes(p.id))}
+            onChange={toggleSelectAllVisible}
+          />
+          Seleccionar todos ({selectedIds.length} seleccionado{selectedIds.length === 1 ? '' : 's'})
+        </label>
+      )}
+
+      {selectedIds.length > 0 && (
+        <div className="player-form" style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="modal-hint" style={{ margin: 0 }}>Poner posición a {selectedIds.length} jugador{selectedIds.length === 1 ? '' : 'es'}:</span>
+          <select className="player-form-input" value={bulkPosition} onChange={(e) => setBulkPosition(e.target.value)}>
+            <option value="" disabled>Selecciona posición…</option>
+            {POSITIONS.map((pos) => (
+              <option key={pos} value={pos}>{pos}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn btn-clock btn-start"
+            disabled={!bulkPosition || bulkPositionBusy}
+            onClick={applyBulkPosition}
+          >
+            {bulkPositionBusy ? 'APLICANDO…' : 'APLICAR'}
+          </button>
+          <button type="button" className="modal-cancel" onClick={() => setSelectedIds([])}>Cancelar selección</button>
+        </div>
+      )}
+
       <div className="admin-list">
         {visiblePlayers.map((p) => (
           <div key={p.id} className="admin-row">
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(p.id)}
+              onChange={() => toggleSelected(p.id)}
+            />
             {p.photoUrl ? (
               <img className="player-thumb" src={p.photoUrl} alt="" />
             ) : (
@@ -286,7 +348,7 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
             )}
             <div className="admin-user-info">
               <span className="admin-user-name">#{p.number} {p.displayName}{p.imageAuthorized === false ? ' (sin imagen)' : ''}</span>
-              <span className="admin-user-email">{p.firstName} {p.lastName} · {POSITION_ABBR[p.position] || p.position}</span>
+              <span className="admin-user-email">{p.firstName} {p.lastName} · {POSITION_ABBR[p.position] || p.position || 'Sin posición'}</span>
             </div>
             <button className="btn btn-timeout" onClick={() => startEdit(p)}>Editar</button>
             <button className="btn btn-timeout btn-danger-text" onClick={() => removePlayer(p.id)}>Borrar</button>
