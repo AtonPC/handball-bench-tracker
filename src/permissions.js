@@ -34,7 +34,7 @@ export function isSystemAdmin(identity) {
 
 export function isClubManagerOf(identity, clubId) {
   if (!identity || !clubId) return false;
-  return identity.managedClubIds.includes(clubId);
+  return isSystemAdmin(identity) || identity.managedClubIds.includes(clubId);
 }
 
 export function membershipFor(identity, teamId) {
@@ -51,6 +51,14 @@ export function hasCapability(identity, teamId, capability) {
 
 export function canWriteBench(identity, teamId) {
   return hasCapability(identity, teamId, 'benchConsole');
+}
+
+// Clubes entre los que la persona puede elegir como "club activo": todos si
+// es administrador de sistema (ve todo), o solo los que gestiona.
+export function accessibleClubs(identity) {
+  if (!identity) return [];
+  if (isSystemAdmin(identity)) return identity.allClubs || [];
+  return identity.managedClubs || [];
 }
 
 // Todos los equipos a los que la persona tiene algún tipo de acceso de

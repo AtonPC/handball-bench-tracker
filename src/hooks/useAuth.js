@@ -18,6 +18,7 @@ export function useAuth() {
   const [managedClubs, setManagedClubs] = useState([]);
   const [staffMemberships, setStaffMemberships] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
+  const [allClubs, setAllClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const selfHealAttempted = useRef(false);
@@ -64,11 +65,15 @@ export function useAuth() {
     const unsubTeams = onSnapshot(collection(db, 'teams'), (snap) => {
       setAllTeams(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
+    const unsubAllClubs = onSnapshot(collection(db, 'clubs'), (snap) => {
+      setAllClubs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
     return () => {
       unsubUser();
       unsubClubs();
       unsubMemberships();
       unsubTeams();
+      unsubAllClubs();
     };
   }, [user]);
 
@@ -84,8 +89,9 @@ export function useAuth() {
       staffMemberships,
       allTeams,
       teamsById,
+      allClubs,
     };
-  }, [user, systemRole, managedClubs, staffMemberships, allTeams]);
+  }, [user, systemRole, managedClubs, staffMemberships, allTeams, allClubs]);
 
   async function loginWithGoogle() {
     setError(null);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
-import { accessibleTeams, canWriteBench, hasCapability, isClubManagerOf, isSystemAdmin } from './permissions';
+import { accessibleClubs, accessibleTeams, canWriteBench, hasCapability, isClubManagerOf, isSystemAdmin } from './permissions';
 import LoginScreen from './components/LoginScreen';
 import BenchConsole from './components/BenchConsole';
 import StatsView from './components/StatsView';
@@ -20,6 +20,7 @@ export default function App() {
 
   const teams = useMemo(() => (identity ? accessibleTeams(identity) : []), [identity]);
   const managedClubs = identity?.managedClubs || [];
+  const clubOptions = useMemo(() => (identity ? accessibleClubs(identity) : []), [identity]);
   const isAdmin = identity ? isSystemAdmin(identity) : false;
 
   const [activeTeamId, setActiveTeamId] = useState('');
@@ -29,22 +30,29 @@ export default function App() {
   const [openSubView, setOpenSubView] = useState('bench');
 
   useEffect(() => {
-    if (teams.length === 0) {
-      if (activeTeamId) setActiveTeamId('');
-      return;
-    }
-    if (!teams.some((t) => t.id === activeTeamId)) setActiveTeamId(teams[0].id);
-  }, [teams, activeTeamId]);
-
-  useEffect(() => {
-    if (managedClubs.length === 0) {
+    if (clubOptions.length === 0) {
       if (activeClubId) setActiveClubId('');
       return;
     }
-    if (!managedClubs.some((c) => c.id === activeClubId)) setActiveClubId(managedClubs[0].id);
-  }, [managedClubs, activeClubId]);
+    if (!clubOptions.some((c) => c.id === activeClubId)) setActiveClubId(clubOptions[0].id);
+  }, [clubOptions, activeClubId]);
 
-  const activeTeam = teams.find((t) => t.id === activeTeamId) || null;
+  // El equipo activo se limita a los del club activo — así elegir un club
+  // filtra de verdad qué equipos aparecen, en vez de mezclar todos.
+  const teamsInActiveClub = useMemo(
+    () => (activeClubId ? teams.filter((t) => t.clubId === activeClubId) : teams),
+    [teams, activeClubId]
+  );
+
+  useEffect(() => {
+    if (teamsInActiveClub.length === 0) {
+      if (activeTeamId) setActiveTeamId('');
+      return;
+    }
+    if (!teamsInActiveClub.some((t) => t.id === activeTeamId)) setActiveTeamId(teamsInActiveClub[0].id);
+  }, [teamsInActiveClub, activeTeamId]);
+
+  const activeTeam = teamsInActiveClub.find((t) => t.id === activeTeamId) || null;
   const canManageRoster = activeTeamId ? hasCapability(identity, activeTeamId, 'manageRoster') : false;
   const canUseBench = activeTeamId ? canWriteBench(identity, activeTeamId) : false;
   const canManageClub = activeClubId ? isClubManagerOf(identity, activeClubId) : false;
@@ -120,32 +128,32 @@ export default function App() {
     <div className="app-shell">
       <nav className="admin-nav">
         <span className="admin-nav-role">{roleLabel}</span>
-        {teams.length > 0 && (
-          <select
-            className="admin-role-select"
-            value={activeTeamId}
-            onChange={(e) => setActiveTeamId(e.target.value)}
-            title="Equipo activo"
-          >
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        )}
-        {managedClubs.length > 0 && (
+        {clubOptions.length > 0 && (
           <select
             className="admin-role-select"
             value={activeClubId}
             onChange={(e) => setActiveClubId(e.target.value)}
             title="Club activo"
           >
-            {managedClubs.map((c) => (
+            {clubOptions.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         )}
+        {teamsInActiveClub.length > 0 && (
+          <select
+            className="admin-role-select"
+            value={activeTeamId}
+            onChange={(e) => setActiveTeamId(e.target.value)}
+            title="Equipo activo"
+          >
+            {teamsInActiveClub.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
         <div className="admin-nav-tabs">
-          {teams.length > 0 && (
+          {teamsInActiveClub.length > 0 && (
             <button
               className={`admin-nav-tab${view === 'matches' ? ' admin-nav-tab--active' : ''}`}
               onClick={() => setView('matches')}
@@ -161,7 +169,7 @@ export default function App() {
               Plantilla
             </button>
           )}
-          {teams.length > 0 && (
+          {teamsInActiveClub.length > 0 && (
             <button
               className={`admin-nav-tab${view === 'teamStats' ? ' admin-nav-tab--active' : ''}`}
               onClick={() => setView('teamStats')}
@@ -169,7 +177,7 @@ export default function App() {
               Estadísticas
             </button>
           )}
-          {managedClubs.length > 0 && (
+          {clubOptions.length > 0 && (
             <button
               className={`admin-nav-tab${view === 'club' ? ' admin-nav-tab--active' : ''}`}
               onClick={() => setView('club')}
@@ -177,7 +185,7 @@ export default function App() {
               Club
             </button>
           )}
-          {managedClubs.length > 0 && (
+          {clubOptions.length > 0 && (
             <button
               className={`admin-nav-tab${view === 'staff' ? ' admin-nav-tab--active' : ''}`}
               onClick={() => setView('staff')}
