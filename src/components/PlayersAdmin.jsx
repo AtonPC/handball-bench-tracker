@@ -28,13 +28,14 @@ function findPosition(text) {
   return POSITIONS.find((p) => p.toLowerCase() === needle || POSITION_ABBR[p].toLowerCase() === needle) || null;
 }
 
-// Una fila por jugador: Nombre, Apellidos, Dorsal, Posición (opcional).
-// Acepta tabulaciones (pegado directo de una hoja de cálculo), comas o punto y coma.
+// Una fila por jugador: Nombre, Apellidos, Dorsal, Posición (opcional),
+// Nombre en camiseta/panel (opcional). Acepta tabulaciones (pegado directo
+// de una hoja de cálculo), comas o punto y coma.
 function parseBulkLine(line, lineNumber) {
   const raw = line.trim();
   if (!raw) return null;
   const parts = splitLine(raw).map((s) => s.trim());
-  const [firstName, lastName, numberText, positionText] = parts;
+  const [firstName, lastName, numberText, positionText, displayNameText] = parts;
   if (!firstName || !lastName || !numberText) {
     return { error: `Línea ${lineNumber}: falta nombre, apellidos o dorsal ("${raw}")` };
   }
@@ -47,7 +48,7 @@ function parseBulkLine(line, lineNumber) {
     player: {
       firstName,
       lastName,
-      displayName: firstName,
+      displayName: displayNameText || firstName,
       number,
       photoUrl: null,
       position,
@@ -167,13 +168,14 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
       {showBulk && (
         <form className="player-form" onSubmit={handleBulkImport}>
           <p className="modal-hint" style={{ margin: 0 }}>
-            Un jugador por línea: Nombre, Apellidos, Dorsal y Posición (opcional). Separa los campos con comas,
-            punto y coma, o pega directamente varias columnas de una hoja de cálculo.
+            Un jugador por línea: Nombre, Apellidos, Dorsal, Posición (opcional) y Nombre en camiseta/panel
+            (opcional, si no se indica se usa el Nombre). Separa los campos con comas, punto y coma, o pega
+            directamente varias columnas de una hoja de cálculo.
           </p>
           <textarea
             className="player-form-input"
             rows={8}
-            placeholder={'Ainhoa, García, 7, Extremo Izquierdo\nMarc, López, 12'}
+            placeholder={'Ainhoa, García, 7, Extremo Izquierdo, Ainhoa G.\nMarc, López, 12'}
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
           />
