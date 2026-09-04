@@ -1,29 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-// Esta cuenta se auto-asigna como Administrador de Sistemas la primera vez que
+// Esta cuenta se auto-asigna como Administrador de Sistema la primera vez que
 // inicia sesión, para no depender de que alguien más le dé permisos a mano.
 const OWNER_EMAIL = 'aperlesc@gmail.com';
 
-// Cualquier otra cuenta nueva entra como 'family' (solo lectura) hasta que
-// un administrador le asigne un rol distinto desde el panel de usuarios.
-const DEFAULT_ROLE = 'family';
-
 const googleProvider = new GoogleAuthProvider();
 
+// Resuelve, además de la sesión de Firebase Auth, la "identidad" de la
+// persona en el modelo multi-club: si es administrador de sistema, qué
+// clubes gestiona y en qué equipos tiene una membresía de staff activa.
 export function useAuth() {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
+  const [systemRole, setSystemRole] = useState(null);
+  const [managedClubs, setManagedClubs] = useState([]);
+  const [staffMemberships, setStaffMemberships] = useState([]);
+  const [allTeams, setAllTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const selfHealAttempted = useRef(false);
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      selfHealAttempted.current = false;
       if (!firebaseUser) {
-        setRole(null);
+        setSystemRole(null);
+        setManagedClubs([]);
+        setStaffMemberships([]);
         setLoading(false);
       }
     });
@@ -32,12 +38,54 @@ export function useAuth() {
 
   useEffect(() => {
     if (!user) return undefined;
-    const unsubRole = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      setRole(snap.exists() ? snap.data().role : DEFAULT_ROLE);
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubUser = onSnapshot(userDocRef, (snap) => {
+      const data = snap.exists() ? snap.data() : null;
+      setSystemRole(data?.systemRole || null);
       setLoading(false);
+      // Autocorrige, una sola vez por sesión, cuentas propietarias que ya
+      // existían antes de este modelo (se habían quedado con el viejo
+      // campo `role`, sin `systemRole`). Un solo intento evita machacar
+      // Firestore en bucle si el despliegue de reglas todavía no incluye
+      // el permiso de autopromoción.
+      if (data && user.email === OWNER_EMAIL && data.systemRole !== 'admin' && !selfHealAttempted.current) {
+        selfHealAttempted.current = true;
+        setDoc(userDocRef, { systemRole: 'admin' }, { merge: true }).catch(() => {});
+      }
     });
-    return unsubRole;
+    const unsubClubs = onSnapshot(
+      query(collection(db, 'clubs'), where('managerUids', 'array-contains', user.uid)),
+      (snap) => setManagedClubs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    );
+    const unsubMemberships = onSnapshot(
+      query(collection(db, 'staffMemberships'), where('personUid', '==', user.uid)),
+      (snap) => setStaffMemberships(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    );
+    const unsubTeams = onSnapshot(collection(db, 'teams'), (snap) => {
+      setAllTeams(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return () => {
+      unsubUser();
+      unsubClubs();
+      unsubMemberships();
+      unsubTeams();
+    };
   }, [user]);
+
+  const identity = useMemo(() => {
+    if (!user) return null;
+    const teamsById = {};
+    for (const t of allTeams) teamsById[t.id] = t;
+    return {
+      uid: user.uid,
+      systemRole,
+      managedClubs,
+      managedClubIds: managedClubs.map((c) => c.id),
+      staffMemberships,
+      allTeams,
+      teamsById,
+    };
+  }, [user, systemRole, managedClubs, staffMemberships, allTeams]);
 
   async function loginWithGoogle() {
     setError(null);
@@ -46,11 +94,10 @@ export function useAuth() {
       const userDocRef = doc(db, 'users', cred.user.uid);
       const existing = await getDoc(userDocRef);
       if (!existing.exists()) {
-        const role = cred.user.email === OWNER_EMAIL ? 'admin' : DEFAULT_ROLE;
         await setDoc(userDocRef, {
           displayName: cred.user.displayName || cred.user.email,
           email: cred.user.email,
-          role,
+          systemRole: cred.user.email === OWNER_EMAIL ? 'admin' : null,
           createdAt: Date.now(),
         });
       }
@@ -63,5 +110,5 @@ export function useAuth() {
     await signOut(auth);
   }
 
-  return { user, role, loading, error, loginWithGoogle, logout };
+  return { user, identity, loading, error, loginWithGoogle, logout };
 }

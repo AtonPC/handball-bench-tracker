@@ -1,27 +1,36 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const playersCol = collection(db, 'players');
 
-// Plantilla del club (todos los jugadores, con o sin convocatoria activa).
-export function usePlayers(enabled) {
+// Plantilla de un equipo concreto.
+export function usePlayers(clubId, teamId) {
   const [players, setPlayers] = useState([]);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!teamId) {
       setPlayers([]);
       return undefined;
     }
-    const unsub = onSnapshot(query(playersCol, orderBy('number', 'asc')), (snap) => {
-      setPlayers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    const unsub = onSnapshot(query(playersCol, where('teamId', '==', teamId)), (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+      setPlayers(list);
     });
     return unsub;
-  }, [enabled]);
+  }, [teamId]);
 
   const addPlayer = useCallback((data) => {
-    return addDoc(playersCol, { ...data, active: true, createdAt: Date.now() });
-  }, []);
+    return addDoc(playersCol, {
+      clubId,
+      teamId,
+      imageAuthorized: true,
+      active: true,
+      ...data,
+      createdAt: Date.now(),
+    });
+  }, [clubId, teamId]);
 
   const updatePlayer = useCallback((id, data) => updateDoc(doc(db, 'players', id), data), []);
 

@@ -7,9 +7,13 @@ function pct(part, total) {
 
 export default function StatsView({ store }) {
   const { state } = store;
-  const players = Object.values(state.players).sort((a, b) => a.number - b.number);
+  const players = Object.values(state.players)
+    .map((p) => ({ ...p, attempts: p.goals + p.shots }))
+    .sort((a, b) => a.number - b.number);
 
-  const teamShots = players.reduce((sum, p) => sum + p.shots, 0);
+  const teamGoals = players.reduce((sum, p) => sum + p.goals, 0);
+  const teamMisses = players.reduce((sum, p) => sum + p.shots, 0);
+  const teamAttempts = teamGoals + teamMisses;
   const teamRecoveries = players.reduce((sum, p) => sum + p.recoveries, 0);
 
   return (
@@ -24,8 +28,12 @@ export default function StatsView({ store }) {
           <span className="stats-summary-value">{formatClock(state.clock.elapsedMs)}</span>
         </div>
         <div className="stats-summary-item">
-          <span className="stats-summary-label">Tiros totales</span>
-          <span className="stats-summary-value">{teamShots}</span>
+          <span className="stats-summary-label">Tiros totales (goles + fallos)</span>
+          <span className="stats-summary-value">{teamAttempts}</span>
+        </div>
+        <div className="stats-summary-item">
+          <span className="stats-summary-label">% de acierto</span>
+          <span className="stats-summary-value">{pct(teamGoals, teamAttempts)}</span>
         </div>
         <div className="stats-summary-item">
           <span className="stats-summary-label">Recuperaciones</span>
@@ -42,9 +50,9 @@ export default function StatsView({ store }) {
               <th>Tiempo</th>
               <th>% tiempo</th>
               <th>Goles</th>
-              <th>% goles equipo</th>
+              <th>Fallos</th>
               <th>Tiros</th>
-              <th>% tiros equipo</th>
+              <th>% acierto</th>
               <th>Recup.</th>
               <th>% recup. equipo</th>
             </tr>
@@ -57,9 +65,9 @@ export default function StatsView({ store }) {
                 <td>{formatClock(p.accumulatedMs)}</td>
                 <td>{pct(p.accumulatedMs, state.clock.elapsedMs)}</td>
                 <td>{p.goals}</td>
-                <td>{pct(p.goals, state.score.own)}</td>
                 <td>{p.shots}</td>
-                <td>{pct(p.shots, teamShots)}</td>
+                <td>{p.attempts}</td>
+                <td>{pct(p.goals, p.attempts)}</td>
                 <td>{p.recoveries}</td>
                 <td>{pct(p.recoveries, teamRecoveries)}</td>
               </tr>

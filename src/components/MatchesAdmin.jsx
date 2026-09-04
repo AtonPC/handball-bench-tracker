@@ -1,20 +1,16 @@
 import { useMemo, useState } from 'react';
-import { useMatches } from '../hooks/useMatches';
+import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
-import { useTeams } from '../hooks/useTeams';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En juego', finished: 'Finalizado' };
 
-export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
-  const { matches, createMatch, startMatch } = useMatches(true);
-  const { players } = usePlayers(true);
-  const { teams } = useTeams(true);
+export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRoster, canUseBench, onOpenMatch, onOpenStats }) {
+  const { matches, createMatch, startMatch } = useMatches(clubId, teamId);
+  const { players } = usePlayers(clubId, teamId);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ rivalName: '', isHome: true, venue: '', scheduledAt: '' });
   const [callUpIds, setCallUpIds] = useState([]);
-
-  const defaultTeam = useMemo(() => teams.find((t) => t.isDefault), [teams]);
-  const ownTeamName = defaultTeam?.name || 'Mi equipo';
+  const [callUpSearch, setCallUpSearch] = useState('');
 
   const rosterById = useMemo(() => {
     const map = {};
@@ -22,27 +18,25 @@ export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
     return map;
   }, [players]);
 
+  const visibleCallUpPlayers = useMemo(() => {
+    const needle = callUpSearch.trim().toLowerCase();
+    if (!needle) return players;
+    return players.filter((p) => {
+      const haystack = `${p.firstName || ''} ${p.lastName || ''} ${p.displayName || ''} ${p.number ?? ''}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [players, callUpSearch]);
+
+  const pastRivals = useMemo(() => [...new Set(matches.map((m) => m.rivalName).filter(Boolean))], [matches]);
+
   function toggleCallUp(id) {
     setCallUpIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  function handleHomeAwayChange(isHome) {
-    let venue = form.venue;
-    if (!venue) {
-      if (isHome) venue = defaultTeam?.venue || '';
-      else {
-        const rivalTeam = teams.find((t) => t.name.toLowerCase() === form.rivalName.trim().toLowerCase());
-        venue = rivalTeam?.venue || '';
-      }
-    }
-    setForm({ ...form, isHome, venue });
-  }
-
   function handleRivalBlur() {
     if (form.venue) return;
-    if (form.isHome) return;
-    const rivalTeam = teams.find((t) => t.name.toLowerCase() === form.rivalName.trim().toLowerCase());
-    if (rivalTeam?.venue) setForm((f) => ({ ...f, venue: rivalTeam.venue }));
+    const venue = findLastVenueForRival(matches, form.rivalName);
+    if (venue) setForm((f) => ({ ...f, venue }));
   }
 
   async function handleCreate(e) {
@@ -75,7 +69,7 @@ export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
     <div className="admin-panel">
       <div className="matches-header">
         <p className="modal-hint">Partidos</p>
-        {canCreate && (
+        {canManageRoster && (
           <button className="btn btn-clock btn-start" onClick={() => setShowForm((v) => !v)}>
             {showForm ? 'CANCELAR' : '+ NUEVO PARTIDO'}
           </button>
@@ -84,33 +78,33 @@ export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
 
       {showForm && (
         <form className="player-form" onSubmit={handleCreate}>
-          <p className="modal-hint">Mi equipo: <strong>{ownTeamName}</strong>{!defaultTeam && ' (márcalo en la pestaña Equipos)'}</p>
+          <p className="modal-hint">Mi equipo: <strong>{ownTeamName}</strong></p>
 
           <input
             className="player-form-input"
-            list="team-names"
+            list="rival-names"
             placeholder="Equipo rival"
             value={form.rivalName}
             onChange={(e) => setForm({ ...form, rivalName: e.target.value })}
             onBlur={handleRivalBlur}
             required
           />
-          <datalist id="team-names">
-            {teams.filter((t) => !t.isDefault).map((t) => <option key={t.id} value={t.name} />)}
+          <datalist id="rival-names">
+            {pastRivals.map((name) => <option key={name} value={name} />)}
           </datalist>
 
           <div className="home-away-toggle">
             <button
               type="button"
               className={`btn btn-timeout${form.isHome ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => handleHomeAwayChange(true)}
+              onClick={() => setForm({ ...form, isHome: true })}
             >
               Local
             </button>
             <button
               type="button"
               className={`btn btn-timeout${!form.isHome ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => handleHomeAwayChange(false)}
+              onClick={() => setForm({ ...form, isHome: false })}
             >
               Visitante
             </button>
@@ -129,8 +123,16 @@ export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
           />
 
           <p className="modal-hint">Convocatoria ({callUpIds.length} jugadores)</p>
+          {players.length > 0 && (
+            <input
+              className="player-form-input"
+              placeholder="Buscar por nombre, apellidos o dorsal…"
+              value={callUpSearch}
+              onChange={(e) => setCallUpSearch(e.target.value)}
+            />
+          )}
           <div className="call-up-list">
-            {players.map((p) => (
+            {visibleCallUpPlayers.map((p) => (
               <label key={p.id} className="call-up-item">
                 <input
                   type="checkbox"
@@ -141,6 +143,7 @@ export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
               </label>
             ))}
             {players.length === 0 && <p className="modal-hint">No hay jugadores en la plantilla todavía.</p>}
+            {players.length > 0 && visibleCallUpPlayers.length === 0 && <p className="modal-hint">Ningún jugador coincide con la búsqueda.</p>}
           </div>
 
           <button className="btn btn-clock btn-start" type="submit">CREAR PARTIDO</button>
@@ -159,12 +162,12 @@ export default function MatchesAdmin({ canCreate, onOpenMatch, onOpenStats }) {
               </span>
             </div>
             <span className={`match-badge match-badge--${m.lifecycle}`}>{LIFECYCLE_LABELS[m.lifecycle] || m.lifecycle}</span>
-            {m.lifecycle === 'scheduled' && (
+            {m.lifecycle === 'scheduled' && canUseBench && (
               <button className="btn btn-clock btn-start" onClick={() => handleStart(m.id, m.callUpPlayerIds)}>
                 Iniciar
               </button>
             )}
-            {m.lifecycle === 'live' && (
+            {m.lifecycle === 'live' && canUseBench && (
               <button className="btn btn-clock btn-start" onClick={() => onOpenMatch(m.id)}>Continuar</button>
             )}
             {m.lifecycle === 'finished' && (

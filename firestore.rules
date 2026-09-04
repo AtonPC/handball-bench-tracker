@@ -7,86 +7,151 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function myRole() {
-      return isSignedIn()
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-        : null;
+    function isSystemAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.systemRole == 'admin';
     }
 
-    function isAdmin() {
-      return myRole() == 'admin';
+    function isClubManager(clubId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/clubs/$(clubId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/clubs/$(clubId)).data.managerUids;
     }
 
-    function isRoleManager() {
-      return myRole() in ['admin', 'team_admin'];
+    function membershipId(teamId) {
+      return teamId + '_' + request.auth.uid;
     }
 
-    function isBenchWriter() {
-      return myRole() in ['admin', 'team_admin', 'coach', 'staff'];
+    function hasMembership(teamId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/staffMemberships/$(membershipId(teamId)));
     }
 
-    // Perfiles de usuario y roles.
+    function membershipData(teamId) {
+      return get(/databases/$(database)/documents/staffMemberships/$(membershipId(teamId))).data;
+    }
+
+    function hasCapability(teamId, capability) {
+      return hasMembership(teamId) &&
+        membershipData(teamId).active == true &&
+        membershipData(teamId).capabilities[capability] == true;
+    }
+
+    // Puede tocar la plantilla/convocatoria de un equipo: admin, gestor del
+    // club dueño, o staff con la capacidad concreta.
+    function canManageTeamCapability(clubId, teamId, capability) {
+      return isSystemAdmin() || isClubManager(clubId) || hasCapability(teamId, capability);
+    }
+
+    // Perfiles de usuario: el flag de administrador de sistema vive aquí.
     match /users/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isRoleManager());
+      allow read: if isSignedIn() && (request.auth.uid == uid || isSystemAdmin());
 
-      // Alta propia: solo puede autoasignarse un rol de bajo privilegio,
-      // salvo la cuenta propietaria que se autoasigna 'admin'.
       allow create: if isSignedIn() && request.auth.uid == uid && (
-        request.resource.data.role in ['family', 'player'] ||
-        (request.resource.data.role == 'admin' && request.auth.token.email == 'aperlesc@gmail.com')
+        !('systemRole' in request.resource.data) || request.resource.data.systemRole == null ||
+        (request.resource.data.systemRole == 'admin' && request.auth.token.email == 'aperlesc@gmail.com')
       );
 
       allow update: if isSignedIn() && (
-        // el propio usuario puede editar su perfil, pero no su rol
-        (request.auth.uid == uid && request.resource.data.role == resource.data.role) ||
-        // un admin puede cambiar el rol de cualquier otra cuenta
-        (isAdmin() && request.auth.uid != uid) ||
-        // un team_admin solo mueve entre entrenador/staff/jugador/familia,
-        // nunca puede tocar cuentas admin o team_admin
-        (myRole() == 'team_admin' &&
-          resource.data.role in ['coach', 'staff', 'player', 'family'] &&
-          request.resource.data.role in ['coach', 'staff', 'player', 'family'])
+        (request.auth.uid == uid && request.resource.data.systemRole == resource.data.systemRole) ||
+        // Autopromoción de la cuenta propietaria: cubre cuentas que ya
+        // existían antes de este modelo y se habían quedado sin systemRole.
+        (request.auth.uid == uid && request.auth.token.email == 'aperlesc@gmail.com' &&
+          request.resource.data.systemRole == 'admin') ||
+        isSystemAdmin()
       );
 
       allow delete: if false;
     }
 
-    // Plantilla del club: la gestionan los administradores; todos la leen
-    // (hace falta para armar convocatorias y ver nombres/dorsales).
-    match /players/{playerId} {
+    match /leagues/{leagueId} {
       allow read: if isSignedIn();
-      allow write: if isRoleManager();
+      allow write: if isSystemAdmin();
     }
 
-    // Ajustes del club (p. ej. nombre del equipo propio).
-    match /club/{docId} {
+    match /clubs/{clubId} {
       allow read: if isSignedIn();
-      allow write: if isRoleManager();
+      allow write: if isSystemAdmin();
     }
 
-    // Equipos conocidos (el propio y rivales): nombre y lugar habitual.
     match /teams/{teamId} {
       allow read: if isSignedIn();
-      allow write: if isRoleManager();
+      allow create: if isSystemAdmin() || isClubManager(request.resource.data.clubId);
+      allow update, delete: if isSystemAdmin() || isClubManager(resource.data.clubId);
     }
 
-    // Partido: cualquier usuario autenticado puede ver el marcador y los minutos.
-    // Crear un partido (convocatoria) es cosa de administradores; una vez creado,
-    // cualquier entrenador/staff puede iniciarlo y registrar eventos en directo.
+    match /staffMemberships/{membershipDocId} {
+      allow read: if isSignedIn() && (
+        resource.data.personUid == request.auth.uid ||
+        isSystemAdmin() || isClubManager(resource.data.clubId)
+      );
+      allow create: if isSystemAdmin() || isClubManager(request.resource.data.clubId);
+      allow update, delete: if isSystemAdmin() || isClubManager(resource.data.clubId);
+    }
+
+    match /follows/{followDocId} {
+      allow read: if isSignedIn() && (
+        resource.data.personUid == request.auth.uid || isSystemAdmin() ||
+        (exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) &&
+          isClubManager(get(/databases/$(database)/documents/teams/$(resource.data.teamId)).data.clubId))
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.personUid == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if isSignedIn() &&
+        exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) &&
+        (isSystemAdmin() ||
+          isClubManager(get(/databases/$(database)/documents/teams/$(resource.data.teamId)).data.clubId));
+      allow delete: if isSignedIn() && resource.data.personUid == request.auth.uid;
+    }
+
+    match /guardianships/{guardianshipDocId} {
+      allow read: if isSignedIn() && (
+        resource.data.personUid == request.auth.uid || isSystemAdmin() ||
+        (exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) &&
+          isClubManager(get(/databases/$(database)/documents/teams/$(resource.data.teamId)).data.clubId))
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.personUid == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if isSignedIn() &&
+        exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) &&
+        (isSystemAdmin() ||
+          isClubManager(get(/databases/$(database)/documents/teams/$(resource.data.teamId)).data.clubId));
+      allow delete: if isSignedIn() && resource.data.personUid == request.auth.uid;
+    }
+
+    // Plantilla: pertenece a un equipo concreto.
+    match /players/{playerId} {
+      allow read: if isSignedIn();
+      allow create: if canManageTeamCapability(request.resource.data.clubId, request.resource.data.teamId, 'manageRoster');
+      allow update, delete: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'manageRoster');
+    }
+
+    // Partido: la convocatoria la gestiona quien puede gestionar la
+    // plantilla del equipo; la consola en vivo, quien tenga esa capacidad.
     match /matches/{matchId} {
       allow read: if isSignedIn();
-      allow create: if isRoleManager();
-      allow update: if isBenchWriter();
-      allow delete: if isRoleManager();
+      allow create: if canManageTeamCapability(request.resource.data.clubId, request.resource.data.teamId, 'manageRoster');
+      allow update: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'benchConsole');
+      allow delete: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'manageRoster');
 
       match /players/{playerId} {
         allow read: if isSignedIn();
-        allow write: if isBenchWriter();
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
       }
 
       match /events/{eventId} {
         allow read: if isSignedIn();
-        allow write: if isBenchWriter();
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
       }
     }
   }

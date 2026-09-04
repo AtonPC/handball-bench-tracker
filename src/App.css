@@ -13,6 +13,7 @@
 
 .admin-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
@@ -98,6 +99,16 @@
   color: var(--text-dim);
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* ---------- Buscador de listas ---------- */
+.list-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.list-search .player-form-input {
+  flex: 1;
 }
 
 /* ---------- Gestión de partidos ---------- */
