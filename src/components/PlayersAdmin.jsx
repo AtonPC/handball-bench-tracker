@@ -16,6 +16,47 @@ function byField(field) {
   return (a, b) => (a[field] || '').localeCompare(b[field] || '');
 }
 
+function splitLine(line) {
+  if (line.includes('\t')) return line.split('\t');
+  if (line.includes(';')) return line.split(';');
+  return line.split(',');
+}
+
+function findPosition(text) {
+  if (!text) return null;
+  const needle = text.trim().toLowerCase();
+  return POSITIONS.find((p) => p.toLowerCase() === needle || POSITION_ABBR[p].toLowerCase() === needle) || null;
+}
+
+// Una fila por jugador: Nombre, Apellidos, Dorsal, Posición (opcional).
+// Acepta tabulaciones (pegado directo de una hoja de cálculo), comas o punto y coma.
+function parseBulkLine(line, lineNumber) {
+  const raw = line.trim();
+  if (!raw) return null;
+  const parts = splitLine(raw).map((s) => s.trim());
+  const [firstName, lastName, numberText, positionText] = parts;
+  if (!firstName || !lastName || !numberText) {
+    return { error: `Línea ${lineNumber}: falta nombre, apellidos o dorsal ("${raw}")` };
+  }
+  const number = Number(numberText);
+  if (!Number.isFinite(number)) {
+    return { error: `Línea ${lineNumber}: dorsal no numérico ("${numberText}")` };
+  }
+  const position = findPosition(positionText) || POSITIONS[0];
+  return {
+    player: {
+      firstName,
+      lastName,
+      displayName: firstName,
+      number,
+      photoUrl: null,
+      position,
+      isGK: position === 'Portero',
+      imageAuthorized: true,
+    },
+  };
+}
+
 const SORTS = {
   lastName: { label: 'Apellidos', compare: (a, b) => byField('lastName')(a, b) || byField('firstName')(a, b) },
   firstName: { label: 'Nombre', compare: (a, b) => byField('firstName')(a, b) || byField('lastName')(a, b) },
@@ -28,6 +69,10 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('lastName');
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkResult, setBulkResult] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const visiblePlayers = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -58,6 +103,30 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
     setForm(emptyForm);
   }
 
+  async function handleBulkImport(e) {
+    e.preventDefault();
+    const lines = bulkText.split('\n');
+    const parsed = lines.map((line, i) => parseBulkLine(line, i + 1)).filter(Boolean);
+    const errors = parsed.filter((r) => r.error).map((r) => r.error);
+    const toAdd = parsed.filter((r) => r.player).map((r) => r.player);
+
+    setBulkBusy(true);
+    let added = 0;
+    for (const player of toAdd) {
+      try {
+        await addPlayer(player);
+        added += 1;
+      } catch (err) {
+        errors.push(`${player.firstName} ${player.lastName}: ${err.message}`);
+      }
+    }
+    setBulkBusy(false);
+    setBulkResult({ added, errors });
+    if (errors.length === 0) {
+      setBulkText('');
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.firstName.trim() || !form.lastName.trim() || form.number === '') return;
@@ -81,7 +150,53 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
 
   return (
     <div className="admin-panel">
-      <p className="modal-hint">Plantilla de <strong>{teamName}</strong></p>
+      <div className="matches-header">
+        <p className="modal-hint">Plantilla de <strong>{teamName}</strong></p>
+        <button
+          type="button"
+          className="btn btn-timeout"
+          onClick={() => {
+            setShowBulk((v) => !v);
+            setBulkResult(null);
+          }}
+        >
+          {showBulk ? 'CANCELAR CARGA MASIVA' : 'CARGA MASIVA'}
+        </button>
+      </div>
+
+      {showBulk && (
+        <form className="player-form" onSubmit={handleBulkImport}>
+          <p className="modal-hint" style={{ margin: 0 }}>
+            Un jugador por línea: Nombre, Apellidos, Dorsal y Posición (opcional). Separa los campos con comas,
+            punto y coma, o pega directamente varias columnas de una hoja de cálculo.
+          </p>
+          <textarea
+            className="player-form-input"
+            rows={8}
+            placeholder={'Ainhoa, García, 7, Extremo Izquierdo\nMarc, López, 12'}
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+          />
+          <div className="player-form-actions">
+            <button className="btn btn-clock btn-start" type="submit" disabled={bulkBusy || !bulkText.trim()}>
+              {bulkBusy ? 'IMPORTANDO…' : 'IMPORTAR'}
+            </button>
+          </div>
+          {bulkResult && (
+            <div className="modal-hint">
+              {bulkResult.added > 0 && <p>Añadidos: {bulkResult.added} jugador{bulkResult.added === 1 ? '' : 'es'}.</p>}
+              {bulkResult.errors.length > 0 && (
+                <>
+                  <p>Con errores ({bulkResult.errors.length}):</p>
+                  <ul>
+                    {bulkResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </form>
+      )}
 
       <form className="player-form" onSubmit={handleSubmit}>
         <input
