@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMatchEditor } from '../hooks/useMatchEditor';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { SHOT_ZONES, GOAL_ZONES } from '../shotZones';
@@ -25,22 +25,34 @@ export default function FinishedMatchEditor({ store, onBack }) {
     () => Object.values(state.players).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)),
     [state.players]
   );
-  const [playerDrafts, setPlayerDrafts] = useState(() => {
-    const map = {};
-    for (const p of players) {
-      map[p.id] = {
-        goals: p.goals,
-        shots: p.shots,
-        saves: p.saves || 0,
-        recoveries: p.recoveries,
-        losses: p.losses,
-        exclusionsCount: p.exclusionsCount || 0,
-        disqualified: !!p.disqualified,
-        minutes: Math.round((p.accumulatedMs || 0) / 60000),
-      };
-    }
-    return map;
-  });
+  const [playerDrafts, setPlayerDrafts] = useState({});
+
+  // La subcolección de jugadores del partido llega por su propio listener,
+  // que puede resolver un instante después que el documento del partido —
+  // por eso los borradores se rellenan aquí (reactivo), no en el useState
+  // inicial, para no quedarse con la tabla vacía si llegan tarde. Solo
+  // añade a quien todavía no tenga borrador, sin pisar ediciones en curso.
+  useEffect(() => {
+    setPlayerDrafts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const p of players) {
+        if (next[p.id]) continue;
+        changed = true;
+        next[p.id] = {
+          goals: p.goals,
+          shots: p.shots,
+          saves: p.saves || 0,
+          recoveries: p.recoveries,
+          losses: p.losses,
+          exclusionsCount: p.exclusionsCount || 0,
+          disqualified: !!p.disqualified,
+          minutes: Math.round((p.accumulatedMs || 0) / 60000),
+        };
+      }
+      return changed ? next : prev;
+    });
+  }, [players]);
   const [savedPlayerId, setSavedPlayerId] = useState(null);
   const [newRivalGoal, setNewRivalGoal] = useState(emptyRivalGoal);
 
