@@ -6,6 +6,7 @@ import { accessibleClubs, accessibleTeams, canWriteBench, hasCapability, isClubM
 import LoginScreen from './components/LoginScreen';
 import BenchConsole from './components/BenchConsole';
 import StatsView from './components/StatsView';
+import FinishedMatchEditor from './components/FinishedMatchEditor';
 import TeamStats from './components/TeamStats';
 import MatchesAdmin from './components/MatchesAdmin';
 import PlayersAdmin from './components/PlayersAdmin';
@@ -91,6 +92,10 @@ export default function App() {
     setOpenMatchId(matchId);
     setOpenSubView('stats');
   }
+  function openEditFinishedStats(matchId) {
+    setOpenMatchId(matchId);
+    setOpenSubView('editStats');
+  }
   function backToMatches() {
     setOpenMatchId(null);
   }
@@ -109,6 +114,9 @@ export default function App() {
           <StatsView store={store} />
         </div>
       );
+    }
+    if (openSubView === 'editStats') {
+      return <FinishedMatchEditor store={store} onBack={backToMatches} />;
     }
     return (
       <BenchConsole
@@ -214,6 +222,7 @@ export default function App() {
           canUseBench={canUseBench}
           onOpenMatch={openMatch}
           onOpenStats={openStats}
+          onEditFinishedStats={openEditFinishedStats}
         />
       )}
       {view === 'players' && canManageRoster && activeTeam && (

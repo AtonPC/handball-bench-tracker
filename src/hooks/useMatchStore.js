@@ -444,6 +444,8 @@ export function useMatchStore(matchId, enabled) {
       rivalName: match?.rivalName || 'Rival',
       ownTeamName: match?.ownTeamName || 'Mi equipo',
       isHome: match?.isHome ?? true,
+      venue: match?.venue || '',
+      scheduledAt: match?.scheduledAt || null,
       clock: { status: match?.status || 'idle', period: match?.period || 1, elapsedMs: liveElapsedMs },
       score: match?.score || { own: 0, rival: 0 },
       rivalShots: match?.rivalShots || 0,
