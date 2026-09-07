@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
+
+const MATCH_SUBCOLLECTIONS = ['players', 'events', 'rivalGoals', 'shotEvents'];
 
 const matchesCol = collection(db, 'matches');
 
@@ -48,11 +50,23 @@ export function useMatches(clubId, teamId) {
     return ref.id;
   }, [clubId, teamId]);
 
-  // Solo tiene sentido editar/borrar un partido que todavía no ha empezado
-  // (programado): una vez en juego, sus subcolecciones ya tienen datos reales.
+  // Editar un partido programado permite tocar convocatoria y titulares;
+  // uno finalizado solo los datos del propio partido (rival, lugar, fecha) —
+  // ya jugó con quien jugó, así que MatchesAdmin no manda esos campos.
   const updateMatch = useCallback((matchId, data) => updateDoc(doc(db, 'matches', matchId), data), []);
 
-  const removeMatch = useCallback((matchId) => deleteDoc(doc(db, 'matches', matchId)), []);
+  // Borra el partido y, si ya se jugó, también sus subcolecciones (Firestore
+  // no las borra solas al borrar el documento padre) — si no, quedarían
+  // estadísticas huérfanas sin ningún partido que las referencie.
+  const removeMatch = useCallback(async (matchId) => {
+    const batch = writeBatch(db);
+    for (const sub of MATCH_SUBCOLLECTIONS) {
+      const snap = await getDocs(collection(db, 'matches', matchId, sub));
+      snap.forEach((d) => batch.delete(d.ref));
+    }
+    batch.delete(doc(db, 'matches', matchId));
+    await batch.commit();
+  }, []);
 
   // Convierte un partido programado en el partido en juego: siembra las
   // estadísticas en vivo de cada convocado a partir de la plantilla del equipo.
