@@ -3,10 +3,12 @@ import MatchHeader from './MatchHeader';
 import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
 import SubstitutionModal from './SubstitutionModal';
+import RivalGoalModal from './RivalGoalModal';
 
 export default function BenchConsole({ store, onBack, onFinish }) {
   const { state } = store;
   const [substitutionForId, setSubstitutionForId] = useState(null);
+  const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -47,6 +49,7 @@ export default function BenchConsole({ store, onBack, onFinish }) {
         rivalShots={state.rivalShots}
         onGoal={store.rivalGoal}
         onShot={store.rivalShot}
+        onOpenGoalDetail={() => setShowRivalGoalModal(true)}
       />
 
       {substitutionForId && (
@@ -55,6 +58,16 @@ export default function BenchConsole({ store, onBack, onFinish }) {
           benchPlayers={benchPlayers}
           onSelect={handleSelectIncoming}
           onCancel={() => setSubstitutionForId(null)}
+        />
+      )}
+
+      {showRivalGoalModal && (
+        <RivalGoalModal
+          onConfirm={(detail) => {
+            store.rivalGoalWithDetail(detail);
+            setShowRivalGoalModal(false);
+          }}
+          onCancel={() => setShowRivalGoalModal(false)}
         />
       )}
     </div>

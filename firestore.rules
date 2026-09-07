@@ -153,6 +153,16 @@ service cloud.firestore {
           'benchConsole'
         );
       }
+
+      // Detalle de cada gol rival: dorsal, minuto y zonas (opcional).
+      match /rivalGoals/{rivalGoalId} {
+        allow read: if isSignedIn();
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
     }
   }
 }

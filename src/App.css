@@ -227,6 +227,11 @@
   flex-direction: column;
   gap: 14px;
 }
+.stats-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
 .stats-summary {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -709,6 +714,63 @@
   padding: 10px;
   min-height: 44px;
   cursor: pointer;
+}
+
+/* ---------- Gol rival: teclado de dorsal y rejillas de zona ---------- */
+.rival-goal-modal {
+  max-width: 460px;
+  overflow-y: auto;
+}
+.rival-goal-display {
+  align-self: center;
+  font-size: 40px;
+  font-weight: 700;
+  min-width: 80px;
+  text-align: center;
+  color: var(--accent);
+}
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.keypad-btn {
+  min-height: 56px;
+  font-size: 20px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.keypad-btn:active {
+  background: var(--border);
+}
+.keypad-btn--alt {
+  color: var(--text-dim);
+  font-size: 16px;
+}
+.zone-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.zone-btn {
+  min-height: 44px;
+  font-size: 11px;
+  line-height: 1.2;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 4px;
+  cursor: pointer;
+}
+.zone-btn--active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ---------- Tablet en horizontal / pantallas anchas: todo más grande ---------- */

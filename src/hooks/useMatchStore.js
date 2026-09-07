@@ -121,7 +121,10 @@ export function useMatchStore(matchId, enabled) {
     return result;
   }, [players, now]);
 
-  const recordEvent = useCallback(async (label, matchUpdate, playerUpdates) => {
+  // `extra.create` permite que un evento, además de los cambios habituales,
+  // cree un documento aparte (p. ej. el detalle de un gol rival) — se guarda
+  // su ruta en el propio evento para que el deshacer también lo borre.
+  const recordEvent = useCallback(async (label, matchUpdate, playerUpdates, extra) => {
     if (!match) return;
     const snapshot = buildSnapshot(match, players);
     const batch = writeBatch(db);
@@ -129,7 +132,12 @@ export function useMatchStore(matchId, enabled) {
     for (const id of Object.keys(playerUpdates || {})) {
       batch.update(playerRef(id), playerUpdates[id]);
     }
-    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, snapshot });
+    let createdRefPath = null;
+    if (extra?.create) {
+      batch.set(extra.create.ref, extra.create.data);
+      createdRefPath = extra.create.ref.path;
+    }
+    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, snapshot, createdRefPath });
     await batch.commit();
   }, [match, players, matchRef, playerRef, eventsCol]);
 
@@ -215,6 +223,33 @@ export function useMatchStore(matchId, enabled) {
       recordEvent(delta > 0 ? 'Gol rival' : 'Gol rival (-1)', { 'score.rival': next }, {});
     },
     [match, recordEvent]
+  );
+
+  // Gol rival con detalle: dorsal de quien marca, minuto (del propio reloj
+  // del partido) y, si se rellenan, zona de lanzamiento y de entrada a
+  // portería. Se guarda como documento propio en matches/{id}/rivalGoals,
+  // no solo como un +1 al marcador.
+  const rivalGoalWithDetail = useCallback(
+    ({ number, shotZone, goalZone }) => {
+      if (!match) return;
+      const next = Math.max(0, match.score.rival + 1);
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'rivalGoals'));
+      recordEvent(`Gol rival #${number}`, { 'score.rival': next }, {}, {
+        create: {
+          ref,
+          data: {
+            number,
+            minute,
+            period: match.period,
+            shotZone: shotZone || null,
+            goalZone: goalZone || null,
+            createdAt: Date.now(),
+          },
+        },
+      });
+    },
+    [match, matchId, liveElapsedMs, recordEvent]
   );
 
   const rivalShot = useCallback(
@@ -335,11 +370,15 @@ export function useMatchStore(matchId, enabled) {
     const snap = await getDocs(query(eventsCol, orderBy('createdAt', 'desc'), limit(1)));
     if (snap.empty) return;
     const eventDoc = snap.docs[0];
-    const { match: matchSnap, players: playersSnap } = eventDoc.data().snapshot;
+    const eventData = eventDoc.data();
+    const { match: matchSnap, players: playersSnap } = eventData.snapshot;
     const batch = writeBatch(db);
     batch.update(matchRef, matchSnap);
     for (const id of Object.keys(playersSnap)) {
       batch.update(playerRef(id), playersSnap[id]);
+    }
+    if (eventData.createdRefPath) {
+      batch.delete(doc(db, eventData.createdRefPath));
     }
     batch.delete(eventDoc.ref);
     await batch.commit();
@@ -364,6 +403,7 @@ export function useMatchStore(matchId, enabled) {
 
   return {
     ready: !!match,
+    matchId,
     state,
     canUndo,
     startPeriod1,
@@ -371,6 +411,7 @@ export function useMatchStore(matchId, enabled) {
     startPeriod2,
     finishMatch,
     rivalGoal,
+    rivalGoalWithDetail,
     rivalShot,
     timeout,
     playerGoal,
