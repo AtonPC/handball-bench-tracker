@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useShotEvents } from '../hooks/useShotEvents';
 
 function pct(part, total) {
   if (!total) return '—';
@@ -17,6 +18,13 @@ export default function StatsView({ store }) {
     }
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [rivalGoals]);
+
+  const shotEvents = useShotEvents(matchId);
+  const nameById = useMemo(() => {
+    const map = {};
+    for (const p of Object.values(state.players)) map[p.id] = p.name;
+    return map;
+  }, [state.players]);
 
   const players = Object.values(state.players)
     .map((p) => ({ ...p, attempts: p.goals + p.shots }))
@@ -115,6 +123,36 @@ export default function StatsView({ store }) {
           <p className="modal-hint">
             Por dorsal: {rivalGoalsByNumber.map(([number, count]) => `#${number} (${count})`).join(' · ')}
           </p>
+        </>
+      )}
+
+      {shotEvents.length > 0 && (
+        <>
+          <h3 className="stats-section-title">Lanzamientos propios (con zona)</h3>
+          <div className="stats-table-wrap">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th>Min.</th>
+                  <th>Jugador</th>
+                  <th>Resultado</th>
+                  <th>Zona de lanzamiento</th>
+                  <th>Zona de entrada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shotEvents.map((s) => (
+                  <tr key={s.id}>
+                    <td>{s.minute}'</td>
+                    <td>{nameById[s.playerId] || s.playerId}</td>
+                    <td>{s.type === 'goal' ? 'Gol' : 'Fallo'}</td>
+                    <td>{s.shotZone || '—'}</td>
+                    <td>{s.goalZone || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

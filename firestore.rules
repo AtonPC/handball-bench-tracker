@@ -163,6 +163,16 @@ service cloud.firestore {
           'benchConsole'
         );
       }
+
+      // Detalle de cada gol/fallo propio: jugador, minuto y zonas (opcional).
+      match /shotEvents/{shotEventId} {
+        allow read: if isSignedIn();
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
     }
   }
 }

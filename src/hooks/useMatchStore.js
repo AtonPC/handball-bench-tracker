@@ -292,6 +292,41 @@ export function useMatchStore(matchId, enabled) {
     [players, recordEvent]
   );
 
+  // Gol/Fallo con zona (lanzamiento y, si es gol, entrada a portería), igual
+  // que el gol rival: se guarda como documento propio en matches/{id}/shotEvents.
+  const playerGoalWithDetail = useCallback(
+    (playerId, { shotZone, goalZone }) => {
+      if (!match) return;
+      const nextGoals = Math.max(0, players[playerId].goals + 1);
+      const nextScore = Math.max(0, match.score.own + 1);
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'shotEvents'));
+      recordEvent('Gol', { 'score.own': nextScore }, { [playerId]: { goals: nextGoals } }, {
+        create: {
+          ref,
+          data: { playerId, type: 'goal', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
+        },
+      });
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
+  const playerShotWithDetail = useCallback(
+    (playerId, { shotZone }) => {
+      if (!match) return;
+      const next = Math.max(0, players[playerId].shots + 1);
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'shotEvents'));
+      recordEvent('Fallo', {}, { [playerId]: { shots: next } }, {
+        create: {
+          ref,
+          data: { playerId, type: 'miss', minute, period: match.period, shotZone: shotZone || null, goalZone: null, createdAt: Date.now() },
+        },
+      });
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
   const playerRecovery = useCallback(
     (playerId, delta = 1) => {
       const next = Math.max(0, players[playerId].recoveries + delta);
@@ -415,7 +450,9 @@ export function useMatchStore(matchId, enabled) {
     rivalShot,
     timeout,
     playerGoal,
+    playerGoalWithDetail,
     playerShot,
+    playerShotWithDetail,
     playerRecovery,
     playerLoss,
     playerExclusion,

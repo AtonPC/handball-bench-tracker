@@ -4,11 +4,13 @@ import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
 import SubstitutionModal from './SubstitutionModal';
 import RivalGoalModal from './RivalGoalModal';
+import ShotDetailModal from './ShotDetailModal';
 
 export default function BenchConsole({ store, onBack, onFinish }) {
   const { state } = store;
   const [substitutionForId, setSubstitutionForId] = useState(null);
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
+  const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -29,9 +31,9 @@ export default function BenchConsole({ store, onBack, onFinish }) {
             player={player}
             onOpenSubstitution={() => setSubstitutionForId(player.id)}
             actions={{
-              goalInc: () => store.playerGoal(player.id, 1),
+              goalInc: () => setShotDetailFor({ playerId: player.id, kind: 'goal' }),
               goalDec: () => store.playerGoal(player.id, -1),
-              shotInc: () => store.playerShot(player.id, 1),
+              shotInc: () => setShotDetailFor({ playerId: player.id, kind: 'miss' }),
               shotDec: () => store.playerShot(player.id, -1),
               recoveryInc: () => store.playerRecovery(player.id, 1),
               recoveryDec: () => store.playerRecovery(player.id, -1),
@@ -68,6 +70,22 @@ export default function BenchConsole({ store, onBack, onFinish }) {
             setShowRivalGoalModal(false);
           }}
           onCancel={() => setShowRivalGoalModal(false)}
+        />
+      )}
+
+      {shotDetailFor && (
+        <ShotDetailModal
+          playerName={state.players[shotDetailFor.playerId]?.name}
+          kind={shotDetailFor.kind}
+          onConfirm={(detail) => {
+            if (shotDetailFor.kind === 'goal') {
+              store.playerGoalWithDetail(shotDetailFor.playerId, detail);
+            } else {
+              store.playerShotWithDetail(shotDetailFor.playerId, detail);
+            }
+            setShotDetailFor(null);
+          }}
+          onCancel={() => setShotDetailFor(null)}
         />
       )}
     </div>
