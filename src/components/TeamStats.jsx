@@ -32,6 +32,8 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
   const teamGoals = players.reduce((sum, p) => sum + p.goals, 0);
   const teamMisses = players.reduce((sum, p) => sum + p.shots, 0);
   const teamAttempts = teamGoals + teamMisses;
+  const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
+  const teamDisqualifications = players.reduce((sum, p) => sum + (p.disqualifications || 0), 0);
 
   return (
     <div className="admin-panel">
@@ -66,6 +68,8 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                 <th>Tiros</th>
                 <th>% acierto</th>
                 <th>Recup.</th>
+                <th>Excl.</th>
+                <th>Expulsiones</th>
               </tr>
             </thead>
             <tbody>
@@ -80,10 +84,12 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                   <td>{p.attempts}</td>
                   <td>{pct(p.goals, p.attempts)}</td>
                   <td>{p.recoveries}</td>
+                  <td>{p.exclusionsCount || 0}</td>
+                  <td>{p.disqualifications || 0}</td>
                 </tr>
               ))}
               {visiblePlayers.length === 0 && (
-                <tr><td colSpan={9}><p className="modal-hint">Ningún jugador coincide con el filtro.</p></td></tr>
+                <tr><td colSpan={11}><p className="modal-hint">Ningún jugador coincide con el filtro.</p></td></tr>
               )}
               <tr>
                 <td /><td><strong>Equipo</strong></td><td /><td />
@@ -92,6 +98,8 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                 <td><strong>{teamAttempts}</strong></td>
                 <td><strong>{pct(teamGoals, teamAttempts)}</strong></td>
                 <td />
+                <td><strong>{teamExclusions}</strong></td>
+                <td><strong>{teamDisqualifications}</strong></td>
               </tr>
             </tbody>
           </table>

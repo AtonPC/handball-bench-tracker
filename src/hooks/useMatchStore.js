@@ -18,6 +18,7 @@ function buildSnapshot(match, players) {
       recoveries: p.recoveries,
       losses: p.losses,
       exclusionsCount: p.exclusionsCount,
+      disqualified: p.disqualified,
     };
   }
   return {
@@ -343,21 +344,39 @@ export function useMatchStore(matchId, enabled) {
     [players, recordEvent]
   );
 
+  // A la 3ª exclusión, el jugador queda expulsado del partido (tarjeta roja):
+  // no vuelve a pista, sin cuenta atrás — se saca directamente del once.
   const playerExclusion = useCallback(
     (playerId) => {
       const nowMs = Date.now();
       const p = players[playerId];
+      const nextCount = p.exclusionsCount + 1;
+      const accumulatedMs = p.onCourtSinceMs ? p.accumulatedMs + (nowMs - p.onCourtSinceMs) : p.accumulatedMs;
+      if (nextCount >= 3) {
+        const courtSlots = match.courtSlots.filter((id) => id !== playerId);
+        recordEvent('Expulsión (3ª exclusión)', { courtSlots }, {
+          [playerId]: {
+            exclusionsCount: nextCount,
+            excluded: false,
+            exclusionEndsAtMs: null,
+            disqualified: true,
+            accumulatedMs,
+            onCourtSinceMs: null,
+          },
+        });
+        return;
+      }
       recordEvent('Exclusión 2min', {}, {
         [playerId]: {
-          exclusionsCount: p.exclusionsCount + 1,
+          exclusionsCount: nextCount,
           excluded: true,
           exclusionEndsAtMs: nowMs + EXCLUSION_MS,
-          accumulatedMs: p.onCourtSinceMs ? p.accumulatedMs + (nowMs - p.onCourtSinceMs) : p.accumulatedMs,
+          accumulatedMs,
           onCourtSinceMs: null,
         },
       });
     },
-    [players, recordEvent]
+    [match, players, recordEvent]
   );
 
   // Cancela una exclusión en curso (toque accidental): el jugador vuelve a

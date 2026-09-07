@@ -93,6 +93,7 @@ export function useMatches(clubId, teamId) {
         recoveries: 0,
         losses: 0,
         exclusionsCount: 0,
+        disqualified: false,
         accumulatedMs: 0,
         onCourtSinceMs: null,
         excluded: false,

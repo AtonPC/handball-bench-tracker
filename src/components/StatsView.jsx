@@ -34,6 +34,8 @@ export default function StatsView({ store }) {
   const teamMisses = players.reduce((sum, p) => sum + p.shots, 0);
   const teamAttempts = teamGoals + teamMisses;
   const teamRecoveries = players.reduce((sum, p) => sum + p.recoveries, 0);
+  const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
+  const teamDisqualifications = players.filter((p) => p.disqualified).length;
 
   return (
     <div className="stats-view">
@@ -58,6 +60,14 @@ export default function StatsView({ store }) {
           <span className="stats-summary-label">Recuperaciones</span>
           <span className="stats-summary-value">{teamRecoveries}</span>
         </div>
+        <div className="stats-summary-item">
+          <span className="stats-summary-label">Exclusiones</span>
+          <span className="stats-summary-value">{teamExclusions}</span>
+        </div>
+        <div className="stats-summary-item">
+          <span className="stats-summary-label">Expulsiones</span>
+          <span className="stats-summary-value">{teamDisqualifications}</span>
+        </div>
       </div>
 
       <div className="stats-table-wrap">
@@ -74,6 +84,8 @@ export default function StatsView({ store }) {
               <th>% acierto</th>
               <th>Recup.</th>
               <th>% recup. equipo</th>
+              <th>Excl.</th>
+              <th>Expulsado</th>
             </tr>
           </thead>
           <tbody>
@@ -89,6 +101,8 @@ export default function StatsView({ store }) {
                 <td>{pct(p.goals, p.attempts)}</td>
                 <td>{p.recoveries}</td>
                 <td>{pct(p.recoveries, teamRecoveries)}</td>
+                <td>{p.exclusionsCount || 0}</td>
+                <td>{p.disqualified ? 'Sí' : '—'}</td>
               </tr>
             ))}
           </tbody>
