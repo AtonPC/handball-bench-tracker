@@ -32,6 +32,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
   const teamGoals = players.reduce((sum, p) => sum + p.goals, 0);
   const teamMisses = players.reduce((sum, p) => sum + p.shots, 0);
   const teamAttempts = teamGoals + teamMisses;
+  const teamSaves = players.reduce((sum, p) => sum + (p.saves || 0), 0);
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
   const teamDisqualifications = players.reduce((sum, p) => sum + (p.disqualifications || 0), 0);
 
@@ -67,6 +68,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                 <th>Fallos</th>
                 <th>Tiros</th>
                 <th>% acierto</th>
+                <th>Paradas</th>
                 <th>Recup.</th>
                 <th>Excl.</th>
                 <th>Expulsiones</th>
@@ -83,13 +85,14 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                   <td>{p.shots}</td>
                   <td>{p.attempts}</td>
                   <td>{pct(p.goals, p.attempts)}</td>
+                  <td>{p.saves || 0}</td>
                   <td>{p.recoveries}</td>
                   <td>{p.exclusionsCount || 0}</td>
                   <td>{p.disqualifications || 0}</td>
                 </tr>
               ))}
               {visiblePlayers.length === 0 && (
-                <tr><td colSpan={11}><p className="modal-hint">Ningún jugador coincide con el filtro.</p></td></tr>
+                <tr><td colSpan={12}><p className="modal-hint">Ningún jugador coincide con el filtro.</p></td></tr>
               )}
               <tr>
                 <td /><td><strong>Equipo</strong></td><td /><td />
@@ -97,7 +100,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                 <td><strong>{teamMisses}</strong></td>
                 <td><strong>{teamAttempts}</strong></td>
                 <td><strong>{pct(teamGoals, teamAttempts)}</strong></td>
-                <td />
+                <td><strong>{teamSaves}</strong></td>
                 <td><strong>{teamExclusions}</strong></td>
                 <td><strong>{teamDisqualifications}</strong></td>
               </tr>

@@ -31,6 +31,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
       map[p.id] = {
         goals: p.goals,
         shots: p.shots,
+        saves: p.saves || 0,
         recoveries: p.recoveries,
         losses: p.losses,
         exclusionsCount: p.exclusionsCount || 0,
@@ -71,6 +72,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
     await updatePlayerStats(id, {
       goals: Number(d.goals) || 0,
       shots: Number(d.shots) || 0,
+      saves: Number(d.saves) || 0,
       recoveries: Number(d.recoveries) || 0,
       losses: Number(d.losses) || 0,
       exclusionsCount: Number(d.exclusionsCount) || 0,
@@ -185,6 +187,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
                 <th>Min.</th>
                 <th>Goles</th>
                 <th>Fallos</th>
+                <th>Paradas</th>
                 <th>Recup.</th>
                 <th>Pérdidas</th>
                 <th>Excl.</th>
@@ -203,6 +206,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.minutes} onChange={(e) => updateDraft(p.id, 'minutes', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.goals} onChange={(e) => updateDraft(p.id, 'goals', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.shots} onChange={(e) => updateDraft(p.id, 'shots', e.target.value)} /></td>
+                    <td><input className="player-form-input player-form-input--number" type="number" value={d.saves} onChange={(e) => updateDraft(p.id, 'saves', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.recoveries} onChange={(e) => updateDraft(p.id, 'recoveries', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.losses} onChange={(e) => updateDraft(p.id, 'losses', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.exclusionsCount} onChange={(e) => updateDraft(p.id, 'exclusionsCount', e.target.value)} /></td>

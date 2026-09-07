@@ -15,6 +15,7 @@ function buildSnapshot(match, players) {
       exclusionEndsAtMs: p.exclusionEndsAtMs,
       goals: p.goals,
       shots: p.shots,
+      saves: p.saves,
       recoveries: p.recoveries,
       losses: p.losses,
       exclusionsCount: p.exclusionsCount,

@@ -90,6 +90,7 @@ export function useMatches(clubId, teamId) {
         photoUrl: rp.photoUrl || null,
         goals: 0,
         shots: 0,
+        saves: 0,
         recoveries: 0,
         losses: 0,
         exclusionsCount: 0,
