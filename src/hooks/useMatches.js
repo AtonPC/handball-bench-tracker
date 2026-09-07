@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addDoc, collection, doc, onSnapshot, query, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const matchesCol = collection(db, 'matches');
@@ -22,7 +22,7 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds, startingLineupIds }) => {
     const ref = await addDoc(matchesCol, {
       clubId,
       teamId,
@@ -32,6 +32,7 @@ export function useMatches(clubId, teamId) {
       scheduledAt,
       ownTeamName,
       callUpPlayerIds,
+      startingLineupIds: startingLineupIds || [],
       lifecycle: 'scheduled', // 'scheduled' | 'live' | 'finished'
       status: 'idle', // cronómetro: 'idle' | 'running' | 'paused'
       period: 1,
@@ -47,15 +48,24 @@ export function useMatches(clubId, teamId) {
     return ref.id;
   }, [clubId, teamId]);
 
+  // Solo tiene sentido editar/borrar un partido que todavía no ha empezado
+  // (programado): una vez en juego, sus subcolecciones ya tienen datos reales.
+  const updateMatch = useCallback((matchId, data) => updateDoc(doc(db, 'matches', matchId), data), []);
+
+  const removeMatch = useCallback((matchId) => deleteDoc(doc(db, 'matches', matchId)), []);
+
   // Convierte un partido programado en el partido en juego: siembra las
   // estadísticas en vivo de cada convocado a partir de la plantilla del equipo.
-  const startMatch = useCallback(async (matchId, callUpPlayerIds, rosterById) => {
+  const startMatch = useCallback(async (matchId, callUpPlayerIds, rosterById, startingLineupIds) => {
     // Descarta convocados que ya no existen en la plantilla (p. ej. borrados
     // después de armar la convocatoria) para no dejar ids huérfanos en pista.
     const validIds = callUpPlayerIds.filter((pid) => rosterById[pid]);
+    const validStarters = (startingLineupIds || []).filter((pid) => validIds.includes(pid));
+    // Si se eligieron titulares explícitamente (6+1), se respetan; si no, se
+    // usan los 7 primeros de la convocatoria, como antes.
+    const courtSlots = validStarters.length === 7 ? validStarters : validIds.slice(0, 7);
+    const bench = validIds.filter((pid) => !courtSlots.includes(pid));
     const batch = writeBatch(db);
-    const courtSlots = validIds.slice(0, 7);
-    const bench = validIds.slice(7);
     batch.update(doc(db, 'matches', matchId), { lifecycle: 'live', courtSlots, bench });
     for (const pid of validIds) {
       const rp = rosterById[pid];
@@ -78,7 +88,7 @@ export function useMatches(clubId, teamId) {
     await batch.commit();
   }, []);
 
-  return { matches, createMatch, startMatch };
+  return { matches, createMatch, updateMatch, removeMatch, startMatch };
 }
 
 // Busca el último lugar registrado para un rival concreto en el histórico de

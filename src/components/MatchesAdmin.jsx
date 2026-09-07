@@ -3,13 +3,16 @@ import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En juego', finished: 'Finalizado' };
+const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '' };
 
 export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRoster, canUseBench, onOpenMatch, onOpenStats }) {
-  const { matches, createMatch, startMatch } = useMatches(clubId, teamId);
+  const { matches, createMatch, updateMatch, removeMatch, startMatch } = useMatches(clubId, teamId);
   const { players } = usePlayers(clubId, teamId);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ rivalName: '', isHome: true, venue: '', scheduledAt: '' });
+  const [editingMatchId, setEditingMatchId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
   const [callUpIds, setCallUpIds] = useState([]);
+  const [startingIds, setStartingIds] = useState([]);
   const [callUpSearch, setCallUpSearch] = useState('');
 
   const rosterById = useMemo(() => {
@@ -29,8 +32,36 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
 
   const pastRivals = useMemo(() => [...new Set(matches.map((m) => m.rivalName).filter(Boolean))], [matches]);
 
+  const fieldStartersCount = startingIds.filter((id) => !rosterById[id]?.isGK).length;
+  const gkStartersCount = startingIds.filter((id) => rosterById[id]?.isGK).length;
+
   function toggleCallUp(id) {
-    setCallUpIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    const isRemoving = callUpIds.includes(id);
+    setCallUpIds((prev) => (isRemoving ? prev.filter((x) => x !== id) : [...prev, id]));
+    // Si se quita de la convocatoria, no puede seguir de titular.
+    if (isRemoving) setStartingIds((prev) => prev.filter((x) => x !== id));
+  }
+
+  function callUpAll() {
+    setCallUpIds(players.map((p) => p.id));
+  }
+
+  function callUpNone() {
+    setCallUpIds([]);
+    setStartingIds([]);
+  }
+
+  function toggleStarter(id) {
+    const player = rosterById[id];
+    if (!player) return;
+    setStartingIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      const fieldCount = prev.filter((x) => !rosterById[x]?.isGK).length;
+      const gkCount = prev.filter((x) => rosterById[x]?.isGK).length;
+      if (player.isGK && gkCount >= 1) return prev;
+      if (!player.isGK && fieldCount >= 6) return prev;
+      return [...prev, id];
+    });
   }
 
   function handleRivalBlur() {
@@ -39,26 +70,56 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
     if (venue) setForm((f) => ({ ...f, venue }));
   }
 
-  async function handleCreate(e) {
+  function startEdit(m) {
+    setEditingMatchId(m.id);
+    setForm({
+      rivalName: m.rivalName || '',
+      isHome: m.isHome ?? true,
+      venue: m.venue || '',
+      scheduledAt: m.scheduledAt ? new Date(m.scheduledAt).toISOString().slice(0, 16) : '',
+    });
+    setCallUpIds(m.callUpPlayerIds || []);
+    setStartingIds(m.startingLineupIds || []);
+    setShowForm(true);
+  }
+
+  function cancelForm() {
+    setEditingMatchId(null);
+    setForm(emptyForm);
+    setCallUpIds([]);
+    setStartingIds([]);
+    setShowForm(false);
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!form.rivalName || callUpIds.length === 0) return;
-    await createMatch({
+    const data = {
       rivalName: form.rivalName.trim(),
       isHome: form.isHome,
       venue: form.venue.trim(),
       scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).getTime() : Date.now(),
       ownTeamName,
       callUpPlayerIds: callUpIds,
-    });
-    setForm({ rivalName: '', isHome: true, venue: '', scheduledAt: '' });
-    setCallUpIds([]);
-    setShowForm(false);
+      startingLineupIds: startingIds,
+    };
+    if (editingMatchId) {
+      await updateMatch(editingMatchId, data);
+    } else {
+      await createMatch(data);
+    }
+    cancelForm();
   }
 
-  async function handleStart(matchId, callUpPlayerIds) {
+  async function handleDelete(matchId) {
+    if (!confirm('¿Borrar este partido programado?')) return;
+    await removeMatch(matchId);
+  }
+
+  async function handleStart(m) {
     try {
-      await startMatch(matchId, callUpPlayerIds, rosterById);
-      onOpenMatch(matchId);
+      await startMatch(m.id, m.callUpPlayerIds, rosterById, m.startingLineupIds);
+      onOpenMatch(m.id);
     } catch (err) {
       console.error('No se pudo iniciar el partido', err);
       alert(`No se pudo iniciar el partido: ${err.message}`);
@@ -70,14 +131,14 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       <div className="matches-header">
         <p className="modal-hint">Partidos</p>
         {canManageRoster && (
-          <button className="btn btn-clock btn-start" onClick={() => setShowForm((v) => !v)}>
+          <button className="btn btn-clock btn-start" onClick={() => (showForm ? cancelForm() : setShowForm(true))}>
             {showForm ? 'CANCELAR' : '+ NUEVO PARTIDO'}
           </button>
         )}
       </div>
 
       {showForm && (
-        <form className="player-form" onSubmit={handleCreate}>
+        <form className="player-form" onSubmit={handleSubmit}>
           <p className="modal-hint">Mi equipo: <strong>{ownTeamName}</strong></p>
 
           <input
@@ -122,7 +183,13 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
             onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
           />
 
-          <p className="modal-hint">Convocatoria ({callUpIds.length} jugadores)</p>
+          <div className="matches-header">
+            <p className="modal-hint" style={{ margin: 0 }}>Convocatoria ({callUpIds.length} jugadores)</p>
+            <div className="player-form-actions">
+              <button type="button" className="btn btn-timeout" onClick={callUpAll}>Convocar a todos</button>
+              <button type="button" className="btn btn-timeout" onClick={callUpNone}>Quitar a todos</button>
+            </div>
+          </div>
           {players.length > 0 && (
             <input
               className="player-form-input"
@@ -139,14 +206,40 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
                   checked={callUpIds.includes(p.id)}
                   onChange={() => toggleCallUp(p.id)}
                 />
-                #{p.number} {p.displayName}
+                #{p.number} {p.displayName}{p.isGK ? ' (P)' : ''}
               </label>
             ))}
             {players.length === 0 && <p className="modal-hint">No hay jugadores en la plantilla todavía.</p>}
             {players.length > 0 && visibleCallUpPlayers.length === 0 && <p className="modal-hint">Ningún jugador coincide con la búsqueda.</p>}
           </div>
 
-          <button className="btn btn-clock btn-start" type="submit">CREAR PARTIDO</button>
+          {callUpIds.length > 0 && (
+            <>
+              <p className="modal-hint">
+                Titulares: {fieldStartersCount}/6 jugadores de campo, {gkStartersCount}/1 portero (opcional —
+                si no eliges, empiezan los 7 primeros de la convocatoria)
+              </p>
+              <div className="call-up-list">
+                {callUpIds.map((id) => {
+                  const p = rosterById[id];
+                  if (!p) return null;
+                  return (
+                    <label key={id} className="call-up-item">
+                      <input type="checkbox" checked={startingIds.includes(id)} onChange={() => toggleStarter(id)} />
+                      #{p.number} {p.displayName}{p.isGK ? ' (P)' : ''}
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <div className="player-form-actions">
+            <button className="btn btn-clock btn-start" type="submit">
+              {editingMatchId ? 'GUARDAR CAMBIOS' : 'CREAR PARTIDO'}
+            </button>
+            <button type="button" className="modal-cancel" onClick={cancelForm}>Cancelar</button>
+          </div>
         </form>
       )}
 
@@ -162,8 +255,14 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
               </span>
             </div>
             <span className={`match-badge match-badge--${m.lifecycle}`}>{LIFECYCLE_LABELS[m.lifecycle] || m.lifecycle}</span>
+            {m.lifecycle === 'scheduled' && canManageRoster && (
+              <>
+                <button className="btn btn-timeout" onClick={() => startEdit(m)}>Editar</button>
+                <button className="btn btn-timeout btn-danger-text" onClick={() => handleDelete(m.id)}>Borrar</button>
+              </>
+            )}
             {m.lifecycle === 'scheduled' && canUseBench && (
-              <button className="btn btn-clock btn-start" onClick={() => handleStart(m.id, m.callUpPlayerIds)}>
+              <button className="btn btn-clock btn-start" onClick={() => handleStart(m)}>
                 Iniciar
               </button>
             )}
