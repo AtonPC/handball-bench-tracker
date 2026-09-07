@@ -1,11 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useMatches } from '../hooks/useMatches';
 import { useTeamStats } from '../hooks/useTeamStats';
+import { useSortableTable } from '../hooks/useSortableTable';
+import SortableTh from './SortableTh';
 import { formatClock } from '../utils/time';
 
 function pct(part, total) {
   if (!total) return '—';
   return `${Math.round((part / total) * 100)}%`;
+}
+
+function ratio(part, total) {
+  return total ? part / total : 0;
 }
 
 export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }) {
@@ -16,9 +22,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
   const [search, setSearch] = useState('');
 
   const players = useMemo(() => {
-    return Object.entries(totals)
-      .map(([id, p]) => ({ id, ...p, attempts: p.goals + p.shots }))
-      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+    return Object.entries(totals).map(([id, p]) => ({ id, ...p, attempts: p.goals + p.shots }));
   }, [totals]);
 
   const visiblePlayers = useMemo(() => {
@@ -27,12 +31,29 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
     return players.filter((p) => `${p.name || ''} ${p.number ?? ''}`.toLowerCase().includes(needle));
   }, [players, search]);
 
+  const columns = [
+    { key: 'number', value: (p) => p.number ?? 0 },
+    { key: 'name', value: (p) => p.name || '' },
+    { key: 'matches', value: (p) => p.matchesPlayed },
+    { key: 'time', value: (p) => p.accumulatedMs },
+    { key: 'goals', value: (p) => p.goals },
+    { key: 'shots', value: (p) => p.shots },
+    { key: 'attempts', value: (p) => p.attempts },
+    { key: 'accPct', value: (p) => ratio(p.goals, p.attempts) },
+    { key: 'saves', value: (p) => p.saves || 0 },
+    { key: 'recoveries', value: (p) => p.recoveries },
+    { key: 'exclusions', value: (p) => p.exclusionsCount || 0 },
+    { key: 'disqualifications', value: (p) => p.disqualifications || 0 },
+  ];
+  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(visiblePlayers, columns, 'number');
+
   // El resumen de equipo siempre suma sobre todos los jugadores, no sobre el filtro
   // de búsqueda — filtrar es para encontrar a alguien, no para recalcular el equipo.
   const teamGoals = players.reduce((sum, p) => sum + p.goals, 0);
   const teamMisses = players.reduce((sum, p) => sum + p.shots, 0);
   const teamAttempts = teamGoals + teamMisses;
   const teamSaves = players.reduce((sum, p) => sum + (p.saves || 0), 0);
+  const teamRecoveries = players.reduce((sum, p) => sum + p.recoveries, 0);
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
   const teamDisqualifications = players.reduce((sum, p) => sum + (p.disqualifications || 0), 0);
 
@@ -60,22 +81,22 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
           <table className="stats-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Jugador</th>
-                <th>Partidos</th>
-                <th>Tiempo total</th>
-                <th>Goles</th>
-                <th>Fallos</th>
-                <th>Tiros</th>
-                <th>% acierto</th>
-                <th>Paradas</th>
-                <th>Recup.</th>
-                <th>Excl.</th>
-                <th>Expulsiones</th>
+                <SortableTh label="#" columnKey="number" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Jugador" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Partidos" columnKey="matches" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Tiempo total" columnKey="time" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Goles" columnKey="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Fallos" columnKey="shots" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Tiros" columnKey="attempts" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="% acierto" columnKey="accPct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Paradas" columnKey="saves" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Recup." columnKey="recoveries" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Excl." columnKey="exclusions" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Expulsiones" columnKey="disqualifications" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody>
-              {visiblePlayers.map((p) => (
+              {sorted.map((p) => (
                 <tr key={p.id}>
                   <td>{p.number}</td>
                   <td>{p.name}{p.isGK ? ' (P)' : ''}</td>
@@ -101,6 +122,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                 <td><strong>{teamAttempts}</strong></td>
                 <td><strong>{pct(teamGoals, teamAttempts)}</strong></td>
                 <td><strong>{teamSaves}</strong></td>
+                <td><strong>{teamRecoveries}</strong></td>
                 <td><strong>{teamExclusions}</strong></td>
                 <td><strong>{teamDisqualifications}</strong></td>
               </tr>

@@ -300,6 +300,14 @@
 .stats-table tbody tr:nth-child(odd) {
   background: var(--panel-alt);
 }
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.sortable-th:hover {
+  color: var(--accent);
+}
 
 .app-loading {
   min-height: 100svh;

@@ -2,10 +2,16 @@ import { useMemo } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
+import { useSortableTable } from '../hooks/useSortableTable';
+import SortableTh from './SortableTh';
 
 function pct(part, total) {
   if (!total) return '—';
   return `${Math.round((part / total) * 100)}%`;
+}
+
+function ratio(part, total) {
+  return total ? part / total : 0;
 }
 
 export default function StatsView({ store }) {
@@ -37,6 +43,23 @@ export default function StatsView({ store }) {
   const teamSaves = players.reduce((sum, p) => sum + (p.saves || 0), 0);
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
   const teamDisqualifications = players.filter((p) => p.disqualified).length;
+
+  const columns = [
+    { key: 'number', value: (p) => p.number ?? 0 },
+    { key: 'name', value: (p) => p.name || '' },
+    { key: 'time', value: (p) => p.accumulatedMs },
+    { key: 'timePct', value: (p) => ratio(p.accumulatedMs, state.clock.elapsedMs) },
+    { key: 'goals', value: (p) => p.goals },
+    { key: 'shots', value: (p) => p.shots },
+    { key: 'attempts', value: (p) => p.attempts },
+    { key: 'accPct', value: (p) => ratio(p.goals, p.attempts) },
+    { key: 'saves', value: (p) => p.saves || 0 },
+    { key: 'recoveries', value: (p) => p.recoveries },
+    { key: 'recPct', value: (p) => ratio(p.recoveries, teamRecoveries) },
+    { key: 'exclusions', value: (p) => p.exclusionsCount || 0 },
+    { key: 'disqualified', value: (p) => (p.disqualified ? 1 : 0) },
+  ];
+  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(players, columns, 'number');
 
   return (
     <div className="stats-view">
@@ -79,23 +102,23 @@ export default function StatsView({ store }) {
         <table className="stats-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Jugador</th>
-              <th>Tiempo</th>
-              <th>% tiempo</th>
-              <th>Goles</th>
-              <th>Fallos</th>
-              <th>Tiros</th>
-              <th>% acierto</th>
-              <th>Paradas</th>
-              <th>Recup.</th>
-              <th>% recup. equipo</th>
-              <th>Excl.</th>
-              <th>Expulsado</th>
+              <SortableTh label="#" columnKey="number" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Jugador" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Tiempo" columnKey="time" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="% tiempo" columnKey="timePct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Goles" columnKey="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Fallos" columnKey="shots" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Tiros" columnKey="attempts" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="% acierto" columnKey="accPct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Paradas" columnKey="saves" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Recup." columnKey="recoveries" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="% recup. equipo" columnKey="recPct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Excl." columnKey="exclusions" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortableTh label="Expulsado" columnKey="disqualified" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
             </tr>
           </thead>
           <tbody>
-            {players.map((p) => (
+            {sorted.map((p) => (
               <tr key={p.id}>
                 <td>{p.number}</td>
                 <td>{p.name}{p.isGK ? ' (P)' : ''}</td>
