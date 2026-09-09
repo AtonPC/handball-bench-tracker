@@ -4,6 +4,16 @@ import { useAccessApprovals, useTeamAccessRequests } from '../hooks/useAccessApp
 
 const KIND_LABEL = { follow: 'Seguidor', guardianship: 'Tutela' };
 
+// playerLabel es el campo antiguo (texto libre) de antes del selector de
+// jugador/a — se mantiene como respaldo por si queda alguna solicitud
+// creada con esa versión.
+function guardianshipPlayerText(r) {
+  if (r.kind !== 'guardianship') return '';
+  if (r.playerName) return ` · #${r.playerNumber ?? '?'} ${r.playerName}`;
+  if (r.playerLabel) return ` · ${r.playerLabel}`;
+  return '';
+}
+
 export default function FollowApprovals({ clubId, identity }) {
   const { teams } = useTeams(clubId);
   const [teamId, setTeamId] = useState('');
@@ -29,7 +39,7 @@ export default function FollowApprovals({ clubId, identity }) {
             <div className="admin-user-info">
               <span className="admin-user-name">{r.personDisplayName || r.personEmail}</span>
               <span className="admin-user-email">
-                {KIND_LABEL[r.kind]}{r.kind === 'guardianship' && r.playerLabel ? ` · ${r.playerLabel}` : ''} · {r.personEmail}
+                {KIND_LABEL[r.kind]}{guardianshipPlayerText(r)} · {r.personEmail}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -50,7 +60,7 @@ export default function FollowApprovals({ clubId, identity }) {
                 <div className="admin-user-info">
                   <span className="admin-user-name">{r.personDisplayName || r.personEmail}</span>
                   <span className="admin-user-email">
-                    {KIND_LABEL[r.kind]}{r.kind === 'guardianship' && r.playerLabel ? ` · ${r.playerLabel}` : ''}
+                    {KIND_LABEL[r.kind]}{guardianshipPlayerText(r)}
                   </span>
                 </div>
                 <button className="btn btn-timeout btn-danger-text" onClick={() => rejectRequest(r.kind, r.id, identity)}>Revocar</button>

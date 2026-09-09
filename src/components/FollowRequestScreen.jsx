@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { requestFollow, requestGuardianship, useAccessRequestActions } from '../hooks/useFollowRequests';
+import { useRosterDirectory } from '../hooks/useRosterDirectory';
 
 function TeamRequestRow({ team, grant, user }) {
   const [mode, setMode] = useState(null); // null | 'guardianship'
-  const [playerLabel, setPlayerLabel] = useState('');
+  const [playerId, setPlayerId] = useState('');
   const { retryRequest } = useAccessRequestActions();
+  // Solo se pide la plantilla pública (rosterDirectory) cuando hace falta
+  // elegir jugador/a — nada de leerla de más si solo se va a "seguir".
+  const roster = useRosterDirectory(mode === 'guardianship' ? team.id : null);
 
   if (grant?.status === 'pending') {
     return (
@@ -28,7 +32,10 @@ function TeamRequestRow({ team, grant, user }) {
         </div>
         <button
           className="btn btn-timeout"
-          onClick={() => retryRequest(grant.kind, team.id, user, grant.playerLabel)}
+          onClick={() => retryRequest(
+            grant.kind, team.id, user,
+            grant.kind === 'guardianship' ? { id: grant.playerId, displayName: grant.playerName, number: grant.playerNumber } : undefined
+          )}
         >
           Volver a solicitar
         </button>
@@ -51,19 +58,21 @@ function TeamRequestRow({ team, grant, user }) {
       </div>
       {mode === 'guardianship' && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input
-            className="player-form-input"
-            placeholder="Nombre y dorsal de tu hijo/a"
-            value={playerLabel}
-            onChange={(e) => setPlayerLabel(e.target.value)}
-          />
+          <select className="player-form-input" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
+            <option value="">Selecciona jugador/a…</option>
+            {roster.map((p) => (
+              <option key={p.id} value={p.id}>#{p.number} {p.displayName}</option>
+            ))}
+          </select>
+          {roster.length === 0 && <span className="modal-hint">Esta plantilla todavía no tiene jugadores.</span>}
           <button
             className="btn btn-clock btn-start"
-            disabled={!playerLabel.trim()}
+            disabled={!playerId}
             onClick={() => {
-              requestGuardianship(team.id, playerLabel.trim(), user);
+              const player = roster.find((p) => p.id === playerId);
+              requestGuardianship(team.id, player, user);
               setMode(null);
-              setPlayerLabel('');
+              setPlayerId('');
             }}
           >
             Enviar solicitud
@@ -75,9 +84,10 @@ function TeamRequestRow({ team, grant, user }) {
 }
 
 // Pantalla para quien todavía no tiene acceso de staff a ningún equipo:
-// puede pedir seguir a un equipo, o pedir tutela indicando a mano de qué
-// jugador/a es familiar (no se le puede mostrar la plantilla real todavía —
-// las reglas de "players" ya exigen tener acceso aprobado para leerla).
+// puede pedir seguir a un equipo, o pedir tutela eligiendo de qué
+// jugador/a es familiar en un desplegable (rosterDirectory: solo nombre y
+// dorsal, abierto a cualquier persona registrada — la plantilla completa
+// sigue exigiendo el acceso aprobado que da follow/guardianship).
 export default function FollowRequestScreen({ identity, user, onLogout, myGrants }) {
   const myGrantsByTeam = Object.fromEntries(myGrants.map((g) => [g.teamId, g]));
   const clubs = identity.allClubs || [];

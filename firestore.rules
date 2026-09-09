@@ -102,6 +102,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSystemAdmin() || isClubManager(request.resource.data.clubId);
       allow update, delete: if isSystemAdmin() || isClubManager(resource.data.clubId);
+
+      // Versión mínima y pública de la plantilla (solo nombre y dorsal, sin
+      // foto ni otros datos): permite elegir "de qué jugador/a soy familiar"
+      // al pedir tutela sin necesitar ya el acceso aprobado que exige leer
+      // la colección "players" completa. La escribe quien gestiona la
+      // plantilla, igual que "players".
+      match /rosterDirectory/{playerId} {
+        allow read: if isSignedIn();
+        allow create, update: if canManageTeamCapability(request.resource.data.clubId, teamId, 'manageRoster');
+        allow delete: if canManageTeamCapability(resource.data.clubId, teamId, 'manageRoster');
+      }
     }
 
     match /staffMemberships/{membershipDocId} {

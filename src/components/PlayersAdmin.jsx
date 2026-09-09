@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePlayers } from '../hooks/usePlayers';
 import { useClubs } from '../hooks/useClubs';
 import { useTeams } from '../hooks/useTeams';
@@ -67,7 +67,14 @@ const SORTS = {
 };
 
 export default function PlayersAdmin({ clubId, teamId, teamName }) {
-  const { players, addPlayer, updatePlayer, removePlayer } = usePlayers(clubId, teamId);
+  const { players, addPlayer, updatePlayer, removePlayer, backfillRosterDirectory } = usePlayers(clubId, teamId);
+  const backfilledTeams = useRef(new Set());
+  useEffect(() => {
+    if (teamId && players.length > 0 && !backfilledTeams.current.has(teamId)) {
+      backfilledTeams.current.add(teamId);
+      backfillRosterDirectory();
+    }
+  }, [teamId, players, backfillRosterDirectory]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');

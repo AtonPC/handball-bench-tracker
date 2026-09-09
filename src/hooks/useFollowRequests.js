@@ -57,18 +57,21 @@ export function requestFollow(teamId, user) {
   });
 }
 
-// `playerLabel` es texto libre (p.ej. "Juan Pérez, dorsal 7") que escribe la
-// propia persona solicitante, no una referencia a un documento de `players`:
-// las reglas ya endurecidas de "players" exigen tener acceso aprobado al
-// equipo para leer su plantilla, y quien todavía no tiene ese acceso no
-// puede elegir de una lista — el club valida el dato a mano al aprobar.
-export function requestGuardianship(teamId, playerLabel, user) {
+// `player` es una fila de useRosterDirectory (solo {id, displayName,
+// number} — la versión pública mínima de la plantilla). Se desnormalizan
+// nombre y dorsal en el propio documento para que el club no necesite
+// otra lectura al revisar la solicitud; `playerId` se guarda por si hace
+// falta cruzarlo más adelante, pero el acceso concedido es siempre a todo
+// el equipo, no solo a ese jugador/a (decisión de producto ya tomada).
+export function requestGuardianship(teamId, player, user) {
   return setDoc(doc(db, 'guardianships', guardianshipDocId(teamId, user.uid)), {
     personUid: user.uid,
     personDisplayName: user.displayName || user.email || '',
     personEmail: user.email || '',
     teamId,
-    playerLabel,
+    playerId: player.id,
+    playerName: player.displayName || '',
+    playerNumber: player.number ?? null,
     status: 'pending',
     createdAt: Date.now(),
     respondedAt: null,
@@ -84,9 +87,9 @@ export function useAccessRequestActions() {
     return deleteDoc(doc(db, KIND_TO_COLLECTION[kind], KIND_TO_DOC_ID[kind](teamId, uid)));
   }, []);
 
-  const retryRequest = useCallback(async (kind, teamId, user, playerLabel) => {
+  const retryRequest = useCallback(async (kind, teamId, user, player) => {
     await deleteDoc(doc(db, KIND_TO_COLLECTION[kind], KIND_TO_DOC_ID[kind](teamId, user.uid)));
-    if (kind === 'guardianship') return requestGuardianship(teamId, playerLabel, user);
+    if (kind === 'guardianship') return requestGuardianship(teamId, player, user);
     return requestFollow(teamId, user);
   }, []);
 
