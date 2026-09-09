@@ -43,6 +43,30 @@ service cloud.firestore {
       return isSystemAdmin() || isClubManager(clubId) || hasCapability(teamId, capability);
     }
 
+    function isActiveStaff(teamId) {
+      return hasMembership(teamId) && membershipData(teamId).active == true;
+    }
+
+    // Un follow o una tutela aprobados dan acceso de lectura a todo el
+    // equipo (misma decisión de producto para ambos). Id determinista
+    // teamId_uid — ver followDocId/guardianshipDocId en permissions.js.
+    function isApprovedForTeam(teamId) {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/follows/$(teamId + '_' + request.auth.uid)) &&
+          get(/databases/$(database)/documents/follows/$(teamId + '_' + request.auth.uid)).data.status == 'approved') ||
+        (exists(/databases/$(database)/documents/guardianships/$(teamId + '_' + request.auth.uid)) &&
+          get(/databases/$(database)/documents/guardianships/$(teamId + '_' + request.auth.uid)).data.status == 'approved')
+      );
+    }
+
+    // Puede leer los datos (plantilla/partidos) de un equipo: admin, gestor
+    // del club dueño, staff activo del equipo, o Seguidor/tutor aprobado.
+    // Sustituye el "cualquier usuario registrado puede leer" original.
+    function canViewTeamData(clubId, teamId) {
+      return isSignedIn() &&
+        (isSystemAdmin() || isClubManager(clubId) || isActiveStaff(teamId) || isApprovedForTeam(teamId));
+    }
+
     // Perfiles de usuario: el flag de administrador de sistema vive aquí.
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isSystemAdmin());
@@ -123,7 +147,7 @@ service cloud.firestore {
 
     // Plantilla: pertenece a un equipo concreto.
     match /players/{playerId} {
-      allow read: if isSignedIn();
+      allow read: if canViewTeamData(resource.data.clubId, resource.data.teamId);
       allow create: if canManageTeamCapability(request.resource.data.clubId, request.resource.data.teamId, 'manageRoster');
       allow update, delete: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'manageRoster');
     }
@@ -131,13 +155,16 @@ service cloud.firestore {
     // Partido: la convocatoria la gestiona quien puede gestionar la
     // plantilla del equipo; la consola en vivo, quien tenga esa capacidad.
     match /matches/{matchId} {
-      allow read: if isSignedIn();
+      allow read: if canViewTeamData(resource.data.clubId, resource.data.teamId);
       allow create: if canManageTeamCapability(request.resource.data.clubId, request.resource.data.teamId, 'manageRoster');
       allow update: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'benchConsole');
       allow delete: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'manageRoster');
 
       match /players/{playerId} {
-        allow read: if isSignedIn();
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
         allow write: if canManageTeamCapability(
           get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
           get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
@@ -146,7 +173,10 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
-        allow read: if isSignedIn();
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
         allow write: if canManageTeamCapability(
           get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
           get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
@@ -156,7 +186,10 @@ service cloud.firestore {
 
       // Detalle de cada gol rival: dorsal, minuto y zonas (opcional).
       match /rivalGoals/{rivalGoalId} {
-        allow read: if isSignedIn();
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
         allow write: if canManageTeamCapability(
           get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
           get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
@@ -166,7 +199,10 @@ service cloud.firestore {
 
       // Detalle de cada gol/fallo propio: jugador, minuto y zonas (opcional).
       match /shotEvents/{shotEventId} {
-        allow read: if isSignedIn();
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
         allow write: if canManageTeamCapability(
           get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
           get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
@@ -176,7 +212,10 @@ service cloud.firestore {
 
       // Detalle de cada parada del portero: jugador, minuto y zona (opcional).
       match /saveEvents/{saveEventId} {
-        allow read: if isSignedIn();
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
         allow write: if canManageTeamCapability(
           get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
           get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
