@@ -108,7 +108,14 @@ export function useAuth() {
         });
       }
     } catch (err) {
-      setError(err.message);
+      if (err.code === 'auth/missing-initial-state' || /missing initial state/i.test(err.message)) {
+        setError(
+          'No se ha podido completar el inicio de sesión en este navegador. Si has abierto el enlace desde ' +
+          'WhatsApp, Instagram u otra app, ábrelo en Safari o Chrome y vuelve a intentarlo.'
+        );
+      } else {
+        setError(err.message);
+      }
     }
   }
 
