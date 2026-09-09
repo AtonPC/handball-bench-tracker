@@ -48,6 +48,34 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
     });
   }, [matches, filters]);
 
+  // Un partido "en juego" no se puede borrar — no entra en la selección masiva.
+  const [selectedMatchIds, setSelectedMatchIds] = useState([]);
+  const selectableMatches = useMemo(() => filteredMatches.filter((m) => m.lifecycle !== 'live'), [filteredMatches]);
+
+  function toggleMatchSelect(id) {
+    setSelectedMatchIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function selectAllMatches() {
+    setSelectedMatchIds(selectableMatches.map((m) => m.id));
+  }
+
+  function deselectAllMatches() {
+    setSelectedMatchIds([]);
+  }
+
+  async function handleBulkDelete() {
+    const hasFinished = selectedMatchIds.some((id) => matches.find((m) => m.id === id)?.lifecycle === 'finished');
+    const message = hasFinished
+      ? `¿Borrar ${selectedMatchIds.length} partido(s)? Los finalizados perderán sus estadísticas y no se puede deshacer.`
+      : `¿Borrar ${selectedMatchIds.length} partido(s) programado(s)?`;
+    if (!confirm(message)) return;
+    for (const id of selectedMatchIds) {
+      await removeMatch(id);
+    }
+    setSelectedMatchIds([]);
+  }
+
   function toggleCallUp(id) {
     const isRemoving = callUpIds.includes(id);
     setCallUpIds((prev) => (isRemoving ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -316,9 +344,33 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
         />
       </div>
 
+      {canManageRoster && selectableMatches.length > 0 && (
+        <div className="matches-header">
+          <p className="modal-hint" style={{ margin: 0 }}>
+            {selectedMatchIds.length} seleccionado{selectedMatchIds.length === 1 ? '' : 's'}
+          </p>
+          <div className="player-form-actions">
+            <button type="button" className="btn btn-timeout" onClick={selectAllMatches}>Seleccionar todos</button>
+            <button type="button" className="btn btn-timeout" onClick={deselectAllMatches}>Desmarcar todos</button>
+            {selectedMatchIds.length > 0 && (
+              <button type="button" className="btn btn-timeout btn-danger-text" onClick={handleBulkDelete}>
+                Borrar seleccionados ({selectedMatchIds.length})
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="admin-list">
         {filteredMatches.map((m) => (
           <div key={m.id} className="admin-row match-row">
+            {canManageRoster && m.lifecycle !== 'live' && (
+              <input
+                type="checkbox"
+                checked={selectedMatchIds.includes(m.id)}
+                onChange={() => toggleMatchSelect(m.id)}
+              />
+            )}
             <div className="admin-user-info">
               <span className="admin-user-name">
                 {m.isHome ? `${m.ownTeamName || 'Mi equipo'} vs ${m.rivalName}` : `${m.rivalName} vs ${m.ownTeamName || 'Mi equipo'}`}
