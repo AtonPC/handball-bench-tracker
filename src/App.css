@@ -1071,3 +1071,32 @@
     font-size: 24px;
   }
 }
+
+/* ---------- Sistema de diseño: tarjetas ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  border-left: 3px solid var(--team-primary);
+}
+.card h4 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.card p {
+  margin: 0;
+  padding: var(--space-1) 0;
+  font-size: 14px;
+}
