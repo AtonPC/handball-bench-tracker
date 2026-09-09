@@ -15,6 +15,8 @@ import SystemAdmin from './components/SystemAdmin';
 import ClubAdmin from './components/ClubAdmin';
 import StaffAdmin from './components/StaffAdmin';
 import AppSidebar from './components/AppSidebar';
+import FollowRequestScreen from './components/FollowRequestScreen';
+import { useMyAccessGrants } from './hooks/useFollowRequests';
 
 export default function App() {
   const auth = useAuth();
@@ -61,6 +63,7 @@ export default function App() {
   const canManageClub = activeClubId ? isClubManagerOf(identity, activeClubId) : false;
 
   const store = useMatchStore(openMatchId, isAuthed);
+  const { all: myGrants } = useMyAccessGrants(auth.user?.uid);
 
   if (auth.loading) {
     return <div className="app-loading">Cargando…</div>;
@@ -72,18 +75,7 @@ export default function App() {
 
   const hasAnyAccess = teams.length > 0 || managedClubs.length > 0 || isAdmin;
   if (!hasAnyAccess) {
-    return (
-      <div className="app-shell">
-        <nav className="admin-nav">
-          <span className="admin-nav-role">{auth.user.displayName || auth.user.email}</span>
-          <button className="btn btn-logout" onClick={auth.logout}>SALIR</button>
-        </nav>
-        <div className="app-loading">
-          Todavía no perteneces a ningún equipo. Pídele a tu club que te dé de alta como staff, o espera a que
-          se active el flujo de seguidores.
-        </div>
-      </div>
-    );
+    return <FollowRequestScreen identity={identity} user={auth.user} onLogout={auth.logout} myGrants={myGrants} />;
   }
 
   function openMatch(matchId) {

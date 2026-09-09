@@ -57,13 +57,18 @@ export function requestFollow(teamId, user) {
   });
 }
 
-export function requestGuardianship(teamId, playerId, user) {
+// `playerLabel` es texto libre (p.ej. "Juan Pérez, dorsal 7") que escribe la
+// propia persona solicitante, no una referencia a un documento de `players`:
+// las reglas ya endurecidas de "players" exigen tener acceso aprobado al
+// equipo para leer su plantilla, y quien todavía no tiene ese acceso no
+// puede elegir de una lista — el club valida el dato a mano al aprobar.
+export function requestGuardianship(teamId, playerLabel, user) {
   return setDoc(doc(db, 'guardianships', guardianshipDocId(teamId, user.uid)), {
     personUid: user.uid,
     personDisplayName: user.displayName || user.email || '',
     personEmail: user.email || '',
     teamId,
-    playerId,
+    playerLabel,
     status: 'pending',
     createdAt: Date.now(),
     respondedAt: null,
@@ -79,9 +84,9 @@ export function useAccessRequestActions() {
     return deleteDoc(doc(db, KIND_TO_COLLECTION[kind], KIND_TO_DOC_ID[kind](teamId, uid)));
   }, []);
 
-  const retryRequest = useCallback(async (kind, teamId, user, playerId) => {
+  const retryRequest = useCallback(async (kind, teamId, user, playerLabel) => {
     await deleteDoc(doc(db, KIND_TO_COLLECTION[kind], KIND_TO_DOC_ID[kind](teamId, user.uid)));
-    if (kind === 'guardianship') return requestGuardianship(teamId, playerId, user);
+    if (kind === 'guardianship') return requestGuardianship(teamId, playerLabel, user);
     return requestFollow(teamId, user);
   }, []);
 
