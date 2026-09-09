@@ -28,6 +28,18 @@ export function membershipDocId(teamId, uid) {
   return `${teamId}_${uid}`;
 }
 
+// Un follow o una tutela (guardianship) aprobados dan el mismo acceso de
+// lectura a todo el equipo — un id determinista por (equipo, persona) evita
+// duplicados y permite que las reglas de Firestore comprueben el acceso con
+// exists()/get() en vez de una query.
+export function followDocId(teamId, uid) {
+  return `${teamId}_${uid}`;
+}
+
+export function guardianshipDocId(teamId, uid) {
+  return `${teamId}_${uid}`;
+}
+
 export function isSystemAdmin(identity) {
   return identity?.systemRole === 'admin';
 }
