@@ -5,6 +5,7 @@ import RivalPanel from './RivalPanel';
 import SubstitutionModal from './SubstitutionModal';
 import RivalGoalModal from './RivalGoalModal';
 import ShotDetailModal from './ShotDetailModal';
+import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
 
 export default function BenchConsole({ store, onBack, onFinish }) {
@@ -12,6 +13,7 @@ export default function BenchConsole({ store, onBack, onFinish }) {
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
+  const [saveDetailForId, setSaveDetailForId] = useState(null);
   const [showQuickStats, setShowQuickStats] = useState(false);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
@@ -53,7 +55,7 @@ export default function BenchConsole({ store, onBack, onFinish }) {
               shotDec: () => store.playerShot(player.id, -1),
               recoveryInc: () => store.playerRecovery(player.id, 1),
               recoveryDec: () => store.playerRecovery(player.id, -1),
-              saveInc: () => store.playerSave(player.id, 1),
+              saveInc: () => setSaveDetailForId(player.id),
               saveDec: () => store.playerSave(player.id, -1),
               exclusionStart: () => handleExclusionStart(player.id),
               exclusionCancel: () => store.cancelExclusion(player.id),
@@ -104,6 +106,17 @@ export default function BenchConsole({ store, onBack, onFinish }) {
             setShotDetailFor(null);
           }}
           onCancel={() => setShotDetailFor(null)}
+        />
+      )}
+
+      {saveDetailForId && (
+        <SaveDetailModal
+          playerName={state.players[saveDetailForId]?.name}
+          onConfirm={(detail) => {
+            store.playerSaveWithDetail(saveDetailForId, detail);
+            setSaveDetailForId(null);
+          }}
+          onCancel={() => setSaveDetailForId(null)}
         />
       )}
 

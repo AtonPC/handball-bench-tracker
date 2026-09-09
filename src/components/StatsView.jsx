@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
+import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useSortableTable } from '../hooks/useSortableTable';
 import SortableTh from './SortableTh';
 import { SHOT_ZONES, GOAL_ZONES } from '../shotZones';
@@ -35,6 +36,7 @@ export default function StatsView({ store }) {
   }, [rivalGoals]);
 
   const shotEvents = useShotEvents(matchId);
+  const saveEvents = useSaveEvents(matchId);
   const nameById = useMemo(() => {
     const map = {};
     for (const p of Object.values(state.players)) map[p.id] = p.name;
@@ -70,11 +72,14 @@ export default function StatsView({ store }) {
   ];
   const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(players, columns, 'number');
 
-  // Toca Goles/Fallos/Tiros para desplegar de dónde vino cada uno — un toque
-  // funciona igual en tablet/móvil que un hover, que ahí no existe.
-  const [expanded, setExpanded] = useState(null); // { playerId, type: 'goal'|'miss'|'attempts' }
+  // Toca Goles/Fallos/Tiros/Paradas para desplegar de dónde vino cada uno —
+  // un toque funciona igual en tablet/móvil que un hover, que ahí no existe.
+  const [expanded, setExpanded] = useState(null); // { playerId, type: 'goal'|'miss'|'attempts'|'save' }
 
   function eventsFor(playerId, type) {
+    if (type === 'save') {
+      return saveEvents.filter((s) => s.playerId === playerId).sort((a, b) => a.minute - b.minute);
+    }
     return shotEvents
       .filter((s) => s.playerId === playerId && (type === 'attempts' || s.type === type))
       .sort((a, b) => a.minute - b.minute);
@@ -111,6 +116,18 @@ export default function StatsView({ store }) {
       return true;
     });
   }, [shotEvents, shotFilter]);
+
+  // --- Filtros de "Paradas" ---
+  const [saveFilter, setSaveFilter] = useState({ playerId: ANY, goalZone: ANY, minMinute: '', maxMinute: '' });
+  const filteredSaveEvents = useMemo(() => {
+    return saveEvents.filter((s) => {
+      if (saveFilter.playerId !== ANY && s.playerId !== saveFilter.playerId) return false;
+      if (saveFilter.goalZone !== ANY && s.goalZone !== saveFilter.goalZone) return false;
+      if (saveFilter.minMinute && s.minute < Number(saveFilter.minMinute)) return false;
+      if (saveFilter.maxMinute && s.minute > Number(saveFilter.maxMinute)) return false;
+      return true;
+    });
+  }, [saveEvents, saveFilter]);
 
   return (
     <div className="stats-view">
@@ -181,7 +198,7 @@ export default function StatsView({ store }) {
                   <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'miss')}>{p.shots}</button></td>
                   <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'attempts')}>{p.attempts}</button></td>
                   <td>{pct(p.goals, p.attempts)}</td>
-                  <td>{p.saves || 0}</td>
+                  <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'save')}>{p.saves || 0}</button></td>
                   <td>{p.recoveries}</td>
                   <td>{pct(p.recoveries, teamRecoveries)}</td>
                   <td>{p.exclusionsCount || 0}</td>
@@ -191,13 +208,19 @@ export default function StatsView({ store }) {
                   <tr className="stats-detail-row">
                     <td colSpan={13}>
                       {eventsFor(p.id, expanded.type).length === 0 ? (
-                        <span className="modal-hint">Sin lanzamientos con zona registrados para esto.</span>
+                        <span className="modal-hint">Sin eventos con zona registrados para esto.</span>
                       ) : (
                         <ul className="stats-detail-list">
                           {eventsFor(p.id, expanded.type).map((s) => (
                             <li key={s.id}>
-                              Min. {s.minute}' — {s.type === 'goal' ? 'Gol' : 'Fallo'} · lanzó desde: {s.shotZone || 'sin zona'}
-                              {s.type === 'goal' ? ` · entró por: ${s.goalZone || 'sin zona'}` : ''}
+                              {expanded.type === 'save' ? (
+                                <>Min. {s.minute}' — Parada · zona: {s.goalZone || 'sin zona'}</>
+                              ) : (
+                                <>
+                                  Min. {s.minute}' — {s.type === 'goal' ? 'Gol' : 'Fallo'} · lanzó desde: {s.shotZone || 'sin zona'}
+                                  {s.type === 'goal' ? ` · entró por: ${s.goalZone || 'sin zona'}` : ''}
+                                </>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -308,6 +331,47 @@ export default function StatsView({ store }) {
                 ))}
                 {filteredShotEvents.length === 0 && (
                   <tr><td colSpan={5}><p className="modal-hint">Ningún lanzamiento coincide con el filtro.</p></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {saveEvents.length > 0 && (
+        <>
+          <h3 className="stats-section-title">Paradas (con zona)</h3>
+          <div className="list-filters">
+            <select className="player-form-input" value={saveFilter.playerId} onChange={(e) => setSaveFilter({ ...saveFilter, playerId: e.target.value })}>
+              <option value={ANY}>Todos los jugadores</option>
+              {players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select className="player-form-input" value={saveFilter.goalZone} onChange={(e) => setSaveFilter({ ...saveFilter, goalZone: e.target.value })}>
+              <option value={ANY}>Toda zona</option>
+              {GOAL_ZONES.map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <input className="player-form-input player-form-input--number" type="number" placeholder="Minuto desde" value={saveFilter.minMinute} onChange={(e) => setSaveFilter({ ...saveFilter, minMinute: e.target.value })} />
+            <input className="player-form-input player-form-input--number" type="number" placeholder="Minuto hasta" value={saveFilter.maxMinute} onChange={(e) => setSaveFilter({ ...saveFilter, maxMinute: e.target.value })} />
+          </div>
+          <div className="stats-table-wrap">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th>Min.</th>
+                  <th>Jugador</th>
+                  <th>Zona</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSaveEvents.map((s) => (
+                  <tr key={s.id}>
+                    <td>{s.minute}'</td>
+                    <td>{nameById[s.playerId] || s.playerId}</td>
+                    <td>{s.goalZone || '—'}</td>
+                  </tr>
+                ))}
+                {filteredSaveEvents.length === 0 && (
+                  <tr><td colSpan={3}><p className="modal-hint">Ninguna parada coincide con el filtro.</p></td></tr>
                 )}
               </tbody>
             </table>

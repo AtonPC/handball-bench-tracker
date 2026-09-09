@@ -173,6 +173,16 @@ service cloud.firestore {
           'benchConsole'
         );
       }
+
+      // Detalle de cada parada del portero: jugador, minuto y zona (opcional).
+      match /saveEvents/{saveEventId} {
+        allow read: if isSignedIn();
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
     }
   }
 }

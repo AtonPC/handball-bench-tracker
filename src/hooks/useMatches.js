@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 
-const MATCH_SUBCOLLECTIONS = ['players', 'events', 'rivalGoals', 'shotEvents'];
+const MATCH_SUBCOLLECTIONS = ['players', 'events', 'rivalGoals', 'shotEvents', 'saveEvents'];
 
 const matchesCol = collection(db, 'matches');
 

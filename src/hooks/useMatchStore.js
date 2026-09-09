@@ -346,6 +346,24 @@ export function useMatchStore(matchId, enabled) {
     [players, recordEvent]
   );
 
+  // Parada con zona: se guarda como documento propio en
+  // matches/{id}/saveEvents, igual que el gol/fallo propio.
+  const playerSaveWithDetail = useCallback(
+    (playerId, { goalZone }) => {
+      if (!match) return;
+      const next = Math.max(0, players[playerId].saves + 1);
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'saveEvents'));
+      recordEvent('Parada', {}, { [playerId]: { saves: next } }, {
+        create: {
+          ref,
+          data: { playerId, minute, period: match.period, goalZone: goalZone || null, createdAt: Date.now() },
+        },
+      });
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
   // A la 3ª exclusión, el jugador queda expulsado del partido (tarjeta roja).
   // No se toca courtSlots aquí: el jugador se queda en su sitio (sin poder
   // seguir jugando) hasta que el banquillo elige quién entra por él, con
@@ -507,6 +525,7 @@ export function useMatchStore(matchId, enabled) {
     playerShotWithDetail,
     playerRecovery,
     playerSave,
+    playerSaveWithDetail,
     playerExclusion,
     cancelExclusion,
     substitute,
