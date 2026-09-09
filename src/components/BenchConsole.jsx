@@ -7,8 +7,9 @@ import RivalGoalModal from './RivalGoalModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
+import { teamColorStyle } from '../utils/teamColors';
 
-export default function BenchConsole({ store, onBack, onFinish }) {
+export default function BenchConsole({ store, onBack, onFinish, team }) {
   const { state } = store;
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
@@ -39,7 +40,7 @@ export default function BenchConsole({ store, onBack, onFinish }) {
   }
 
   return (
-    <div className="bench-console">
+    <div className="bench-console" style={teamColorStyle(team)}>
       <MatchHeader store={store} onBack={onBack} onFinish={onFinish} onOpenQuickStats={() => setShowQuickStats(true)} />
 
       <div className="player-panel">

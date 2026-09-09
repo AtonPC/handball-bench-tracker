@@ -6,6 +6,7 @@ import { useShotEvents } from '../hooks/useShotEvents';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { formatClock } from '../utils/time';
+import { teamColorStyle } from '../utils/teamColors';
 import GoalCelebration from './GoalCelebration';
 
 // Nombre a mostrar de un jugador propio, respetando imageAuthorized: si el
@@ -209,7 +210,7 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
   const activeTeam = teams.find((t) => t.id === teamId) || null;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={teamColorStyle(activeTeam)}>
       <nav className="admin-nav">
         <span className="admin-nav-role">{user.displayName || user.email}</span>
         {teams.length > 1 && (

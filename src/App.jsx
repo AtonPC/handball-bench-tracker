@@ -15,6 +15,7 @@ import SystemAdmin from './components/SystemAdmin';
 import ClubAdmin from './components/ClubAdmin';
 import StaffAdmin from './components/StaffAdmin';
 import FollowApprovals from './components/FollowApprovals';
+import { teamColorStyle } from './utils/teamColors';
 import AppSidebar from './components/AppSidebar';
 import FollowRequestScreen from './components/FollowRequestScreen';
 import FollowerHome from './components/FollowerHome';
@@ -124,6 +125,7 @@ export default function App() {
     return (
       <BenchConsole
         store={store}
+        team={activeTeam}
         onBack={backToMatches}
         onFinish={async () => {
           await store.finishMatch();
@@ -146,7 +148,7 @@ export default function App() {
   ].filter(Boolean);
 
   return (
-    <div className="app-layout">
+    <div className="app-layout" style={teamColorStyle(activeTeam)}>
       <AppSidebar
         roleLabel={roleLabel}
         clubOptions={clubOptions}
