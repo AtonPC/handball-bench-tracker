@@ -12,7 +12,7 @@
 
 .app-layout {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   min-height: 100svh;
 }
 .app-main {
@@ -23,25 +23,30 @@
   overflow: hidden;
 }
 
+/* Móvil/tablet (por defecto): el sidebar es solo una barra estrecha con el
+   botón de menú — nunca un carril de iconos permanente que reste ancho al
+   contenido. Al pulsar, se abre como cajón (drawer) a pantalla completa. */
 .app-sidebar {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  width: 64px;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  width: auto;
+  height: 52px;
   flex-shrink: 0;
   background: var(--panel-alt);
-  border-right: 1px solid var(--border);
-  padding: var(--space-3) var(--space-2);
-  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+  padding: 0 var(--space-3);
+  overflow: visible;
 }
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--space-2);
+  flex: 1;
 }
 .sidebar-brand-text {
-  display: none;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 18px;
@@ -60,26 +65,17 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
 }
-.sidebar-role {
+.sidebar-role,
+.sidebar-select,
+.sidebar-tabs,
+.sidebar-logout {
   display: none;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-.sidebar-select {
-  display: none;
-  width: 100%;
-}
-.sidebar-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  flex: 1;
 }
 .sidebar-tab {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-2);
   border: 1px solid transparent;
   background: transparent;
@@ -97,68 +93,94 @@
   color: var(--text);
 }
 .sidebar-tab-label {
-  display: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sidebar-logout {
+.sidebar-scrim {
+  display: none;
+}
+
+/* Cajón desplegable en móvil/tablet: ocupa toda la altura, con fondo oscuro
+   detrás para cerrar tocando fuera. */
+.app-sidebar--expanded {
+  position: fixed;
+  inset: 0 auto 0 0;
+  flex-direction: column;
+  align-items: stretch;
+  width: 260px;
+  height: 100%;
+  border-bottom: none;
+  border-right: 1px solid var(--border);
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-3);
+  z-index: 60;
+  box-shadow: var(--shadow-card);
+  overflow-y: auto;
+}
+.app-sidebar--expanded .sidebar-role,
+.app-sidebar--expanded .sidebar-select {
+  display: block;
+}
+.app-sidebar--expanded .sidebar-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+.app-sidebar--expanded .sidebar-logout {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
 }
-.sidebar-scrim {
-  display: none;
-}
-
-.app-sidebar--expanded {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 240px;
-  z-index: 60;
-  box-shadow: var(--shadow-card);
-}
-.app-sidebar--expanded .sidebar-brand-text,
-.app-sidebar--expanded .sidebar-role,
-.app-sidebar--expanded .sidebar-select,
-.app-sidebar--expanded .sidebar-tab-label {
-  display: block;
-}
-.app-sidebar--expanded .sidebar-header {
-  justify-content: space-between;
-}
-.app-sidebar--expanded .sidebar-tab {
-  justify-content: flex-start;
-}
 .app-sidebar--expanded .sidebar-scrim {
   display: block;
   position: fixed;
   inset: 0;
-  left: 240px;
+  left: 260px;
   background: rgba(0, 0, 0, 0.5);
 }
 
 @media (min-width: 900px) {
+  .app-layout {
+    flex-direction: row;
+  }
   .app-sidebar {
     position: static;
+    flex-direction: column;
+    align-items: stretch;
     width: 240px;
+    height: auto;
+    gap: var(--space-3);
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    padding: var(--space-3) var(--space-2);
+    overflow-y: auto;
   }
   .app-sidebar .sidebar-header {
     justify-content: space-between;
   }
-  .app-sidebar .sidebar-brand-text,
   .app-sidebar .sidebar-role,
-  .app-sidebar .sidebar-select,
-  .app-sidebar .sidebar-tab-label {
+  .app-sidebar .sidebar-select {
     display: block;
+  }
+  .app-sidebar .sidebar-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    flex: 1;
+  }
+  .app-sidebar .sidebar-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
   }
   .app-sidebar .sidebar-toggle {
     display: none;
-  }
-  .app-sidebar .sidebar-tab {
-    justify-content: flex-start;
   }
 }
 
