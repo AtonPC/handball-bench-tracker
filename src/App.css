@@ -444,11 +444,16 @@
 .stats-summary-item {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-left: 3px solid var(--team-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.stats-summary-item--score {
+  border-left-color: var(--own);
 }
 .stats-summary-label {
   font-size: 12px;
@@ -456,25 +461,29 @@
 }
 .stats-summary-value {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+.stats-summary-item--score .stats-summary-value {
+  font-size: 32px;
 }
 
 .stats-table-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .stats-table th,
 .stats-table td {
-  padding: 8px 10px;
+  padding: 10px 12px;
   text-align: right;
 }
 .stats-table th:nth-child(-n+2),
@@ -484,7 +493,11 @@
 .stats-table thead th {
   background: var(--panel-alt);
   color: var(--text-dim);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--team-primary);
   position: sticky;
   top: 0;
 }
@@ -501,6 +514,9 @@
 .stats-table tbody tr.stats-row--danger:nth-child(even),
 .stats-table tbody tr.stats-row--danger:nth-child(odd) {
   background: var(--danger-dim);
+}
+.stats-table tbody tr:hover {
+  filter: brightness(1.12);
 }
 .sortable-th {
   cursor: pointer;
@@ -609,6 +625,16 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: hidden;
+}
+.match-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--team-primary), var(--team-secondary));
 }
 
 .header-row {
@@ -623,7 +649,7 @@
   align-items: baseline;
   gap: 6px;
   font-weight: 700;
-  font-size: 30px;
+  font-size: 38px;
   font-variant-numeric: tabular-nums;
 }
 .score-own,
@@ -744,34 +770,49 @@
 }
 
 .player-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow-x: auto;
+  border-left: 4px solid var(--team-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-card);
 }
 .player-row--excluded {
   border-color: var(--danger);
 }
 .player-row--excl-1 {
   background: var(--warning-dim);
-  border-color: var(--warning);
+  border-left-color: var(--warning);
 }
 .player-row--excl-2 {
   background: var(--danger-dim);
-  border-color: var(--danger);
+  border-left-color: var(--danger);
 }
 .player-row--disqualified {
   background: var(--danger-dim);
-  border-color: var(--danger);
-  opacity: 0.6;
+  border-left-color: var(--danger);
+  opacity: 0.65;
 }
 .excl-dots {
   color: var(--warning);
   letter-spacing: -1px;
+}
+
+.player-row-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.player-row-stats {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.player-row-stats .stat-stepper {
+  flex: 1 1 96px;
 }
 
 .player-identity {
@@ -783,27 +824,42 @@
 
 .player-number {
   flex-shrink: 0;
-  min-width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--panel-alt);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--team-primary);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 19px;
+}
+.gk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--team-secondary);
+  color: #10131a;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
 }
 
 .player-name-block {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   line-height: 1.2;
-  min-width: 62px;
 }
 .player-name {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -838,17 +894,17 @@
   padding: 2px;
 }
 .stat-btn {
-  width: 22px;
-  height: 28px;
+  width: 32px;
+  height: 38px;
   min-height: 0;
   border: none;
   background: transparent;
   color: var(--text-dim);
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
   padding: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
 }
 .stat-btn:active {
@@ -863,20 +919,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
+  min-width: 56px;
   line-height: 1;
   gap: 2px;
-  padding: 0 2px;
+  padding: 0 4px;
 }
 .stat-icon {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--text-dim);
   white-space: nowrap;
 }
 .stat-count {
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -889,13 +946,13 @@
   border: 1px solid var(--border);
   background: var(--panel-alt);
   color: var(--text);
-  border-radius: 8px;
-  min-width: 38px;
-  height: 36px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  min-width: 48px;
+  height: 44px;
+  font-size: 14px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  padding: 0 6px;
+  padding: 0 10px;
   cursor: pointer;
 }
 .excl-btn--active {
@@ -939,9 +996,12 @@
   border: 1px solid var(--border);
   background: var(--panel-alt);
   color: var(--text);
-  border-radius: 8px;
-  width: 38px;
-  height: 36px;
+  border-radius: var(--radius-sm);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 16px;
   cursor: pointer;
 }
@@ -1241,8 +1301,17 @@
    todo el ancho disponible para tocar cómodamente durante el partido ---------- */
 @media (min-width: 900px) and (orientation: landscape) {
   .player-row {
+    flex-direction: row;
+    align-items: center;
     padding: 12px 16px;
     gap: 10px;
+  }
+  /* En pantalla ancha hay sitio de sobra: se deshace el apilado en dos
+     líneas (pensado para tablet en vertical/móvil) y todo vuelve a ser
+     una sola fila, como antes de la fase de rediseño. */
+  .player-row-top,
+  .player-row-stats {
+    display: contents;
   }
   .player-number,
   .player-name-block {

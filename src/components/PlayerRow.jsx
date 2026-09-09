@@ -16,34 +16,40 @@ export default function PlayerRow({ player, onOpenSubstitution, actions }) {
 
   return (
     <div className={`player-row${player.excluded ? ' player-row--excluded' : ''}${exclusionRowClass(player)}`}>
-      <span className="player-number">{player.number}</span>
+      <div className="player-row-top">
+        <span className="player-number">{player.number}</span>
 
-      <div className="player-name-block">
-        <span className="player-name">
-          {player.name}{player.isGK ? ' (P)' : ''}{dots && <span className="excl-dots"> {dots}</span>}
-        </span>
-        <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
+        <div className="player-name-block">
+          <span className="player-name">
+            {player.name}
+            {player.isGK && <span className="gk-badge">P</span>}
+            {dots && <span className="excl-dots"> {dots}</span>}
+          </span>
+          <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
+        </div>
+
+        <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} />
+
+        <button className="btn-change-icon" onClick={onOpenSubstitution} aria-label="Cambio">
+          <Repeat size={20} />
+        </button>
       </div>
 
-      {player.isGK ? (
-        <>
-          <StatStepper icon="PARADA" label="Paradas" count={player.saves || 0} onInc={actions.saveInc} onDec={actions.saveDec} disabled={disabled} />
-          <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
-          <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
-        </>
-      ) : (
-        <>
-          <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
-          <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
-          <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
-        </>
-      )}
-
-      <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} />
-
-      <button className="btn-change-icon" onClick={onOpenSubstitution} aria-label="Cambio">
-        <Repeat size={20} />
-      </button>
+      <div className="player-row-stats">
+        {player.isGK ? (
+          <>
+            <StatStepper icon="PARADA" label="Paradas" count={player.saves || 0} onInc={actions.saveInc} onDec={actions.saveDec} disabled={disabled} />
+            <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
+            <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
+          </>
+        ) : (
+          <>
+            <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
+            <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
+            <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

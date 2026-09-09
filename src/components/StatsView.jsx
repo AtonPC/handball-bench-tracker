@@ -132,7 +132,7 @@ export default function StatsView({ store }) {
   return (
     <div className="stats-view">
       <div className="stats-summary">
-        <div className="stats-summary-item">
+        <div className="stats-summary-item stats-summary-item--score">
           <span className="stats-summary-label">Marcador</span>
           <span className="stats-summary-value">{state.score.own} - {state.score.rival}</span>
         </div>
