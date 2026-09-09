@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { BarChart3, CalendarDays, Settings, Shield, UserCog } from 'lucide-react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
@@ -13,6 +14,7 @@ import PlayersAdmin from './components/PlayersAdmin';
 import SystemAdmin from './components/SystemAdmin';
 import ClubAdmin from './components/ClubAdmin';
 import StaffAdmin from './components/StaffAdmin';
+import AppSidebar from './components/AppSidebar';
 
 export default function App() {
   const auth = useAuth();
@@ -132,108 +134,54 @@ export default function App() {
 
   const roleLabel = isAdmin ? 'Administrador de Sistema' : managedClubs.length > 0 ? 'Gestor de Club' : 'Staff';
 
-  return (
-    <div className="app-shell">
-      <nav className="admin-nav">
-        <span className="admin-nav-role">{roleLabel}</span>
-        {clubOptions.length > 0 && (
-          <select
-            className="admin-role-select"
-            value={activeClubId}
-            onChange={(e) => setActiveClubId(e.target.value)}
-            title="Club activo"
-          >
-            {clubOptions.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        )}
-        {teamsInActiveClub.length > 0 && (
-          <select
-            className="admin-role-select"
-            value={activeTeamId}
-            onChange={(e) => setActiveTeamId(e.target.value)}
-            title="Equipo activo"
-          >
-            {teamsInActiveClub.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        )}
-        <div className="admin-nav-tabs">
-          {teamsInActiveClub.length > 0 && (
-            <button
-              className={`admin-nav-tab${view === 'matches' ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => setView('matches')}
-            >
-              Partidos
-            </button>
-          )}
-          {canManageRoster && (
-            <button
-              className={`admin-nav-tab${view === 'players' ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => setView('players')}
-            >
-              Plantilla
-            </button>
-          )}
-          {teamsInActiveClub.length > 0 && (
-            <button
-              className={`admin-nav-tab${view === 'teamStats' ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => setView('teamStats')}
-            >
-              Estadísticas
-            </button>
-          )}
-          {clubOptions.length > 0 && (
-            <button
-              className={`admin-nav-tab${view === 'club' ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => setView('club')}
-            >
-              Club
-            </button>
-          )}
-          {clubOptions.length > 0 && (
-            <button
-              className={`admin-nav-tab${view === 'staff' ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => setView('staff')}
-            >
-              Staff y Permisos
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className={`admin-nav-tab${view === 'system' ? ' admin-nav-tab--active' : ''}`}
-              onClick={() => setView('system')}
-            >
-              Sistema
-            </button>
-          )}
-        </div>
-        <button className="btn btn-logout" onClick={auth.logout}>SALIR</button>
-      </nav>
+  const tabs = [
+    teamsInActiveClub.length > 0 && { key: 'matches', label: 'Partidos', icon: CalendarDays },
+    canManageRoster && { key: 'players', label: 'Plantilla', icon: UserCog },
+    teamsInActiveClub.length > 0 && { key: 'teamStats', label: 'Estadísticas', icon: BarChart3 },
+    clubOptions.length > 0 && { key: 'club', label: 'Club', icon: Shield },
+    clubOptions.length > 0 && { key: 'staff', label: 'Staff y Permisos', icon: UserCog },
+    isAdmin && { key: 'system', label: 'Sistema', icon: Settings },
+  ].filter(Boolean);
 
-      {view === 'matches' && activeTeam && (
-        <MatchesAdmin
-          clubId={activeTeam.clubId}
-          teamId={activeTeam.id}
-          ownTeamName={activeTeam.name}
-          canManageRoster={canManageRoster}
-          canUseBench={canUseBench}
-          onOpenMatch={openMatch}
-          onOpenStats={openStats}
-          onEditFinishedStats={openEditFinishedStats}
-        />
-      )}
-      {view === 'players' && canManageRoster && activeTeam && (
-        <PlayersAdmin clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} />
-      )}
-      {view === 'teamStats' && activeTeam && (
-        <TeamStats clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} onOpenMatchStats={openStats} />
-      )}
-      {view === 'club' && canManageClub && <ClubAdmin clubId={activeClubId} />}
-      {view === 'staff' && canManageClub && <StaffAdmin clubId={activeClubId} />}
-      {view === 'system' && isAdmin && <SystemAdmin />}
+  return (
+    <div className="app-layout">
+      <AppSidebar
+        roleLabel={roleLabel}
+        clubOptions={clubOptions}
+        activeClubId={activeClubId}
+        onClubChange={setActiveClubId}
+        teamsInActiveClub={teamsInActiveClub}
+        activeTeamId={activeTeamId}
+        onTeamChange={setActiveTeamId}
+        tabs={tabs}
+        view={view}
+        onViewChange={setView}
+        onLogout={auth.logout}
+      />
+
+      <main className="app-main">
+        {view === 'matches' && activeTeam && (
+          <MatchesAdmin
+            clubId={activeTeam.clubId}
+            teamId={activeTeam.id}
+            ownTeamName={activeTeam.name}
+            canManageRoster={canManageRoster}
+            canUseBench={canUseBench}
+            onOpenMatch={openMatch}
+            onOpenStats={openStats}
+            onEditFinishedStats={openEditFinishedStats}
+          />
+        )}
+        {view === 'players' && canManageRoster && activeTeam && (
+          <PlayersAdmin clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} />
+        )}
+        {view === 'teamStats' && activeTeam && (
+          <TeamStats clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} onOpenMatchStats={openStats} />
+        )}
+        {view === 'club' && canManageClub && <ClubAdmin clubId={activeClubId} />}
+        {view === 'staff' && canManageClub && <StaffAdmin clubId={activeClubId} />}
+        {view === 'system' && isAdmin && <SystemAdmin />}
+      </main>
     </div>
   );
 }
