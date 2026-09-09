@@ -4,6 +4,7 @@ import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { usePlayers } from '../hooks/usePlayers';
+import { useTeamStats } from '../hooks/useTeamStats';
 import { formatClock } from '../utils/time';
 import GoalCelebration from './GoalCelebration';
 
@@ -109,8 +110,93 @@ function LiveMatchSection({ clubId, teamId, team }) {
   );
 }
 
+function AccumulatedSection({ clubId, teamId }) {
+  const { matches } = useMatches(clubId, teamId);
+  const finishedMatches = useMemo(() => matches.filter((m) => m.lifecycle === 'finished'), [matches]);
+  const finishedIds = useMemo(() => finishedMatches.map((m) => m.id), [finishedMatches]);
+  const { totals, loading } = useTeamStats(finishedIds);
+  const { players } = usePlayers(clubId, teamId);
+  const authorizedById = useMemo(
+    () => Object.fromEntries(players.map((p) => [p.id, p.imageAuthorized !== false])),
+    [players]
+  );
+
+  const rows = useMemo(
+    () => Object.entries(totals).map(([id, p]) => ({
+      id,
+      ...p,
+      displayName: authorizedById[id] === false ? `Jugador/a #${p.number ?? '?'}` : p.name,
+    })),
+    [totals, authorizedById]
+  );
+
+  const topScorers = useMemo(
+    () => [...rows].filter((p) => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 5),
+    [rows]
+  );
+  const topRecoverers = useMemo(
+    () => [...rows].filter((p) => p.recoveries > 0).sort((a, b) => b.recoveries - a.recoveries).slice(0, 5),
+    [rows]
+  );
+
+  if (loading) return <p className="modal-hint">Calculando…</p>;
+  if (finishedMatches.length === 0) {
+    return <p className="modal-hint">Todavía no hay partidos finalizados.</p>;
+  }
+
+  return (
+    <div style={{ marginTop: 'var(--space-5)' }}>
+      <p className="modal-hint">
+        {finishedMatches.length} partido{finishedMatches.length === 1 ? '' : 's'} finalizado{finishedMatches.length === 1 ? '' : 's'}
+      </p>
+      <div className="card-grid" style={{ marginTop: 'var(--space-3)' }}>
+        <div className="card">
+          <h4>Máximos goleadores</h4>
+          {topScorers.length === 0 && <p>Todavía nadie ha marcado.</p>}
+          {topScorers.map((p, i) => (
+            <p key={p.id}>{i + 1}. #{p.number} {p.displayName} — {p.goals} gol{p.goals === 1 ? '' : 'es'}</p>
+          ))}
+        </div>
+        <div className="card">
+          <h4>Máximas recuperadoras</h4>
+          {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
+          {topRecoverers.map((p, i) => (
+            <p key={p.id}>{i + 1}. #{p.number} {p.displayName} — {p.recoveries} recup.</p>
+          ))}
+        </div>
+      </div>
+      <div className="stats-table-wrap" style={{ marginTop: 'var(--space-4)' }}>
+        <table className="stats-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Jugador/a</th>
+              <th>Jugados</th>
+              <th>Convocados</th>
+              <th>Goles</th>
+              <th>Recup.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => (
+              <tr key={p.id}>
+                <td>{p.number}</td>
+                <td>{p.displayName}{p.isGK ? ' (P)' : ''}</td>
+                <td>{p.matchesPlayed}</td>
+                <td>{p.matchesCalledUp}</td>
+                <td>{p.goals}</td>
+                <td>{p.recoveries}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // Vista de Seguidor/tutor: marcador y goles en directo del equipo aprobado,
-// y (en una fase posterior) estadísticas acumuladas. Nunca muestra el
+// y estadísticas acumuladas de los partidos finalizados. Nunca muestra el
 // nombre de un jugador propio con imageAuthorized === false.
 export default function FollowerHome({ identity, approvedTeamIds, user, onLogout }) {
   const teams = (identity.allTeams || []).filter((t) => approvedTeamIds.includes(t.id));
@@ -142,7 +228,10 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
       </nav>
       <div className="admin-panel">
         {activeTeam ? (
-          <LiveMatchSection clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />
+          <>
+            <LiveMatchSection clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />
+            <AccumulatedSection clubId={activeTeam.clubId} teamId={activeTeam.id} />
+          </>
         ) : (
           <p className="modal-hint">No se encuentra el equipo aprobado.</p>
         )}
