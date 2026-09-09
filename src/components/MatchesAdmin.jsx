@@ -13,6 +13,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
   const [form, setForm] = useState(emptyForm);
   const [callUpIds, setCallUpIds] = useState([]);
   const [startingIds, setStartingIds] = useState([]);
+  const [startingGoalkeeperId, setStartingGoalkeeperId] = useState('');
   const [callUpSearch, setCallUpSearch] = useState('');
 
   const rosterById = useMemo(() => {
@@ -47,14 +48,14 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
     });
   }, [matches, filters]);
 
-  const fieldStartersCount = startingIds.filter((id) => !rosterById[id]?.isGK).length;
-  const gkStartersCount = startingIds.filter((id) => rosterById[id]?.isGK).length;
-
   function toggleCallUp(id) {
     const isRemoving = callUpIds.includes(id);
     setCallUpIds((prev) => (isRemoving ? prev.filter((x) => x !== id) : [...prev, id]));
-    // Si se quita de la convocatoria, no puede seguir de titular.
-    if (isRemoving) setStartingIds((prev) => prev.filter((x) => x !== id));
+    if (isRemoving) {
+      // Si se quita de la convocatoria, no puede seguir de titular ni de portero.
+      setStartingIds((prev) => prev.filter((x) => x !== id));
+      setStartingGoalkeeperId((prev) => (prev === id ? '' : prev));
+    }
   }
 
   function callUpAll() {
@@ -64,19 +65,19 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
   function callUpNone() {
     setCallUpIds([]);
     setStartingIds([]);
+    setStartingGoalkeeperId('');
   }
 
+  // El portero es una designación de este partido, no de la ficha del
+  // jugador (position.isGK) — cualquier convocado puede ser el portero hoy.
   function toggleStarter(id) {
-    const player = rosterById[id];
-    if (!player) return;
-    setStartingIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      const fieldCount = prev.filter((x) => !rosterById[x]?.isGK).length;
-      const gkCount = prev.filter((x) => rosterById[x]?.isGK).length;
-      if (player.isGK && gkCount >= 1) return prev;
-      if (!player.isGK && fieldCount >= 6) return prev;
-      return [...prev, id];
-    });
+    if (startingIds.includes(id)) {
+      setStartingIds((prev) => prev.filter((x) => x !== id));
+      setStartingGoalkeeperId((prev) => (prev === id ? '' : prev));
+      return;
+    }
+    if (startingIds.length >= 7) return;
+    setStartingIds((prev) => [...prev, id]);
   }
 
   function handleRivalBlur() {
@@ -95,6 +96,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
     });
     setCallUpIds(m.callUpPlayerIds || []);
     setStartingIds(m.startingLineupIds || []);
+    setStartingGoalkeeperId(m.startingGoalkeeperId || '');
     setShowForm(true);
   }
 
@@ -103,6 +105,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
     setForm(emptyForm);
     setCallUpIds([]);
     setStartingIds([]);
+    setStartingGoalkeeperId('');
     setShowForm(false);
   }
 
@@ -117,6 +120,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       ownTeamName,
       callUpPlayerIds: callUpIds,
       startingLineupIds: startingIds,
+      startingGoalkeeperId: startingGoalkeeperId || null,
     };
     if (editingMatchId) {
       await updateMatch(editingMatchId, data);
@@ -136,7 +140,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
 
   async function handleStart(m) {
     try {
-      await startMatch(m.id, m.callUpPlayerIds, rosterById, m.startingLineupIds);
+      await startMatch(m.id, m.callUpPlayerIds, rosterById, m.startingLineupIds, m.startingGoalkeeperId);
       onOpenMatch(m.id);
     } catch (err) {
       console.error('No se pudo iniciar el partido', err);
@@ -234,8 +238,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
           {callUpIds.length > 0 && (
             <>
               <p className="modal-hint">
-                Titulares: {fieldStartersCount}/6 jugadores de campo, {gkStartersCount}/1 portero (opcional —
-                si no eliges, empiezan los 7 primeros de la convocatoria)
+                Titulares ({startingIds.length}/7, opcional — si no eliges, empiezan los 7 primeros de la convocatoria)
               </p>
               <div className="call-up-list">
                 {callUpIds.map((id) => {
@@ -244,11 +247,23 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
                   return (
                     <label key={id} className="call-up-item">
                       <input type="checkbox" checked={startingIds.includes(id)} onChange={() => toggleStarter(id)} />
-                      #{p.number} {p.displayName}{p.isGK ? ' (P)' : ''}
+                      #{p.number} {p.displayName}
                     </label>
                   );
                 })}
               </div>
+
+              <p className="modal-hint">
+                Portero de este partido (opcional, independiente de la ficha del jugador)
+              </p>
+              <select className="player-form-input" value={startingGoalkeeperId} onChange={(e) => setStartingGoalkeeperId(e.target.value)}>
+                <option value="">Sin elegir</option>
+                {callUpIds.map((id) => {
+                  const p = rosterById[id];
+                  if (!p) return null;
+                  return <option key={id} value={id}>#{p.number} {p.displayName}</option>;
+                })}
+              </select>
             </>
           )}
 

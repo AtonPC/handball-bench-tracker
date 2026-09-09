@@ -15,6 +15,12 @@ function ratio(part, total) {
   return total ? part / total : 0;
 }
 
+function exclusionRowClass(p) {
+  if (p.disqualified) return ' stats-row--danger';
+  if ((p.exclusionsCount || 0) >= 1) return ' stats-row--warning';
+  return '';
+}
+
 const ANY = '';
 
 export default function StatsView({ store }) {
@@ -166,7 +172,7 @@ export default function StatsView({ store }) {
           <tbody>
             {sorted.map((p) => (
               <Fragment key={p.id}>
-                <tr>
+                <tr className={exclusionRowClass(p).trim() || undefined}>
                   <td>{p.number}</td>
                   <td>{p.name}{p.isGK ? ' (P)' : ''}</td>
                   <td>{formatClock(p.accumulatedMs)}</td>

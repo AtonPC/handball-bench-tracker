@@ -9,3 +9,7 @@ export const GOAL_ZONES = [
   'Medio izquierda', 'Medio centro', 'Medio derecha',
   'Abajo izquierda', 'Abajo centro', 'Abajo derecha',
 ];
+
+// Fila aparte para un fallo que no entró: no fue parada del portero, se fue
+// fuera de la portería. No aplica a un gol (por definición, entró).
+export const OUT_ZONES = ['Fuera izquierda', 'Fuera centro', 'Fuera derecha'];

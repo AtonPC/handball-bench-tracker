@@ -317,6 +317,14 @@
 .stats-table tbody tr:nth-child(odd) {
   background: var(--panel-alt);
 }
+.stats-table tbody tr.stats-row--warning:nth-child(even),
+.stats-table tbody tr.stats-row--warning:nth-child(odd) {
+  background: var(--warning-dim);
+}
+.stats-table tbody tr.stats-row--danger:nth-child(even),
+.stats-table tbody tr.stats-row--danger:nth-child(odd) {
+  background: var(--danger-dim);
+}
 .sortable-th {
   cursor: pointer;
   user-select: none;
@@ -889,6 +897,14 @@
   background: var(--accent-dim);
   border-color: var(--accent);
   color: var(--accent);
+}
+.zone-btn--out {
+  border-style: dashed;
+}
+.zone-btn--out.zone-btn--active {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* ---------- Tablet en horizontal / pantallas anchas: todo más grande ---------- */

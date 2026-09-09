@@ -24,10 +24,19 @@ export default function PlayerRow({ player, onOpenSubstitution, actions }) {
         <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
       </div>
 
-      <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
-      <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
-      <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
-      <StatStepper icon="PÉRDIDA" label="Pérdidas" count={player.losses} onInc={actions.lossInc} onDec={actions.lossDec} disabled={disabled} />
+      {player.isGK ? (
+        <>
+          <StatStepper icon="PARADA" label="Paradas" count={player.saves || 0} onInc={actions.saveInc} onDec={actions.saveDec} disabled={disabled} />
+          <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
+          <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
+        </>
+      ) : (
+        <>
+          <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
+          <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
+          <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
+        </>
+      )}
 
       <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} />
 

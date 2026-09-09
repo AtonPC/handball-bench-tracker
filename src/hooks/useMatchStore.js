@@ -17,9 +17,9 @@ function buildSnapshot(match, players) {
       shots: p.shots,
       saves: p.saves,
       recoveries: p.recoveries,
-      losses: p.losses,
       exclusionsCount: p.exclusionsCount,
       disqualified: p.disqualified,
+      isGK: p.isGK,
     };
   }
   return {
@@ -337,10 +337,11 @@ export function useMatchStore(matchId, enabled) {
     [players, recordEvent]
   );
 
-  const playerLoss = useCallback(
+  // Solo tiene sentido para quien juega de portero en este partido.
+  const playerSave = useCallback(
     (playerId, delta = 1) => {
-      const next = Math.max(0, players[playerId].losses + delta);
-      recordEvent(delta > 0 ? 'Pérdida' : 'Pérdida (-1)', {}, { [playerId]: { losses: next } });
+      const next = Math.max(0, players[playerId].saves + delta);
+      recordEvent(delta > 0 ? 'Parada' : 'Parada (-1)', {}, { [playerId]: { saves: next } });
     },
     [players, recordEvent]
   );
@@ -405,6 +406,8 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // --- Sustitución ---
+  // Si el que sale es el portero de este partido, el que entra hereda ese
+  // rol — el portero es un papel del partido, no de la ficha del jugador.
   const substitute = useCallback(
     (outPlayerId, inPlayerId) => {
       const nowMs = Date.now();
@@ -415,10 +418,12 @@ export function useMatchStore(matchId, enabled) {
         [outPlayerId]: {
           accumulatedMs: outP.onCourtSinceMs ? outP.accumulatedMs + (nowMs - outP.onCourtSinceMs) : outP.accumulatedMs,
           onCourtSinceMs: null,
+          isGK: false,
         },
       };
+      playerUpdates[inPlayerId] = { isGK: !!outP.isGK };
       if (match.status === 'running') {
-        playerUpdates[inPlayerId] = { onCourtSinceMs: nowMs };
+        playerUpdates[inPlayerId].onCourtSinceMs = nowMs;
       }
       recordEvent('Cambio', { courtSlots, bench }, playerUpdates);
     },
@@ -427,19 +432,21 @@ export function useMatchStore(matchId, enabled) {
 
   // Cambio por expulsión: el expulsado no vuelve al banquillo (no puede
   // volver a jugar en lo que queda de partido), a diferencia de un cambio
-  // normal — solo se actualiza el reloj de quien entra.
+  // normal — solo se actualiza el reloj de quien entra. También transfiere
+  // el rol de portero si el expulsado lo tenía.
   const substituteDisqualified = useCallback(
     (outPlayerId, inPlayerId) => {
       const nowMs = Date.now();
+      const outP = players[outPlayerId];
       const courtSlots = match.courtSlots.map((id) => (id === outPlayerId ? inPlayerId : id));
       const bench = match.bench.filter((id) => id !== inPlayerId);
-      const playerUpdates = {};
+      const playerUpdates = { [inPlayerId]: { isGK: !!outP.isGK } };
       if (match.status === 'running') {
-        playerUpdates[inPlayerId] = { onCourtSinceMs: nowMs };
+        playerUpdates[inPlayerId].onCourtSinceMs = nowMs;
       }
       recordEvent('Cambio por expulsión', { courtSlots, bench }, playerUpdates);
     },
-    [match, recordEvent]
+    [match, players, recordEvent]
   );
 
   // --- Deshacer ---
@@ -499,7 +506,7 @@ export function useMatchStore(matchId, enabled) {
     playerShot,
     playerShotWithDetail,
     playerRecovery,
-    playerLoss,
+    playerSave,
     playerExclusion,
     cancelExclusion,
     substitute,

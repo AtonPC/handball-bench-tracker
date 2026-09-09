@@ -24,7 +24,7 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds, startingLineupIds }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds, startingLineupIds, startingGoalkeeperId }) => {
     const ref = await addDoc(matchesCol, {
       clubId,
       teamId,
@@ -35,6 +35,7 @@ export function useMatches(clubId, teamId) {
       ownTeamName,
       callUpPlayerIds,
       startingLineupIds: startingLineupIds || [],
+      startingGoalkeeperId: startingGoalkeeperId || null,
       lifecycle: 'scheduled', // 'scheduled' | 'live' | 'finished'
       status: 'idle', // cronómetro: 'idle' | 'running' | 'paused'
       period: 1,
@@ -70,7 +71,10 @@ export function useMatches(clubId, teamId) {
 
   // Convierte un partido programado en el partido en juego: siembra las
   // estadísticas en vivo de cada convocado a partir de la plantilla del equipo.
-  const startMatch = useCallback(async (matchId, callUpPlayerIds, rosterById, startingLineupIds) => {
+  // El portero es quien se haya elegido para ESTE partido (startingGoalkeeperId),
+  // no lo que diga la ficha del jugador — si no se eligió a nadie, nadie
+  // empieza como portero y habrá que asignarlo a mano si hace falta.
+  const startMatch = useCallback(async (matchId, callUpPlayerIds, rosterById, startingLineupIds, startingGoalkeeperId) => {
     // Descarta convocados que ya no existen en la plantilla (p. ej. borrados
     // después de armar la convocatoria) para no dejar ids huérfanos en pista.
     const validIds = callUpPlayerIds.filter((pid) => rosterById[pid]);
@@ -86,13 +90,12 @@ export function useMatches(clubId, teamId) {
       batch.set(doc(db, 'matches', matchId, 'players', pid), {
         number: rp.number,
         name: rp.displayName || `${rp.firstName} ${rp.lastName}`.trim(),
-        isGK: !!rp.isGK,
+        isGK: pid === startingGoalkeeperId,
         photoUrl: rp.photoUrl || null,
         goals: 0,
         shots: 0,
         saves: 0,
         recoveries: 0,
-        losses: 0,
         exclusionsCount: 0,
         disqualified: false,
         accumulatedMs: 0,

@@ -53,8 +53,8 @@ export default function BenchConsole({ store, onBack, onFinish }) {
               shotDec: () => store.playerShot(player.id, -1),
               recoveryInc: () => store.playerRecovery(player.id, 1),
               recoveryDec: () => store.playerRecovery(player.id, -1),
-              lossInc: () => store.playerLoss(player.id, 1),
-              lossDec: () => store.playerLoss(player.id, -1),
+              saveInc: () => store.playerSave(player.id, 1),
+              saveDec: () => store.playerSave(player.id, -1),
               exclusionStart: () => handleExclusionStart(player.id),
               exclusionCancel: () => store.cancelExclusion(player.id),
             }}

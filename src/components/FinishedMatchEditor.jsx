@@ -44,7 +44,6 @@ export default function FinishedMatchEditor({ store, onBack }) {
           shots: p.shots,
           saves: p.saves || 0,
           recoveries: p.recoveries,
-          losses: p.losses,
           exclusionsCount: p.exclusionsCount || 0,
           disqualified: !!p.disqualified,
           minutes: Math.round((p.accumulatedMs || 0) / 60000),
@@ -86,7 +85,6 @@ export default function FinishedMatchEditor({ store, onBack }) {
       shots: Number(d.shots) || 0,
       saves: Number(d.saves) || 0,
       recoveries: Number(d.recoveries) || 0,
-      losses: Number(d.losses) || 0,
       exclusionsCount: Number(d.exclusionsCount) || 0,
       disqualified: d.disqualified,
       accumulatedMs: (Number(d.minutes) || 0) * 60000,
@@ -201,7 +199,6 @@ export default function FinishedMatchEditor({ store, onBack }) {
                 <th>Fallos</th>
                 <th>Paradas</th>
                 <th>Recup.</th>
-                <th>Pérdidas</th>
                 <th>Excl.</th>
                 <th>Expulsado</th>
                 <th></th>
@@ -220,7 +217,6 @@ export default function FinishedMatchEditor({ store, onBack }) {
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.shots} onChange={(e) => updateDraft(p.id, 'shots', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.saves} onChange={(e) => updateDraft(p.id, 'saves', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.recoveries} onChange={(e) => updateDraft(p.id, 'recoveries', e.target.value)} /></td>
-                    <td><input className="player-form-input player-form-input--number" type="number" value={d.losses} onChange={(e) => updateDraft(p.id, 'losses', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.exclusionsCount} onChange={(e) => updateDraft(p.id, 'exclusionsCount', e.target.value)} /></td>
                     <td>
                       <input type="checkbox" checked={d.disqualified} onChange={(e) => updateDraft(p.id, 'disqualified', e.target.checked)} />
