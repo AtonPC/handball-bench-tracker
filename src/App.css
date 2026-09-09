@@ -551,6 +551,23 @@
 .player-row--excluded {
   border-color: var(--danger);
 }
+.player-row--excl-1 {
+  background: var(--warning-dim);
+  border-color: var(--warning);
+}
+.player-row--excl-2 {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+}
+.player-row--disqualified {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+  opacity: 0.6;
+}
+.excl-dots {
+  color: var(--warning);
+  letter-spacing: -1px;
+}
 
 .player-identity {
   display: flex;
@@ -782,6 +799,23 @@
   font-weight: 700;
   min-width: 28px;
 }
+.bench-name {
+  flex-shrink: 0;
+}
+.bench-stats {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.bench-option--disabled {
+  cursor: default;
+  opacity: 0.55;
+  border-color: var(--danger);
+}
+.bench-option--disabled:active {
+  transform: none;
+}
 .modal-cancel {
   border: 1px solid var(--border);
   background: transparent;
@@ -795,6 +829,10 @@
 /* ---------- Gol rival: teclado de dorsal y rejillas de zona ---------- */
 .rival-goal-modal {
   max-width: 460px;
+  overflow-y: auto;
+}
+.quick-stats-modal {
+  max-width: 640px;
   overflow-y: auto;
 }
 .rival-goal-display {

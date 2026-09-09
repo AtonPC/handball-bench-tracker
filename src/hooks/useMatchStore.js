@@ -345,17 +345,21 @@ export function useMatchStore(matchId, enabled) {
     [players, recordEvent]
   );
 
-  // A la 3ª exclusión, el jugador queda expulsado del partido (tarjeta roja):
-  // no vuelve a pista, sin cuenta atrás — se saca directamente del once.
+  // A la 3ª exclusión, el jugador queda expulsado del partido (tarjeta roja).
+  // No se toca courtSlots aquí: el jugador se queda en su sitio (sin poder
+  // seguir jugando) hasta que el banquillo elige quién entra por él, con
+  // substituteDisqualified — así nunca se saca a nadie sin preguntar.
+  // Devuelve si esta exclusión ha supuesto expulsión, para que quien llama
+  // pueda abrir el cambio en el momento.
   const playerExclusion = useCallback(
     (playerId) => {
       const nowMs = Date.now();
       const p = players[playerId];
       const nextCount = p.exclusionsCount + 1;
       const accumulatedMs = p.onCourtSinceMs ? p.accumulatedMs + (nowMs - p.onCourtSinceMs) : p.accumulatedMs;
-      if (nextCount >= 3) {
-        const courtSlots = match.courtSlots.filter((id) => id !== playerId);
-        recordEvent('Expulsión (3ª exclusión)', { courtSlots }, {
+      const willDisqualify = nextCount >= 3;
+      if (willDisqualify) {
+        recordEvent('Expulsión (3ª exclusión)', {}, {
           [playerId]: {
             exclusionsCount: nextCount,
             excluded: false,
@@ -365,19 +369,20 @@ export function useMatchStore(matchId, enabled) {
             onCourtSinceMs: null,
           },
         });
-        return;
+      } else {
+        recordEvent('Exclusión 2min', {}, {
+          [playerId]: {
+            exclusionsCount: nextCount,
+            excluded: true,
+            exclusionEndsAtMs: nowMs + EXCLUSION_MS,
+            accumulatedMs,
+            onCourtSinceMs: null,
+          },
+        });
       }
-      recordEvent('Exclusión 2min', {}, {
-        [playerId]: {
-          exclusionsCount: nextCount,
-          excluded: true,
-          exclusionEndsAtMs: nowMs + EXCLUSION_MS,
-          accumulatedMs,
-          onCourtSinceMs: null,
-        },
-      });
+      return willDisqualify;
     },
-    [match, players, recordEvent]
+    [players, recordEvent]
   );
 
   // Cancela una exclusión en curso (toque accidental): el jugador vuelve a
@@ -420,6 +425,23 @@ export function useMatchStore(matchId, enabled) {
     [match, players, recordEvent]
   );
 
+  // Cambio por expulsión: el expulsado no vuelve al banquillo (no puede
+  // volver a jugar en lo que queda de partido), a diferencia de un cambio
+  // normal — solo se actualiza el reloj de quien entra.
+  const substituteDisqualified = useCallback(
+    (outPlayerId, inPlayerId) => {
+      const nowMs = Date.now();
+      const courtSlots = match.courtSlots.map((id) => (id === outPlayerId ? inPlayerId : id));
+      const bench = match.bench.filter((id) => id !== inPlayerId);
+      const playerUpdates = {};
+      if (match.status === 'running') {
+        playerUpdates[inPlayerId] = { onCourtSinceMs: nowMs };
+      }
+      recordEvent('Cambio por expulsión', { courtSlots, bench }, playerUpdates);
+    },
+    [match, recordEvent]
+  );
+
   // --- Deshacer ---
   const undo = useCallback(async () => {
     const snap = await getDocs(query(eventsCol, orderBy('createdAt', 'desc'), limit(1)));
@@ -453,6 +475,7 @@ export function useMatchStore(matchId, enabled) {
       timeouts: match?.timeouts || { own: { 1: 0, 2: 0 }, rival: { 1: 0, 2: 0 } },
       courtSlots: match?.courtSlots || [],
       bench: match?.bench || [],
+      startingLineupIds: match?.startingLineupIds || [],
       players: livePlayers,
     }),
     [match, liveElapsedMs, livePlayers]
@@ -480,6 +503,7 @@ export function useMatchStore(matchId, enabled) {
     playerExclusion,
     cancelExclusion,
     substitute,
+    substituteDisqualified,
     undo,
   };
 }

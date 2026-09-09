@@ -1,7 +1,7 @@
 import { formatClock } from '../utils/time';
 import StatStepper from './StatStepper';
 
-export default function MatchHeader({ store, onBack, onFinish }) {
+export default function MatchHeader({ store, onBack, onFinish, onOpenQuickStats }) {
   const { clock, score, timeouts, ownTeamName, rivalName, isHome } = store.state;
   const leftName = isHome ? ownTeamName : rivalName;
   const rightName = isHome ? rivalName : ownTeamName;
@@ -29,6 +29,7 @@ export default function MatchHeader({ store, onBack, onFinish }) {
     <header className="match-header">
       <div className="header-row">
         <button className="btn btn-logout" onClick={onBack}>← PARTIDOS</button>
+        <button className="btn btn-timeout" onClick={onOpenQuickStats}>ESTADÍSTICAS</button>
         <button className="btn btn-undo" onClick={store.undo} disabled={!store.canUndo}>
           DESHACER
         </button>
