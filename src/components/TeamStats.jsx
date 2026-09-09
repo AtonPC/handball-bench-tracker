@@ -34,7 +34,8 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
   const columns = [
     { key: 'number', value: (p) => p.number ?? 0 },
     { key: 'name', value: (p) => p.name || '' },
-    { key: 'matches', value: (p) => p.matchesPlayed },
+    { key: 'matchesPlayed', value: (p) => p.matchesPlayed },
+    { key: 'matchesCalledUp', value: (p) => p.matchesCalledUp },
     { key: 'time', value: (p) => p.accumulatedMs },
     { key: 'goals', value: (p) => p.goals },
     { key: 'shots', value: (p) => p.shots },
@@ -56,6 +57,9 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
   const teamRecoveries = players.reduce((sum, p) => sum + p.recoveries, 0);
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
   const teamDisqualifications = players.reduce((sum, p) => sum + (p.disqualifications || 0), 0);
+
+  const topScorers = useMemo(() => [...players].filter((p) => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 5), [players]);
+  const topRecoverers = useMemo(() => [...players].filter((p) => p.recoveries > 0).sort((a, b) => b.recoveries - a.recoveries).slice(0, 5), [players]);
 
   return (
     <div className="admin-panel">
@@ -83,7 +87,8 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
               <tr>
                 <SortableTh label="#" columnKey="number" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Jugador" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Partidos" columnKey="matches" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Jugados" columnKey="matchesPlayed" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Convocados" columnKey="matchesCalledUp" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Tiempo total" columnKey="time" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Goles" columnKey="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Fallos" columnKey="shots" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -101,6 +106,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                   <td>{p.number}</td>
                   <td>{p.name}{p.isGK ? ' (P)' : ''}</td>
                   <td>{p.matchesPlayed}</td>
+                  <td>{p.matchesCalledUp}</td>
                   <td>{formatClock(p.accumulatedMs)}</td>
                   <td>{p.goals}</td>
                   <td>{p.shots}</td>
@@ -113,10 +119,10 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                 </tr>
               ))}
               {visiblePlayers.length === 0 && (
-                <tr><td colSpan={12}><p className="modal-hint">Ningún jugador coincide con el filtro.</p></td></tr>
+                <tr><td colSpan={13}><p className="modal-hint">Ningún jugador coincide con el filtro.</p></td></tr>
               )}
               <tr>
-                <td /><td><strong>Equipo</strong></td><td /><td />
+                <td /><td><strong>Equipo</strong></td><td /><td /><td />
                 <td><strong>{teamGoals}</strong></td>
                 <td><strong>{teamMisses}</strong></td>
                 <td><strong>{teamAttempts}</strong></td>
@@ -128,6 +134,23 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
               </tr>
             </tbody>
           </table>
+          </div>
+
+          <div className="card-grid" style={{ marginTop: 20 }}>
+            <div className="card">
+              <h4>Máximos goleadores</h4>
+              {topScorers.length === 0 && <p>Todavía nadie ha marcado.</p>}
+              {topScorers.map((p, i) => (
+                <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.goals} gol{p.goals === 1 ? '' : 'es'}</p>
+              ))}
+            </div>
+            <div className="card">
+              <h4>Máximos recuperadores</h4>
+              {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
+              {topRecoverers.map((p, i) => (
+                <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup.</p>
+              ))}
+            </div>
           </div>
 
           <p className="modal-hint" style={{ marginTop: 20 }}>Partidos incluidos en este resumen</p>
