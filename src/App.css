@@ -1214,6 +1214,85 @@
   }
 }
 
+/* ---------- Celebración de gol (vista de Seguidor) ---------- */
+.goal-celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 19, 26, 0.85);
+  overflow: hidden;
+  cursor: pointer;
+}
+.goal-celebration-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  animation: goal-pop 0.4s ease-out;
+}
+.goal-celebration-crest {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+.goal-celebration-text {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 56px;
+  letter-spacing: 0.04em;
+  color: var(--team-primary);
+  text-transform: uppercase;
+}
+.goal-celebration-phrase {
+  font-size: 16px;
+  color: var(--text);
+}
+.goal-celebration-confetti {
+  position: absolute;
+  inset: 0;
+}
+.confetti-piece {
+  position: absolute;
+  top: -10%;
+  width: 8px;
+  height: 14px;
+  background: var(--team-primary);
+  animation: confetti-fall 2.6s linear infinite;
+}
+.confetti-piece:nth-child(3n) { background: var(--team-secondary); }
+.confetti-piece:nth-child(5n) { background: var(--warning); }
+.confetti-piece:nth-child(7n) { width: 6px; height: 10px; }
+.confetti-piece:nth-child(1) { left: 4%; animation-delay: 0s; }
+.confetti-piece:nth-child(2) { left: 10%; animation-delay: 0.3s; }
+.confetti-piece:nth-child(3) { left: 16%; animation-delay: 0.6s; }
+.confetti-piece:nth-child(4) { left: 22%; animation-delay: 0.1s; }
+.confetti-piece:nth-child(5) { left: 28%; animation-delay: 0.5s; }
+.confetti-piece:nth-child(6) { left: 34%; animation-delay: 0.2s; }
+.confetti-piece:nth-child(7) { left: 40%; animation-delay: 0.7s; }
+.confetti-piece:nth-child(8) { left: 48%; animation-delay: 0s; }
+.confetti-piece:nth-child(9) { left: 56%; animation-delay: 0.4s; }
+.confetti-piece:nth-child(10) { left: 64%; animation-delay: 0.15s; }
+.confetti-piece:nth-child(11) { left: 70%; animation-delay: 0.55s; }
+.confetti-piece:nth-child(12) { left: 76%; animation-delay: 0.25s; }
+.confetti-piece:nth-child(13) { left: 82%; animation-delay: 0.65s; }
+.confetti-piece:nth-child(14) { left: 88%; animation-delay: 0.35s; }
+.confetti-piece:nth-child(15) { left: 94%; animation-delay: 0.1s; }
+.confetti-piece:nth-child(16) { left: 98%; animation-delay: 0.45s; }
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+@keyframes goal-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* ---------- Sistema de diseño: tarjetas ---------- */
 .card-grid {
   display: grid;
