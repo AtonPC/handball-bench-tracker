@@ -17,6 +17,7 @@ import StaffAdmin from './components/StaffAdmin';
 import FollowApprovals from './components/FollowApprovals';
 import AppSidebar from './components/AppSidebar';
 import FollowRequestScreen from './components/FollowRequestScreen';
+import FollowerHome from './components/FollowerHome';
 import { useMyAccessGrants } from './hooks/useFollowRequests';
 
 export default function App() {
@@ -64,7 +65,7 @@ export default function App() {
   const canManageClub = activeClubId ? isClubManagerOf(identity, activeClubId) : false;
 
   const store = useMatchStore(openMatchId, isAuthed);
-  const { all: myGrants } = useMyAccessGrants(auth.user?.uid);
+  const { all: myGrants, approvedTeamIds } = useMyAccessGrants(auth.user?.uid);
 
   if (auth.loading) {
     return <div className="app-loading">Cargando…</div>;
@@ -74,8 +75,15 @@ export default function App() {
     return <LoginScreen auth={auth} />;
   }
 
+  // Una cuenta es o bien staff/gestor/admin, o bien Seguidor — nunca las dos
+  // cosas a la vez (decisión de producto para esta pieza).
   const hasAnyAccess = teams.length > 0 || managedClubs.length > 0 || isAdmin;
   if (!hasAnyAccess) {
+    if (approvedTeamIds.length > 0) {
+      return (
+        <FollowerHome identity={identity} approvedTeamIds={approvedTeamIds} user={auth.user} onLogout={auth.logout} />
+      );
+    }
     return <FollowRequestScreen identity={identity} user={auth.user} onLogout={auth.logout} myGrants={myGrants} />;
   }
 

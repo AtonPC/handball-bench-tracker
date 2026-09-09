@@ -1,5 +1,4 @@
-.bench-console,
-.family-view {
+.bench-console {
   display: flex;
   flex-direction: column;
   min-height: 100svh;
@@ -560,15 +559,6 @@
   font-size: 12px;
   padding: 8px 10px;
   min-height: 36px;
-}
-
-.family-hint {
-  padding: 4px 4px 0;
-}
-.family-row {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
 }
 
 /* ---------- Cabecera ---------- */
