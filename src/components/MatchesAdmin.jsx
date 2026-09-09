@@ -3,7 +3,7 @@ import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En juego', finished: 'Finalizado' };
-const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '' };
+const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodDurationMinutes: 20 };
 
 export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRoster, canUseBench, onOpenMatch, onOpenStats, onEditFinishedStats }) {
   const { matches, createMatch, updateMatch, removeMatch, startMatch } = useMatches(clubId, teamId);
@@ -93,6 +93,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       isHome: m.isHome ?? true,
       venue: m.venue || '',
       scheduledAt: m.scheduledAt ? new Date(m.scheduledAt).toISOString().slice(0, 16) : '',
+      periodDurationMinutes: m.periodDurationMs ? m.periodDurationMs / 60000 : 20,
     });
     setCallUpIds(m.callUpPlayerIds || []);
     setStartingIds(m.startingLineupIds || []);
@@ -121,6 +122,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       callUpPlayerIds: callUpIds,
       startingLineupIds: startingIds,
       startingGoalkeeperId: startingGoalkeeperId || null,
+      periodDurationMs: (Number(form.periodDurationMinutes) || 20) * 60000,
     };
     if (editingMatchId) {
       await updateMatch(editingMatchId, data);
@@ -204,6 +206,16 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
             value={form.scheduledAt}
             onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
           />
+          <label className="player-form-checkbox">
+            Duración de cada tiempo (minutos)
+            <input
+              className="player-form-input player-form-input--number"
+              type="number"
+              min="1"
+              value={form.periodDurationMinutes}
+              onChange={(e) => setForm({ ...form, periodDurationMinutes: e.target.value })}
+            />
+          </label>
 
           <div className="matches-header">
             <p className="modal-hint" style={{ margin: 0 }}>Convocatoria ({callUpIds.length} jugadores)</p>

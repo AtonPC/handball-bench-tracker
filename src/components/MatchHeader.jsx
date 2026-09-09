@@ -44,7 +44,9 @@ export default function MatchHeader({ store, onBack, onFinish, onOpenQuickStats 
         </div>
         <div className="master-clock">
           <span className="period-label">{clock.period}ª parte</span>
-          <span className="clock-time">{formatClock(clock.elapsedMs)}</span>
+          <span className={`clock-time${clock.periodRemainingMs < 0 ? ' clock-time--over' : ''}`}>
+            {clock.periodRemainingMs < 0 ? `+${formatClock(-clock.periodRemainingMs)}` : formatClock(clock.periodRemainingMs)}
+          </span>
         </div>
       </div>
       <div className="header-row">

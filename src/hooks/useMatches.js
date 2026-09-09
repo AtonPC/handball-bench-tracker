@@ -24,7 +24,7 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds, startingLineupIds, startingGoalkeeperId }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs }) => {
     const ref = await addDoc(matchesCol, {
       clubId,
       teamId,
@@ -36,10 +36,12 @@ export function useMatches(clubId, teamId) {
       callUpPlayerIds,
       startingLineupIds: startingLineupIds || [],
       startingGoalkeeperId: startingGoalkeeperId || null,
+      periodDurationMs: periodDurationMs || 20 * 60000,
       lifecycle: 'scheduled', // 'scheduled' | 'live' | 'finished'
       status: 'idle', // cronómetro: 'idle' | 'running' | 'paused'
       period: 1,
       accumulatedMs: 0,
+      periodStartAccumulatedMs: 0,
       runningSinceMs: null,
       score: { own: 0, rival: 0 },
       rivalShots: 0,

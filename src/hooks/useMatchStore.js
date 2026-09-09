@@ -183,11 +183,19 @@ export function useMatchStore(matchId, enabled) {
     await batch.commit();
   }, [match, players, matchRef, playerRef]);
 
+  // periodStartAccumulatedMs guarda cuánto llevaba el partido en total al
+  // empezar esta parte, para poder mostrar la cuenta atrás de la parte en
+  // curso (no del partido completo) restando ese punto de partida.
   const startPeriod2 = useCallback(async () => {
     if (!match) return;
     const nowMs = Date.now();
     const batch = writeBatch(db);
-    batch.update(matchRef, { status: 'running', period: 2, runningSinceMs: nowMs });
+    batch.update(matchRef, {
+      status: 'running',
+      period: 2,
+      runningSinceMs: nowMs,
+      periodStartAccumulatedMs: match.accumulatedMs,
+    });
     for (const id of match.courtSlots) {
       if (!players[id]?.excluded) batch.update(playerRef(id), { onCourtSinceMs: nowMs });
     }
@@ -486,6 +494,10 @@ export function useMatchStore(matchId, enabled) {
     await batch.commit();
   }, [eventsCol, matchRef, playerRef]);
 
+  const periodDurationMs = match?.periodDurationMs || 20 * 60 * 1000;
+  const periodElapsedMs = liveElapsedMs - (match?.periodStartAccumulatedMs || 0);
+  const periodRemainingMs = periodDurationMs - periodElapsedMs;
+
   const state = useMemo(
     () => ({
       lifecycle: match?.lifecycle || 'scheduled',
@@ -494,7 +506,13 @@ export function useMatchStore(matchId, enabled) {
       isHome: match?.isHome ?? true,
       venue: match?.venue || '',
       scheduledAt: match?.scheduledAt || null,
-      clock: { status: match?.status || 'idle', period: match?.period || 1, elapsedMs: liveElapsedMs },
+      clock: {
+        status: match?.status || 'idle',
+        period: match?.period || 1,
+        elapsedMs: liveElapsedMs,
+        periodDurationMs,
+        periodRemainingMs,
+      },
       score: match?.score || { own: 0, rival: 0 },
       rivalShots: match?.rivalShots || 0,
       timeouts: match?.timeouts || { own: { 1: 0, 2: 0 }, rival: { 1: 0, 2: 0 } },

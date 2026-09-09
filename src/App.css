@@ -477,6 +477,9 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.clock-time--over {
+  color: var(--danger);
+}
 
 .clock-btn-group {
   display: flex;
