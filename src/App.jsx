@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, Settings, Shield, UserCog } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardCheck, Settings, Shield, UserCog } from 'lucide-react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
@@ -14,6 +14,7 @@ import PlayersAdmin from './components/PlayersAdmin';
 import SystemAdmin from './components/SystemAdmin';
 import ClubAdmin from './components/ClubAdmin';
 import StaffAdmin from './components/StaffAdmin';
+import FollowApprovals from './components/FollowApprovals';
 import AppSidebar from './components/AppSidebar';
 import FollowRequestScreen from './components/FollowRequestScreen';
 import { useMyAccessGrants } from './hooks/useFollowRequests';
@@ -132,6 +133,7 @@ export default function App() {
     teamsInActiveClub.length > 0 && { key: 'teamStats', label: 'Estadísticas', icon: BarChart3 },
     clubOptions.length > 0 && { key: 'club', label: 'Club', icon: Shield },
     clubOptions.length > 0 && { key: 'staff', label: 'Staff y Permisos', icon: UserCog },
+    canManageClub && { key: 'requests', label: 'Solicitudes', icon: ClipboardCheck },
     isAdmin && { key: 'system', label: 'Sistema', icon: Settings },
   ].filter(Boolean);
 
@@ -172,6 +174,7 @@ export default function App() {
         )}
         {view === 'club' && canManageClub && <ClubAdmin clubId={activeClubId} />}
         {view === 'staff' && canManageClub && <StaffAdmin clubId={activeClubId} />}
+        {view === 'requests' && canManageClub && <FollowApprovals clubId={activeClubId} identity={identity} />}
         {view === 'system' && isAdmin && <SystemAdmin />}
       </main>
     </div>
