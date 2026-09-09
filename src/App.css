@@ -157,13 +157,17 @@
   color: var(--text-dim);
   flex-shrink: 0;
 }
+.match-badge--scheduled {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
 .match-badge--live {
   background: var(--accent-dim);
   color: var(--accent);
 }
 .match-badge--finished {
-  background: var(--border);
-  color: var(--text-dim);
+  background: var(--info-dim);
+  color: var(--info);
 }
 
 /* ---------- Formularios de administración (jugadores / partidos) ---------- */

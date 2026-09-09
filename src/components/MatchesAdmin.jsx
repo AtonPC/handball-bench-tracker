@@ -32,6 +32,21 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
 
   const pastRivals = useMemo(() => [...new Set(matches.map((m) => m.rivalName).filter(Boolean))], [matches]);
 
+  const [filters, setFilters] = useState({ rival: '', venue: '', dateFrom: '', dateTo: '' });
+  const filteredMatches = useMemo(() => {
+    const rivalNeedle = filters.rival.trim().toLowerCase();
+    const venueNeedle = filters.venue.trim().toLowerCase();
+    const fromMs = filters.dateFrom ? new Date(filters.dateFrom).setHours(0, 0, 0, 0) : null;
+    const toMs = filters.dateTo ? new Date(filters.dateTo).setHours(23, 59, 59, 999) : null;
+    return matches.filter((m) => {
+      if (rivalNeedle && !(m.rivalName || '').toLowerCase().includes(rivalNeedle)) return false;
+      if (venueNeedle && !(m.venue || '').toLowerCase().includes(venueNeedle)) return false;
+      if (fromMs && (!m.scheduledAt || m.scheduledAt < fromMs)) return false;
+      if (toMs && (!m.scheduledAt || m.scheduledAt > toMs)) return false;
+      return true;
+    });
+  }, [matches, filters]);
+
   const fieldStartersCount = startingIds.filter((id) => !rosterById[id]?.isGK).length;
   const gkStartersCount = startingIds.filter((id) => rosterById[id]?.isGK).length;
 
@@ -246,8 +261,36 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
         </form>
       )}
 
+      <div className="list-filters">
+        <input
+          className="player-form-input"
+          list="rival-names"
+          placeholder="Filtrar por rival…"
+          value={filters.rival}
+          onChange={(e) => setFilters({ ...filters, rival: e.target.value })}
+        />
+        <input
+          className="player-form-input"
+          placeholder="Filtrar por lugar…"
+          value={filters.venue}
+          onChange={(e) => setFilters({ ...filters, venue: e.target.value })}
+        />
+        <input
+          className="player-form-input"
+          type="date"
+          value={filters.dateFrom}
+          onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+        />
+        <input
+          className="player-form-input"
+          type="date"
+          value={filters.dateTo}
+          onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+        />
+      </div>
+
       <div className="admin-list">
-        {matches.map((m) => (
+        {filteredMatches.map((m) => (
           <div key={m.id} className="admin-row match-row">
             <div className="admin-user-info">
               <span className="admin-user-name">
@@ -284,6 +327,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
           </div>
         ))}
         {matches.length === 0 && <p className="modal-hint">Todavía no hay partidos creados.</p>}
+        {matches.length > 0 && filteredMatches.length === 0 && <p className="modal-hint">Ningún partido coincide con el filtro.</p>}
       </div>
     </div>
   );
