@@ -1,14 +1,15 @@
+import { Timer } from 'lucide-react';
 import { formatClock } from '../utils/time';
 
-// El símbolo de tarjeta roja se reserva para la expulsión definitiva (3ª
-// exclusión) — una exclusión normal de 2 minutos no es tarjeta roja.
+// La tarjeta roja se reserva para la expulsión definitiva (3ª exclusión) —
+// una exclusión normal de 2 minutos usa la tarjeta ámbar, no la roja.
 export default function ExclusionControl({ player, onStart, onCancel }) {
   const count = player.exclusionsCount || 0;
 
   if (player.disqualified) {
     return (
       <span className="excl-btn excl-btn--disqualified" aria-label="Expulsado del partido">
-        🟥 Expulsado
+        <span className="ref-card ref-card--red" /> Expulsado
       </span>
     );
   }
@@ -16,7 +17,7 @@ export default function ExclusionControl({ player, onStart, onCancel }) {
   if (player.excluded) {
     return (
       <button className="excl-btn excl-btn--active" onClick={onCancel} aria-label="Cancelar exclusión">
-        🟧 {formatClock(player.exclusionRemainingMs)}
+        <span className="ref-card ref-card--amber" /> {formatClock(player.exclusionRemainingMs)}
         <span className="excl-count">{count}/3</span>
       </button>
     );
@@ -24,7 +25,7 @@ export default function ExclusionControl({ player, onStart, onCancel }) {
 
   return (
     <button className="excl-btn" onClick={onStart} aria-label="Exclusión 2 minutos">
-      ⏱ 2'
+      <Timer size={14} /> 2'
       <span className="excl-count">{count}/3</span>
     </button>
   );

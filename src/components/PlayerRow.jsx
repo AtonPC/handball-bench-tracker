@@ -1,3 +1,4 @@
+import { Repeat } from 'lucide-react';
 import { formatClock } from '../utils/time';
 import StatStepper from './StatStepper';
 import ExclusionControl from './ExclusionControl';
@@ -41,7 +42,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions }) {
       <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} />
 
       <button className="btn-change-icon" onClick={onOpenSubstitution} aria-label="Cambio">
-        🔁
+        <Repeat size={20} />
       </button>
     </div>
   );

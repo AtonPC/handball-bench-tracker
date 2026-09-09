@@ -408,8 +408,11 @@
 }
 .stats-section-title {
   margin: 0;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .stats-summary {
   display: grid;
@@ -430,6 +433,7 @@
   color: var(--text-dim);
 }
 .stats-summary-value {
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -600,12 +604,22 @@
   font-size: 30px;
   font-variant-numeric: tabular-nums;
 }
+.score-own,
+.score-rival,
+.score-sep {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .score-own { color: var(--own); }
 .score-rival { color: var(--rival); }
 .score-sep { color: var(--text-dim); font-size: 20px; }
 .team-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--text-dim);
   max-width: 90px;
   overflow: hidden;
@@ -626,6 +640,7 @@
   letter-spacing: 0.06em;
 }
 .clock-time {
+  font-family: var(--font-display);
   font-size: 26px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -877,6 +892,24 @@
   font-weight: 600;
   opacity: 0.7;
 }
+.ref-card {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+.ref-card--red {
+  background: var(--danger);
+}
+.ref-card--amber {
+  background: var(--warning);
+}
+.excl-btn--disqualified .ref-card--red {
+  background: #fff;
+  border-color: var(--danger);
+}
 
 .btn-change-icon {
   flex-shrink: 0;
@@ -934,7 +967,11 @@
 }
 .modal h2 {
   margin: 0;
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .modal-hint {
   margin: 0;
