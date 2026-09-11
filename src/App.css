@@ -1782,9 +1782,38 @@
   background: rgba(255, 255, 255, 0.18);
   margin-bottom: 14px;
 }
+.follower-oncourt-badge--gk {
+  box-shadow: 0 0 0 2px var(--team-secondary);
+}
+.follower-oncourt-badge--gk::after {
+  content: 'P';
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--team-secondary);
+  color: #10131a;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--panel);
+}
+/* Excluido AHORA MISMO: relleno ámbar sólido + cuenta atrás. */
 .follower-oncourt-badge--excluded {
   background: var(--warning);
   color: #10131a;
+}
+/* Ya cumplió una exclusión y volvió a pista (o exclusión rival, de la que
+   no se puede saber si sigue activa): solo contorno ámbar, no relleno —
+   para que nunca se confunda con "excluido ahora mismo". */
+.follower-oncourt-badge--excluded-past {
+  background: transparent;
+  border: 2px solid var(--warning);
+  color: var(--warning);
 }
 .follower-oncourt-badge--disqualified {
   background: var(--danger);
@@ -1823,8 +1852,18 @@
   background: rgba(255, 255, 255, 0.5);
   flex-shrink: 0;
 }
+.follower-legend-dot--gk {
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--team-secondary);
+}
 .follower-legend-dot--excluded {
   background: var(--warning);
+}
+.follower-legend-dot--excluded-past {
+  background: transparent;
+  border: 2px solid var(--warning);
+  width: 5px;
+  height: 5px;
 }
 .follower-legend-dot--disqualified {
   background: var(--danger);

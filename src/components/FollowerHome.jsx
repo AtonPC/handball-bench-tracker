@@ -213,7 +213,11 @@ function LiveMatchSection({ clubId, teamId, team }) {
   // siga contando como parte de los 7. Su estado va aparte, junto con las
   // expulsiones (que si son permanentes ya no vuelven a "en pista").
   const ownOnCourtActive = onCourt.filter((p) => !p.excluded && !p.disqualified);
-  const ownPenalized = Object.values(state.players).filter((p) => p.excluded || p.disqualified);
+  // Incluye también a quien ya cumplió una exclusión y volvió a pista (no
+  // solo a quien está excluido ahora mismo): así se ve de un vistazo quién
+  // va acumulando exclusiones de cara a una posible expulsión, no solo
+  // quién está sentado en este preciso momento.
+  const ownPenalized = Object.values(state.players).filter((p) => (p.exclusionsCount || 0) > 0 || p.disqualified);
   const isOwnLeft = state.isHome;
   const recentEvents = chronology.slice(0, 4);
 
@@ -284,7 +288,9 @@ function LiveMatchSection({ clubId, teamId, team }) {
             <span className="follower-oncourt-label">Equipo en pista</span>
             <div className="follower-oncourt">
               {ownOnCourtActive.map((p) => (
-                <span key={p.id} className="follower-oncourt-badge">{p.number}</span>
+                <span key={p.id} className={`follower-oncourt-badge${p.isGK ? ' follower-oncourt-badge--gk' : ''}`}>
+                  {p.number}
+                </span>
               ))}
               {ownOnCourtActive.length === 0 && <span className="follower-oncourt-empty">—</span>}
             </div>
@@ -296,12 +302,20 @@ function LiveMatchSection({ clubId, teamId, team }) {
           <div className={`follower-oncourt-col${isOwnLeft ? '' : ' follower-oncourt-col--right'}`}>
             <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
             <div className={`follower-oncourt${isOwnLeft ? '' : ' follower-oncourt--right'}`}>
-              {ownPenalized.map((p) => (
-                <span key={p.id} className={`follower-oncourt-badge${p.disqualified ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
-                  {p.number}
-                  <span className="follower-oncourt-sub">{p.disqualified ? 'EXP.' : formatClock(p.exclusionRemainingMs)}</span>
-                </span>
-              ))}
+              {ownPenalized.map((p) => {
+                const state3 = p.disqualified ? 'disqualified' : p.excluded ? 'active' : 'past';
+                return (
+                  <span
+                    key={p.id}
+                    className={`follower-oncourt-badge follower-oncourt-badge--${state3 === 'disqualified' ? 'disqualified' : state3 === 'active' ? 'excluded' : 'excluded-past'}`}
+                  >
+                    {p.number}
+                    <span className="follower-oncourt-sub">
+                      {state3 === 'disqualified' ? 'EXP.' : state3 === 'active' ? formatClock(p.exclusionRemainingMs) : `${p.exclusionsCount}/3`}
+                    </span>
+                  </span>
+                );
+              })}
               {ownPenalized.length === 0 && <span className="follower-oncourt-empty">Ninguno</span>}
             </div>
           </div>
@@ -309,7 +323,7 @@ function LiveMatchSection({ clubId, teamId, team }) {
             <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
             <div className={`follower-oncourt${isOwnLeft ? ' follower-oncourt--right' : ''}`}>
               {rivalExclNumbers.map((n) => (
-                <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
+                <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded-past'}`}>
                   {n}
                   <span className="follower-oncourt-sub">{rivalExclCounts[n] >= 3 ? 'EXP.' : `${rivalExclCounts[n]}/3`}</span>
                 </span>
@@ -321,7 +335,9 @@ function LiveMatchSection({ clubId, teamId, team }) {
 
         <div className="follower-legend">
           <span><span className="follower-legend-dot" /> En pista</span>
-          <span><span className="follower-legend-dot follower-legend-dot--excluded" /> Excluido (tiempo o nº de exclusiones)</span>
+          <span><span className="follower-legend-dot follower-legend-dot--gk" /> Portero</span>
+          <span><span className="follower-legend-dot follower-legend-dot--excluded" /> Excluido ahora (cuenta atrás)</span>
+          <span><span className="follower-legend-dot follower-legend-dot--excluded-past" /> Ya cumplió una exclusión (nº de exclusiones)</span>
           <span><span className="follower-legend-dot follower-legend-dot--disqualified" /> Expulsado</span>
         </div>
 
