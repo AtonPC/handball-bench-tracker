@@ -13,6 +13,13 @@ import { formatClock } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
 import GoalCelebration from './GoalCelebration';
 
+// La plantilla (colección "players") no tiene un campo "name" — solo
+// displayName (o firstName/lastName) —, a diferencia de los jugadores ya
+// copiados a un partido, que sí lo tienen. Mismo criterio que startMatch.
+function rosterDisplayName(p) {
+  return p.displayName || `${p.firstName || ''} ${p.lastName || ''}`.trim();
+}
+
 // Nombre a mostrar de un jugador propio, respetando imageAuthorized: si el
 // club no ha autorizado a mostrar su nombre, solo se ve el dorsal. Nunca se
 // muestra el tiempo jugado individual — solo quién está en pista.
@@ -20,7 +27,7 @@ function ownPlayerLabel(playersById, authorizedById, playerId) {
   const p = playersById[playerId];
   if (!p) return 'Jugador/a';
   if (authorizedById[playerId] === false) return `#${p.number ?? '?'}`;
-  return p.name || `#${p.number ?? '?'}`;
+  return rosterDisplayName(p) || `#${p.number ?? '?'}`;
 }
 
 // Cronología unificada: goles, fallos y recuperaciones propias, y goles y
@@ -179,7 +186,10 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const [detailView, setDetailView] = useState('stats'); // null | 'stats' | 'chronology'
 
   const lastOwnGoal = ownGoals[ownGoals.length - 1] || null;
-  const celebrationPlayer = lastOwnGoal ? playersById[lastOwnGoal.playerId] : null;
+  const celebrationRosterPlayer = lastOwnGoal ? playersById[lastOwnGoal.playerId] : null;
+  const celebrationPlayer = celebrationRosterPlayer
+    ? { ...celebrationRosterPlayer, name: rosterDisplayName(celebrationRosterPlayer) }
+    : null;
   const celebrationAuthorized = lastOwnGoal ? authorizedById[lastOwnGoal.playerId] : true;
   const lastRivalGoal = rivalGoals[rivalGoals.length - 1] || null;
 
