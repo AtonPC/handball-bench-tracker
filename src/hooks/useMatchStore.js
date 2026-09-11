@@ -354,7 +354,7 @@ export function useMatchStore(matchId, enabled) {
   );
 
   const playerShotWithDetail = useCallback(
-    (playerId, { shotZone }) => {
+    (playerId, { shotZone, goalZone }) => {
       if (!match) return;
       const next = Math.max(0, players[playerId].shots + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -362,7 +362,7 @@ export function useMatchStore(matchId, enabled) {
       recordEvent('Fallo', {}, { [playerId]: { shots: next } }, {
         create: {
           ref,
-          data: { playerId, type: 'miss', minute, period: match.period, shotZone: shotZone || null, goalZone: null, createdAt: Date.now() },
+          data: { playerId, type: 'miss', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
         },
       });
     },
