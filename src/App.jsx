@@ -116,7 +116,7 @@ export default function App() {
             <button className="btn btn-logout" onClick={backToMatches}>← PARTIDOS</button>
             <span className="admin-nav-role">Estadísticas</span>
           </nav>
-          <StatsView store={store} />
+          <StatsView store={store} identity={identity} teamId={activeTeamId} />
         </div>
       );
     }

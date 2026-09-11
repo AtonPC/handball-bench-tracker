@@ -114,7 +114,6 @@ function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoals
             <th>Paradas/Tiros</th>
             <th>% Paradas</th>
             <th>Recup.</th>
-            <th>Excl.</th>
           </tr>
         </thead>
         <tbody>
@@ -130,7 +129,6 @@ function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoals
                 <td>{p.isGK ? `${p.saves || 0}/${shotsFaced}` : '—'}</td>
                 <td>{p.isGK ? pct(p.saves || 0, shotsFaced) : '—'}</td>
                 <td>{p.recoveries}</td>
-                <td>{p.exclusionsCount || 0}</td>
               </tr>
             );
           })}
