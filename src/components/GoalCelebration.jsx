@@ -4,10 +4,11 @@ const CONFETTI_PIECES = Array.from({ length: 16 }, (_, i) => i);
 
 // Aviso de gol para la vista de Seguidor: escudo del equipo (grande) +
 // confeti en CSS puro (sin librería nueva) + frase de gol si el equipo la
-// tiene configurada + foto/dorsal/nombre de quien ha marcado. Respeta
-// imageAuthorized: si el jugador no tiene autorizada la imagen, no se
-// muestra ni su foto ni su nombre, solo el dorsal. Se autodestruye sola.
-export default function GoalCelebration({ crestUrl, goalPhrase, player, playerAuthorized, onDone }) {
+// tiene configurada + foto/dorsal/nombre de quien ha marcado + minuto y
+// resultado tras el gol. Respeta imageAuthorized: si el jugador no tiene
+// autorizada la imagen, no se muestra ni su foto ni su nombre, solo el
+// dorsal. Se autodestruye sola.
+export default function GoalCelebration({ crestUrl, goalPhrase, player, playerAuthorized, minute, leftName, rightName, leftScore, rightScore, onDone }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 4200);
     return () => clearTimeout(timer);
@@ -34,6 +35,14 @@ export default function GoalCelebration({ crestUrl, goalPhrase, player, playerAu
             <span className="goal-celebration-scorer-name">
               #{player.number}{showPlayerName && player.name ? ` ${player.name}` : ''}
             </span>
+          </div>
+        )}
+        {minute != null && <span className="goal-celebration-minute">Min. {minute}'</span>}
+        {leftScore != null && rightScore != null && (
+          <div className="goal-celebration-score">
+            <span>{leftName}</span>
+            <span className="goal-celebration-score-value">{leftScore} - {rightScore}</span>
+            <span>{rightName}</span>
           </div>
         )}
       </div>

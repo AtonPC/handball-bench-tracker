@@ -1458,6 +1458,31 @@
   letter-spacing: 0.02em;
   color: #fff;
 }
+.goal-celebration-minute {
+  margin-top: var(--space-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.goal-celebration-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.goal-celebration-score-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
 @keyframes goal-text-punch {
   0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
   55% { transform: scale(1.25) rotate(4deg); opacity: 1; }

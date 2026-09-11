@@ -184,6 +184,8 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const rightName = state.isHome ? state.rivalName : state.ownTeamName;
   const leftCrest = state.isHome ? team?.crestUrl : state.rivalCrestUrl;
   const rightCrest = state.isHome ? state.rivalCrestUrl : team?.crestUrl;
+  const leftScore = state.isHome ? state.score.own : state.score.rival;
+  const rightScore = state.isHome ? state.score.rival : state.score.own;
   const onCourt = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   // "En pista" son quienes están jugando de verdad ahora mismo — un excluido
   // no está físicamente en la cancha esos 2 minutos, aunque el modelo lo
@@ -203,6 +205,11 @@ function LiveMatchSection({ clubId, teamId, team }) {
           goalPhrase={team?.goalPhrase}
           player={celebrationPlayer}
           playerAuthorized={celebrationAuthorized}
+          minute={lastOwnGoal?.minute}
+          leftName={leftName}
+          rightName={rightName}
+          leftScore={leftScore}
+          rightScore={rightScore}
           onDone={() => setCelebrationKey(null)}
         />
       )}
