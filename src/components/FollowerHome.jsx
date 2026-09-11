@@ -466,6 +466,38 @@ function AccumulatedSection({ clubId, teamId }) {
   );
 }
 
+// Con un partido en directo, las estadísticas de temporada quedan ocultas
+// por defecto — lo que se pidió explícitamente es que se vea SOLO lo del
+// partido, no lo acumulado del equipo — pero siguen a un clic si hace
+// falta consultarlas. Sin partido en directo no tiene sentido esconderlas:
+// son lo único que hay que mostrar en ese momento.
+function TeamFollowerContent({ clubId, teamId, team }) {
+  const { matches } = useMatches(clubId, teamId);
+  const hasLiveMatch = matches.some((m) => m.lifecycle === 'live');
+  const [showSeason, setShowSeason] = useState(!hasLiveMatch);
+
+  useEffect(() => {
+    setShowSeason(!hasLiveMatch);
+  }, [hasLiveMatch]);
+
+  return (
+    <>
+      <LiveMatchSection clubId={clubId} teamId={teamId} team={team} />
+      {hasLiveMatch && (
+        <button
+          type="button"
+          className="btn btn-timeout"
+          style={{ marginTop: 'var(--space-3)' }}
+          onClick={() => setShowSeason((v) => !v)}
+        >
+          {showSeason ? 'Ocultar' : 'Ver'} estadísticas de temporada
+        </button>
+      )}
+      {showSeason && <AccumulatedSection clubId={clubId} teamId={teamId} />}
+    </>
+  );
+}
+
 // Vista de Seguidor/tutor: información del partido en directo (marcador,
 // escudos, minuto, alineación en pista y cronología de goles/fallos/
 // recuperaciones/exclusiones) y estadísticas acumuladas de los partidos
@@ -504,10 +536,7 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
       </nav>
       <div className="admin-panel">
         {activeTeam ? (
-          <>
-            <LiveMatchSection clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />
-            <AccumulatedSection clubId={activeTeam.clubId} teamId={activeTeam.id} />
-          </>
+          <TeamFollowerContent clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />
         ) : (
           <p className="modal-hint">No se encuentra el equipo aprobado.</p>
         )}
