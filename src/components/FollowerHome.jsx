@@ -6,7 +6,7 @@ import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
-import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
+import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { formatClock } from '../utils/time';
@@ -144,7 +144,7 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const liveMatch = useMemo(() => matches.find((m) => m.lifecycle === 'live') || null, [matches]);
   const store = useMatchStore(liveMatch?.id || null, !!liveMatch);
   const rivalGoals = useRivalGoals(liveMatch?.id || null);
-  const rivalExclusions = useRivalExclusions(liveMatch?.id || null);
+  const rivalExclusions = useRivalExclusionsLive(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
   const recoveryEvents = useRecoveryEvents(liveMatch?.id || null);
   const exclusionEvents = useExclusionEvents(liveMatch?.id || null);
@@ -193,8 +193,7 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const celebrationAuthorized = lastOwnGoal ? authorizedById[lastOwnGoal.playerId] : true;
   const lastRivalGoal = rivalGoals[rivalGoals.length - 1] || null;
 
-  const rivalExclCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
-  const rivalExclNumbers = useMemo(() => Object.keys(rivalExclCounts).map(Number).sort((a, b) => a - b), [rivalExclCounts]);
+  const rivalExclSummary = useMemo(() => summarizeRivalExclusions(rivalExclusions), [rivalExclusions]);
 
   if (!liveMatch || !store.ready) {
     return <p className="modal-hint">Ahora mismo no hay ningún partido en directo.</p>;
@@ -322,13 +321,22 @@ function LiveMatchSection({ clubId, teamId, team }) {
           <div className={`follower-oncourt-col${isOwnLeft ? ' follower-oncourt-col--right' : ''}`}>
             <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
             <div className={`follower-oncourt${isOwnLeft ? ' follower-oncourt--right' : ''}`}>
-              {rivalExclNumbers.map((n) => (
-                <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded-past'}`}>
-                  {n}
-                  <span className="follower-oncourt-sub">{rivalExclCounts[n] >= 3 ? 'EXP.' : `${rivalExclCounts[n]}/3`}</span>
-                </span>
-              ))}
-              {rivalExclNumbers.length === 0 && <span className="follower-oncourt-empty">Ninguno</span>}
+              {rivalExclSummary.map((entry) => {
+                const cls = entry.disqualified
+                  ? 'follower-oncourt-badge--disqualified'
+                  : entry.activeRemainingMs > 0
+                    ? 'follower-oncourt-badge--excluded'
+                    : 'follower-oncourt-badge--excluded-past';
+                return (
+                  <span key={entry.number} className={`follower-oncourt-badge ${cls}`}>
+                    {entry.number}
+                    <span className="follower-oncourt-sub">
+                      {entry.disqualified ? 'EXP.' : entry.activeRemainingMs > 0 ? formatClock(entry.activeRemainingMs) : `${entry.count}/3`}
+                    </span>
+                  </span>
+                );
+              })}
+              {rivalExclSummary.length === 0 && <span className="follower-oncourt-empty">Ninguno</span>}
             </div>
           </div>
         </div>

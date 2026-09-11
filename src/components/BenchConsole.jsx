@@ -8,7 +8,7 @@ import RivalExclusionModal from './RivalExclusionModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
-import { useRivalExclusions } from '../hooks/useRivalExclusions';
+import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
 import { teamColorStyle } from '../utils/teamColors';
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
@@ -19,7 +19,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
   const [showQuickStats, setShowQuickStats] = useState(false);
-  const rivalExclusions = useRivalExclusions(matchId);
+  const rivalExclusionsLive = useRivalExclusionsLive(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -72,11 +72,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       <RivalPanel
         rivalGoals={state.score.rival}
         rivalShots={state.rivalShots}
-        rivalExclusions={rivalExclusions}
+        rivalExclusionsLive={rivalExclusionsLive}
         onGoal={store.rivalGoal}
         onShot={store.rivalShot}
         onOpenGoalDetail={() => setShowRivalGoalModal(true)}
         onOpenExclusion={() => setShowRivalExclusionModal(true)}
+        onCancelExclusion={store.cancelRivalExclusion}
       />
 
       {substitution && (

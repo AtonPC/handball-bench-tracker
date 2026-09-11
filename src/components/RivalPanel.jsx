@@ -1,13 +1,20 @@
 import StatStepper from './StatStepper';
-import { rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
+import { summarizeRivalExclusions } from '../hooks/useRivalExclusions';
+import { formatClock } from '../utils/time';
 
 // Los badges de exclusión rival dejan ver, sin salir de la consola, qué
 // dorsales ya no pueden seguir jugando (3 exclusiones = expulsión, misma
 // regla que el propio equipo) — importante para que el delegado no deje
-// que un rival expulsado siga en pista por despiste.
-export default function RivalPanel({ rivalGoals, rivalShots, rivalExclusions, onGoal, onShot, onOpenGoalDetail, onOpenExclusion }) {
-  const counts = rivalExclusionCountsByNumber(rivalExclusions);
-  const numbers = Object.keys(counts).map(Number).sort((a, b) => a - b);
+// que un rival expulsado siga en pista por despiste. Mientras una
+// exclusión está en marcha se ve la cuenta atrás, igual que en el propio
+// equipo. Tocar un badge permite anularla si se marcó por error.
+export default function RivalPanel({ rivalGoals, rivalShots, rivalExclusionsLive, onGoal, onShot, onOpenGoalDetail, onOpenExclusion, onCancelExclusion }) {
+  const summary = summarizeRivalExclusions(rivalExclusionsLive);
+
+  function handleBadgeClick(entry) {
+    const ok = confirm(`¿Anular la última exclusión del dorsal #${entry.number}? (marcada por error)`);
+    if (ok) onCancelExclusion(entry.lastEventId);
+  }
 
   return (
     <div className="rival-panel">
@@ -21,12 +28,22 @@ export default function RivalPanel({ rivalGoals, rivalShots, rivalExclusions, on
         <StatStepper icon="TIRO" label="Tiros rival" count={rivalShots} onInc={() => onShot(1)} onDec={() => onShot(-1)} />
       </div>
       <button className="btn btn-timeout" onClick={onOpenExclusion}>EXCLUSIÓN RIVAL</button>
-      {numbers.length > 0 && (
+      {summary.length > 0 && (
         <div className="rival-excl-badges">
-          {numbers.map((n) => (
-            <span key={n} className={`rival-excl-badge${counts[n] >= 3 ? ' rival-excl-badge--disqualified' : ''}`}>
-              #{n} · {Math.min(counts[n], 3)}/3{counts[n] >= 3 ? ' EXPULSADO' : ''}
-            </span>
+          {summary.map((entry) => (
+            <button
+              key={entry.number}
+              type="button"
+              className={`rival-excl-badge${entry.disqualified ? ' rival-excl-badge--disqualified' : entry.activeRemainingMs > 0 ? ' rival-excl-badge--active' : ''}`}
+              onClick={() => handleBadgeClick(entry)}
+              title="Tocar para anular la última exclusión de este dorsal"
+            >
+              #{entry.number} · {entry.disqualified
+                ? 'EXPULSADO'
+                : entry.activeRemainingMs > 0
+                  ? formatClock(entry.activeRemainingMs)
+                  : `${entry.count}/3`}
+            </button>
           ))}
         </div>
       )}

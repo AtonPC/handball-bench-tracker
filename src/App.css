@@ -1066,10 +1066,19 @@
   background: var(--warning-dim);
   color: var(--warning);
   border-radius: var(--radius-sm);
-  padding: 2px 8px;
+  padding: 4px 10px;
+  min-height: 32px;
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+/* Exclusión en marcha ahora mismo: relleno sólido + cuenta atrás, igual
+   que el propio equipo. Sin relleno (el estilo base) = ya cumplió alguna
+   exclusión pero no hay ninguna activa en este momento. */
+.rival-excl-badge--active {
+  background: var(--warning);
+  color: #10131a;
 }
 .rival-excl-badge--disqualified {
   border-color: var(--danger);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const EXCLUSION_MS = 2 * 60 * 1000;
@@ -271,19 +271,35 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // Exclusión rival: solo el dorsal, sin zonas — a diferencia del gol rival,
-  // no cambia el marcador. Se guarda en matches/{id}/rivalExclusions para
-  // poder contar cuántas lleva cada dorsal (ver rivalExclusionCounts en
-  // el estado) y para la cronología de la vista de Seguidor.
+  // no cambia el marcador. Se guarda en matches/{id}/rivalExclusions con su
+  // propia cuenta atrás (endsAtMs) para poder mostrarla en directo, igual
+  // que la del propio equipo — antes no se guardaba y no había forma de
+  // saber si una exclusión rival seguía activa en cada momento.
   const rivalExclusion = useCallback(
     (number) => {
       if (!match) return;
+      const nowMs = Date.now();
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'rivalExclusions'));
       recordEvent(`Exclusión rival #${number}`, {}, {}, {
-        create: { ref, data: { number, minute, period: match.period, createdAt: Date.now() } },
+        create: {
+          ref,
+          data: { number, minute, period: match.period, createdAt: nowMs, endsAtMs: nowMs + EXCLUSION_MS },
+        },
       });
     },
     [match, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Anula una exclusión rival marcada por error: se borra del todo (no solo
+  // se "cancela") para que ni cuente para el 1/3, 2/3... ni salga en la
+  // cronología, como si nunca hubiera pasado.
+  const cancelRivalExclusion = useCallback(
+    (rivalExclusionId) => {
+      if (!matchId) return;
+      return deleteDoc(doc(db, 'matches', matchId, 'rivalExclusions', rivalExclusionId));
+    },
+    [matchId]
   );
 
   // --- Tiempos muertos ---
@@ -572,6 +588,7 @@ export function useMatchStore(matchId, enabled) {
     rivalGoalWithDetail,
     rivalShot,
     rivalExclusion,
+    cancelRivalExclusion,
     timeout,
     playerGoal,
     playerGoalWithDetail,
