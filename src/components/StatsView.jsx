@@ -1,13 +1,10 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
-import { useShotEvents } from '../hooks/useShotEvents';
-import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useMatchEvents } from '../hooks/useMatchEvents';
-import { useSortableTable } from '../hooks/useSortableTable';
-import SortableTh from './SortableTh';
 import { hasCapability } from '../permissions';
+import PlayerStatsTable from './PlayerStatsTable';
 
 const SUBSTITUTION_LABELS = new Set(['Cambio', 'Cambio por expulsión']);
 
@@ -16,14 +13,10 @@ function pct(part, total) {
   return `${Math.round((part / total) * 100)}%`;
 }
 
-function ratio(part, total) {
-  return total ? part / total : 0;
-}
-
 function exclusionRowClass(p) {
-  if (p.disqualified) return ' stats-row--danger';
-  if ((p.exclusionsCount || 0) >= 1) return ' stats-row--warning';
-  return '';
+  if (p.disqualified) return 'stats-row--danger';
+  if ((p.exclusionsCount || 0) >= 1) return 'stats-row--warning';
+  return undefined;
 }
 
 // Top N por un criterio, solo entre quienes tienen algo que mostrar (evita
@@ -48,8 +41,6 @@ export default function StatsView({ store, identity, teamId }) {
 
   const rivalExclusions = useRivalExclusions(matchId);
   const rivalExclusionCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
-  const shotEvents = useShotEvents(matchId);
-  const saveEvents = useSaveEvents(matchId);
   const matchEvents = useMatchEvents(matchId);
   const substitutionsCount = useMemo(
     () => matchEvents.filter((e) => SUBSTITUTION_LABELS.has(e.label)).length,
@@ -58,7 +49,7 @@ export default function StatsView({ store, identity, teamId }) {
   const canCoachPanel = hasCapability(identity, teamId, 'coachPanel');
 
   const players = Object.values(state.players)
-    .map((p) => ({ ...p, attempts: p.goals + p.shots }))
+    .map((p) => ({ ...p, attempts: p.goals + p.shots, shotsFaced: (p.saves || 0) + state.score.rival }))
     .sort((a, b) => a.number - b.number);
 
   const teamGoals = players.reduce((sum, p) => sum + p.goals, 0);
@@ -68,40 +59,6 @@ export default function StatsView({ store, identity, teamId }) {
   const teamSaves = players.reduce((sum, p) => sum + (p.saves || 0), 0);
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
   const teamDisqualifications = players.filter((p) => p.disqualified).length;
-
-  const columns = [
-    { key: 'number', value: (p) => p.number ?? 0 },
-    { key: 'name', value: (p) => p.name || '' },
-    { key: 'time', value: (p) => p.accumulatedMs },
-    { key: 'timePct', value: (p) => ratio(p.accumulatedMs, state.clock.elapsedMs) },
-    { key: 'goals', value: (p) => p.goals },
-    { key: 'shots', value: (p) => p.shots },
-    { key: 'attempts', value: (p) => p.attempts },
-    { key: 'accPct', value: (p) => ratio(p.goals, p.attempts) },
-    { key: 'saves', value: (p) => p.saves || 0 },
-    { key: 'recoveries', value: (p) => p.recoveries },
-    { key: 'recPct', value: (p) => ratio(p.recoveries, teamRecoveries) },
-    { key: 'exclusions', value: (p) => p.exclusionsCount || 0 },
-    { key: 'disqualified', value: (p) => (p.disqualified ? 1 : 0) },
-  ];
-  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(players, columns, 'number');
-
-  // Toca Goles/Fallos/Tiros/Paradas para desplegar de dónde vino cada uno —
-  // un toque funciona igual en tablet/móvil que un hover, que ahí no existe.
-  const [expanded, setExpanded] = useState(null); // { playerId, type: 'goal'|'miss'|'attempts'|'save' }
-
-  function eventsFor(playerId, type) {
-    if (type === 'save') {
-      return saveEvents.filter((s) => s.playerId === playerId).sort((a, b) => a.minute - b.minute);
-    }
-    return shotEvents
-      .filter((s) => s.playerId === playerId && (type === 'attempts' || s.type === type))
-      .sort((a, b) => a.minute - b.minute);
-  }
-
-  function toggleExpand(playerId, type) {
-    setExpanded((cur) => (cur?.playerId === playerId && cur?.type === type ? null : { playerId, type }));
-  }
 
   // Para el entrenador (capacidad "coachPanel"): destacados del partido en
   // curso — quién ha marcado más, recuperado más, y cómo se han repartido
@@ -158,73 +115,11 @@ export default function StatsView({ store, identity, teamId }) {
         </div>
       </div>
 
-      <p className="modal-hint">Toca Goles, Fallos o Tiros de un jugador para ver de dónde vino cada uno (si tiene zona registrada).</p>
-      <div className="stats-table-wrap">
-        <table className="stats-table">
-          <thead>
-            <tr>
-              <SortableTh label="#" columnKey="number" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Jugador" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Tiempo" columnKey="time" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="% tiempo" columnKey="timePct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Goles" columnKey="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Fallos" columnKey="shots" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Tiros" columnKey="attempts" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="% acierto" columnKey="accPct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Paradas" columnKey="saves" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Recup." columnKey="recoveries" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="% recup. equipo" columnKey="recPct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Excl." columnKey="exclusions" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortableTh label="Expulsado" columnKey="disqualified" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((p) => (
-              <Fragment key={p.id}>
-                <tr className={exclusionRowClass(p).trim() || undefined}>
-                  <td>{p.number}</td>
-                  <td>{p.name}{p.isGK ? ' (P)' : ''}</td>
-                  <td>{formatClock(p.accumulatedMs)}</td>
-                  <td>{pct(p.accumulatedMs, state.clock.elapsedMs)}</td>
-                  <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'goal')}>{p.goals}</button></td>
-                  <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'miss')}>{p.shots}</button></td>
-                  <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'attempts')}>{p.attempts}</button></td>
-                  <td>{pct(p.goals, p.attempts)}</td>
-                  <td><button type="button" className="stat-cell-btn" onClick={() => toggleExpand(p.id, 'save')}>{p.saves || 0}</button></td>
-                  <td>{p.recoveries}</td>
-                  <td>{pct(p.recoveries, teamRecoveries)}</td>
-                  <td>{p.exclusionsCount || 0}</td>
-                  <td>{p.disqualified ? 'Sí' : '—'}</td>
-                </tr>
-                {expanded?.playerId === p.id && (
-                  <tr className="stats-detail-row">
-                    <td colSpan={13}>
-                      {eventsFor(p.id, expanded.type).length === 0 ? (
-                        <span className="modal-hint">Sin eventos con zona registrados para esto.</span>
-                      ) : (
-                        <ul className="stats-detail-list">
-                          {eventsFor(p.id, expanded.type).map((s) => (
-                            <li key={s.id}>
-                              {expanded.type === 'save' ? (
-                                <>Min. {s.minute}' — Parada · zona: {s.goalZone || 'sin zona'}</>
-                              ) : (
-                                <>
-                                  Min. {s.minute}' — {s.type === 'goal' ? 'Gol' : 'Fallo'} · lanzó desde: {s.shotZone || 'sin zona'}
-                                  {s.type === 'goal' ? ` · entró por: ${s.goalZone || 'sin zona'}` : ''}
-                                </>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PlayerStatsTable
+        rows={players}
+        minutesTotalMs={state.clock.elapsedMs}
+        rowClassName={exclusionRowClass}
+      />
 
       {(rivalGoals.length > 0 || rivalExclusions.length > 0) && (
         <div className="card-grid" style={{ marginTop: 'var(--space-4)' }}>
@@ -264,11 +159,11 @@ export default function StatsView({ store, identity, teamId }) {
             </div>
             <div className="card">
               <h4>Más minutos jugados</h4>
-              {mostMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {formatClock(p.accumulatedMs)}</p>)}
+              {mostMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {pct(p.accumulatedMs, state.clock.elapsedMs)}</p>)}
             </div>
             <div className="card">
               <h4>Menos minutos jugados</h4>
-              {leastMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {formatClock(p.accumulatedMs)}</p>)}
+              {leastMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {pct(p.accumulatedMs, state.clock.elapsedMs)}</p>)}
             </div>
           </div>
         </div>

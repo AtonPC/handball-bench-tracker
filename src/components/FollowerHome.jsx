@@ -10,11 +10,10 @@ import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRi
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { useFollowerSession } from '../hooks/useFollowerSession';
-import { useSortableTable } from '../hooks/useSortableTable';
 import { formatClock } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
 import GoalCelebration from './GoalCelebration';
-import SortableTh from './SortableTh';
+import PlayerStatsTable from './PlayerStatsTable';
 
 // La plantilla (colección "players") no tiene un campo "name" — solo
 // displayName (o firstName/lastName) —, a diferencia de los jugadores ya
@@ -89,79 +88,24 @@ function ChronologyRow({ entry, playersById, authorizedById, compact }) {
   );
 }
 
-function pct(made, total) {
-  if (!total) return '—';
-  return `${Math.round((made / total) * 100)}%`;
-}
-
-function ratio(made, total) {
-  return total ? made / total : 0;
-}
-
 // Estadísticas del partido EN CURSO (no las acumuladas de temporada),
-// construidas directamente de state.players — sin tiempo jugado. Se puede
-// ordenar por cualquier columna tocándola, igual que en la vista de staff.
-// Goles/Paradas van "hechos/intentos" (p. ej. 3/5) con el % al lado, más
-// compacto que columnas separadas de goles y fallos.
+// construidas directamente de state.players. Misma tabla que ve el staff
+// (PlayerStatsTable): Goles/Tiros, % Acierto, Paradas/Tiros y % Paradas
+// (portero), Recuperaciones, Exclusiones, Expulsado y % Minutos jugados del
+// partido — nunca el tiempo jugado en minutos, solo el reparto en %.
 // "Tiros" de paradas = paradas + goles rivales encajados por el equipo —
 // no se sabe qué portero concreto encajó cada gol (no se registra quién
 // estaba en la portería en ese momento), así que es del equipo, no 1:1
 // del portero si hubo más de uno en el partido.
-function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoalsConceded }) {
+function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoalsConceded, matchElapsedMs }) {
   const rows = Object.values(statePlayers).map((p) => ({
     ...p,
     attempts: p.goals + p.shots,
     shotsFaced: (p.saves || 0) + rivalGoalsConceded,
-    displayName: ownPlayerLabel(playersById, authorizedById, p.id),
+    name: ownPlayerLabel(playersById, authorizedById, p.id),
   }));
 
-  const columns = [
-    { key: 'number', value: (p) => p.number ?? 0 },
-    { key: 'name', value: (p) => p.displayName },
-    { key: 'goals', value: (p) => p.goals },
-    { key: 'accPct', value: (p) => ratio(p.goals, p.attempts) },
-    { key: 'saves', value: (p) => (p.isGK ? p.saves || 0 : -1) },
-    { key: 'savePct', value: (p) => (p.isGK ? ratio(p.saves || 0, p.shotsFaced) : -1) },
-    { key: 'recoveries', value: (p) => p.recoveries },
-    { key: 'exclusions', value: (p) => p.exclusionsCount || 0 },
-    { key: 'disqualified', value: (p) => (p.disqualified ? 1 : 0) },
-  ];
-  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(rows, columns, 'number');
-
-  return (
-    <div className="stats-table-wrap">
-      <table className="stats-table">
-        <thead>
-          <tr>
-            <SortableTh label="#" columnKey="number" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="Jugador/a" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="Goles/Tiros" columnKey="goals" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="% Acierto" columnKey="accPct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="Paradas/Tiros" columnKey="saves" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="% Paradas" columnKey="savePct" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="Recup." columnKey="recoveries" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="Excl." columnKey="exclusions" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            <SortableTh label="Expulsado" columnKey="disqualified" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((p) => (
-            <tr key={p.id}>
-              <td>{p.number}</td>
-              <td>{p.displayName}{p.isGK ? ' (P)' : ''}</td>
-              <td>{p.goals}/{p.attempts}</td>
-              <td>{pct(p.goals, p.attempts)}</td>
-              <td>{p.isGK ? `${p.saves || 0}/${p.shotsFaced}` : '—'}</td>
-              <td>{p.isGK ? pct(p.saves || 0, p.shotsFaced) : '—'}</td>
-              <td>{p.recoveries}</td>
-              <td>{p.exclusionsCount || 0}</td>
-              <td>{p.disqualified ? 'Sí' : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  return <PlayerStatsTable rows={rows} minutesTotalMs={matchElapsedMs} />;
 }
 
 function LiveMatchSection({ clubId, teamId, team, logView }) {
@@ -416,6 +360,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
             playersById={playersById}
             authorizedById={authorizedById}
             rivalGoalsConceded={state.score.rival}
+            matchElapsedMs={state.clock.elapsedMs}
           />
         </div>
       )}
@@ -437,7 +382,7 @@ function AccumulatedSection({ clubId, teamId }) {
   const { matches } = useMatches(clubId, teamId);
   const finishedMatches = useMemo(() => matches.filter((m) => m.lifecycle === 'finished'), [matches]);
   const finishedIds = useMemo(() => finishedMatches.map((m) => m.id), [finishedMatches]);
-  const { totals, loading } = useTeamStats(finishedIds);
+  const { totals, teamTotalMs, teamRivalGoalsConceded, loading } = useTeamStats(finishedIds);
   const { players } = usePlayers(clubId, teamId);
   const authorizedById = useMemo(
     () => Object.fromEntries(players.map((p) => [p.id, p.imageAuthorized !== false])),
@@ -449,9 +394,11 @@ function AccumulatedSection({ clubId, teamId }) {
       id,
       ...p,
       attempts: p.goals + p.shots,
-      displayName: authorizedById[id] === false ? `Jugador/a #${p.number ?? '?'}` : p.name,
+      shotsFaced: (p.saves || 0) + teamRivalGoalsConceded,
+      disqualified: p.disqualifications || 0,
+      name: authorizedById[id] === false ? `Jugador/a #${p.number ?? '?'}` : p.name,
     })),
-    [totals, authorizedById]
+    [totals, authorizedById, teamRivalGoalsConceded]
   );
 
   const topScorers = useMemo(
@@ -480,48 +427,19 @@ function AccumulatedSection({ clubId, teamId }) {
           <h4>Máximos goleadores</h4>
           {topScorers.length === 0 && <p>Todavía nadie ha marcado.</p>}
           {topScorers.map((p, i) => (
-            <p key={p.id}>{i + 1}. #{p.number} {p.displayName} — {p.goals} gol{p.goals === 1 ? '' : 'es'}</p>
+            <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.goals} gol{p.goals === 1 ? '' : 'es'}</p>
           ))}
         </div>
         <div className="card">
           <h4>Máximas recuperadoras</h4>
           {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
           {topRecoverers.map((p, i) => (
-            <p key={p.id}>{i + 1}. #{p.number} {p.displayName} — {p.recoveries} recup.</p>
+            <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup.</p>
           ))}
         </div>
       </div>
-      <div className="stats-table-wrap" style={{ marginTop: 'var(--space-4)' }}>
-        <table className="stats-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Jugador/a</th>
-              <th>Jugados</th>
-              <th>Convocados</th>
-              <th>Goles/Tiros</th>
-              <th>% Acierto</th>
-              <th>Recup.</th>
-              <th>Excl.</th>
-              <th>Expulsado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => (
-              <tr key={p.id}>
-                <td>{p.number}</td>
-                <td>{p.displayName}{p.isGK ? ' (P)' : ''}</td>
-                <td>{p.matchesPlayed}</td>
-                <td>{p.matchesCalledUp}</td>
-                <td>{p.goals}/{p.attempts}</td>
-                <td>{pct(p.goals, p.attempts)}</td>
-                <td>{p.recoveries}</td>
-                <td>{p.exclusionsCount || 0}</td>
-                <td>{p.disqualifications ? 'Sí' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <PlayerStatsTable rows={rows} minutesTotalMs={teamTotalMs} showMatches />
       </div>
         </>
       )}
