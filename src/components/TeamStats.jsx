@@ -72,6 +72,11 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
   const teamRecoveries = players.reduce((sum, p) => sum + p.recoveries, 0);
   const avgRecoveries = matchCount ? (teamRecoveries / matchCount).toFixed(1) : '0';
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
+  const avgExclusions = matchCount ? (teamExclusions / matchCount).toFixed(1) : '0';
+  // Con un solo partido filtrado, la "media" es matemáticamente ese mismo
+  // dato (dividir entre 1) — se quita la palabra "medio/as" para que no
+  // parezca un cálculo distinto al ver un único partido.
+  const isSingleMatch = matchCount === 1;
 
   const topScorers = useMemo(() => [...players].filter((p) => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 5), [players]);
   const topRecoverers = useMemo(() => [...players].filter((p) => p.recoveries > 0).sort((a, b) => b.recoveries - a.recoveries).slice(0, 5), [players]);
@@ -146,7 +151,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
             <>
               <div className="stats-summary">
                 <div className="stats-summary-item stats-summary-item--score">
-                  <span className="stats-summary-label">Resultado medio</span>
+                  <span className="stats-summary-label">{isSingleMatch ? 'Resultado' : 'Resultado medio'}</span>
                   <span className="stats-summary-value">{Math.round(avgOwn)} - {Math.round(avgRival)}</span>
                 </div>
                 <div className="stats-summary-item">
@@ -166,12 +171,12 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
                   <span className="stats-summary-value">{pct(teamSaves, teamShotsFaced)}</span>
                 </div>
                 <div className="stats-summary-item">
-                  <span className="stats-summary-label">Recuperaciones medias</span>
-                  <span className="stats-summary-value">{avgRecoveries}</span>
+                  <span className="stats-summary-label">{isSingleMatch ? 'Recuperaciones' : 'Recuperaciones medias'}</span>
+                  <span className="stats-summary-value">{isSingleMatch ? teamRecoveries : avgRecoveries}</span>
                 </div>
                 <div className="stats-summary-item">
-                  <span className="stats-summary-label">Exclusiones</span>
-                  <span className="stats-summary-value">{teamExclusions}</span>
+                  <span className="stats-summary-label">{isSingleMatch ? 'Exclusiones' : 'Exclusiones medias'}</span>
+                  <span className="stats-summary-value">{isSingleMatch ? teamExclusions : avgExclusions}</span>
                 </div>
               </div>
 
