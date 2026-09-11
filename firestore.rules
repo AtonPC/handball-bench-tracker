@@ -88,6 +88,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Sesiones de Seguidor: cuándo se conecta cada persona, qué ha visto y
+    // cuánto tiempo lleva activa — para que el administrador de sistema
+    // pueda verlo. Cada quien solo puede crear/actualizar su propia sesión
+    // (personUid == su uid); nadie puede leer las de otras personas salvo
+    // el administrador.
+    match /followerSessions/{sessionId} {
+      allow read: if isSystemAdmin();
+      allow create: if isSignedIn() && request.resource.data.personUid == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.personUid == request.auth.uid &&
+        request.resource.data.personUid == request.auth.uid;
+      allow delete: if isSystemAdmin();
+    }
+
     match /leagues/{leagueId} {
       allow read: if isSignedIn();
       allow write: if isSystemAdmin();

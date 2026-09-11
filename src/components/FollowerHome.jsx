@@ -9,6 +9,7 @@ import { useExclusionEvents } from '../hooks/useExclusionEvents';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
+import { useFollowerSession } from '../hooks/useFollowerSession';
 import { formatClock } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
 import GoalCelebration from './GoalCelebration';
@@ -139,7 +140,7 @@ function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoals
   );
 }
 
-function LiveMatchSection({ clubId, teamId, team }) {
+function LiveMatchSection({ clubId, teamId, team, logView }) {
   const { matches } = useMatches(clubId, teamId);
   const liveMatch = useMemo(() => matches.find((m) => m.lifecycle === 'live') || null, [matches]);
   const store = useMatchStore(liveMatch?.id || null, !!liveMatch);
@@ -194,6 +195,12 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const lastRivalGoal = rivalGoals[rivalGoals.length - 1] || null;
 
   const rivalExclSummary = useMemo(() => summarizeRivalExclusions(rivalExclusions), [rivalExclusions]);
+
+  const liveReady = !!liveMatch && store.ready;
+  useEffect(() => {
+    if (liveReady) logView('live');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveReady, liveMatch?.id]);
 
   if (!liveMatch || !store.ready) {
     return <p className="modal-hint">Ahora mismo no hay ningún partido en directo.</p>;
@@ -352,7 +359,11 @@ function LiveMatchSection({ clubId, teamId, team }) {
         <div className="follower-actions-row">
           <button
             className={`follower-icon-btn${detailView === 'stats' ? ' follower-icon-btn--active' : ''}`}
-            onClick={() => setDetailView(detailView === 'stats' ? null : 'stats')}
+            onClick={() => {
+              const next = detailView === 'stats' ? null : 'stats';
+              setDetailView(next);
+              if (next) logView('match-stats');
+            }}
             title="Estadísticas del partido"
             aria-label="Estadísticas del partido"
           >
@@ -360,7 +371,11 @@ function LiveMatchSection({ clubId, teamId, team }) {
           </button>
           <button
             className={`follower-icon-btn${detailView === 'chronology' ? ' follower-icon-btn--active' : ''}`}
-            onClick={() => setDetailView(detailView === 'chronology' ? null : 'chronology')}
+            onClick={() => {
+              const next = detailView === 'chronology' ? null : 'chronology';
+              setDetailView(next);
+              if (next) logView('chronology');
+            }}
             title="Cronología completa"
             aria-label="Cronología completa"
           >
@@ -495,7 +510,7 @@ function AccumulatedSection({ clubId, teamId }) {
 // partido, no lo acumulado del equipo — pero siguen a un clic si hace
 // falta consultarlas. Sin partido en directo no tiene sentido esconderlas:
 // son lo único que hay que mostrar en ese momento.
-function TeamFollowerContent({ clubId, teamId, team }) {
+function TeamFollowerContent({ clubId, teamId, team, logView }) {
   const { matches } = useMatches(clubId, teamId);
   const hasLiveMatch = matches.some((m) => m.lifecycle === 'live');
   const [showSeason, setShowSeason] = useState(!hasLiveMatch);
@@ -504,15 +519,22 @@ function TeamFollowerContent({ clubId, teamId, team }) {
     setShowSeason(!hasLiveMatch);
   }, [hasLiveMatch]);
 
+  function toggleSeason() {
+    setShowSeason((v) => {
+      if (!v) logView('season');
+      return !v;
+    });
+  }
+
   return (
     <>
-      <LiveMatchSection clubId={clubId} teamId={teamId} team={team} />
+      <LiveMatchSection clubId={clubId} teamId={teamId} team={team} logView={logView} />
       {hasLiveMatch && (
         <button
           type="button"
           className="btn btn-timeout"
           style={{ marginTop: 'var(--space-3)' }}
-          onClick={() => setShowSeason((v) => !v)}
+          onClick={toggleSeason}
         >
           {showSeason ? 'Ocultar' : 'Ver'} estadísticas de temporada
         </button>
@@ -538,6 +560,18 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
 
   const activeTeam = teams.find((t) => t.id === teamId) || null;
 
+  // No se registra sesión en previewMode: es el staff comprobando qué ven
+  // las familias, no una visita real de un Seguidor.
+  const { logView } = useFollowerSession({
+    enabled: !previewMode,
+    personUid: user.uid,
+    personDisplayName: user.displayName,
+    personEmail: user.email,
+    teamId: activeTeam?.id,
+    teamName: activeTeam?.name,
+    clubId: activeTeam?.clubId,
+  });
+
   return (
     <div className="app-shell" style={teamColorStyle(activeTeam)}>
       <nav className="admin-nav">
@@ -560,7 +594,7 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
       </nav>
       <div className="admin-panel">
         {activeTeam ? (
-          <TeamFollowerContent clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />
+          <TeamFollowerContent clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} />
         ) : (
           <p className="modal-hint">No se encuentra el equipo aprobado.</p>
         )}
