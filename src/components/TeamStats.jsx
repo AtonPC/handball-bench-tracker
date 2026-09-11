@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMatches } from '../hooks/useMatches';
 import { useTeamStats } from '../hooks/useTeamStats';
+import { useLeagues } from '../hooks/useLeagues';
 import PlayerStatsTable from './PlayerStatsTable';
 
 function pct(part, total) {
@@ -10,9 +11,22 @@ function pct(part, total) {
 
 const ANY = '';
 
-export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }) {
+// Etiqueta de un partido para el desplegable de filtro y la lista de abajo:
+// rival, local/visitante (si no, no se sabía a simple vista quién jugaba en
+// casa), fecha, jornada y temporada de la liga del equipo, si tiene una.
+function matchLabel(m, seasonLabel) {
+  const parts = [`vs ${m.rivalName || 'Rival'}`, m.isHome ? 'Local' : 'Visitante'];
+  parts.push(m.scheduledAt ? new Date(m.scheduledAt).toLocaleDateString() : 'sin fecha');
+  if (m.jornada != null) parts.push(`J${m.jornada}`);
+  if (seasonLabel) parts.push(seasonLabel);
+  return parts.join(' · ');
+}
+
+export default function TeamStats({ clubId, teamId, teamName, leagueId, onOpenMatchStats }) {
   const { matches } = useMatches(clubId, teamId);
   const finishedMatches = useMemo(() => matches.filter((m) => m.lifecycle === 'finished'), [matches]);
+  const { leagues } = useLeagues(true);
+  const seasonLabel = leagues.find((l) => l.id === leagueId)?.season || null;
 
   const [search, setSearch] = useState('');
   const [matchFilter, setMatchFilter] = useState(ANY);
@@ -118,7 +132,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
             <select className="player-form-input" value={matchFilter} onChange={(e) => setMatchFilter(e.target.value)}>
               <option value={ANY}>Todos los partidos</option>
               {finishedMatches.map((m) => (
-                <option key={m.id} value={m.id}>vs {m.rivalName} — {m.scheduledAt ? new Date(m.scheduledAt).toLocaleDateString() : 'sin fecha'}</option>
+                <option key={m.id} value={m.id}>{matchLabel(m, seasonLabel)}</option>
               ))}
             </select>
             <input
@@ -221,12 +235,8 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
             {filteredMatches.map((m) => (
               <div key={m.id} className="admin-row">
                 <div className="admin-user-info">
-                  <span className="admin-user-name">
-                    {m.isHome ? `${m.ownTeamName || teamName} vs ${m.rivalName}` : `${m.rivalName} vs ${m.ownTeamName || teamName}`}
-                  </span>
-                  <span className="admin-user-email">
-                    {m.scheduledAt ? new Date(m.scheduledAt).toLocaleDateString() : ''} · {m.score?.own ?? '—'}-{m.score?.rival ?? '—'}
-                  </span>
+                  <span className="admin-user-name">{matchLabel(m, seasonLabel)}</span>
+                  <span className="admin-user-email">Resultado: {m.score?.own ?? '—'}-{m.score?.rival ?? '—'}</span>
                 </div>
                 <button className="btn btn-timeout" onClick={() => onOpenMatchStats(m.id)}>Ver este partido</button>
               </div>

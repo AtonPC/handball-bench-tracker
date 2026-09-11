@@ -206,7 +206,7 @@ export default function App() {
           <PlayersAdmin clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} />
         )}
         {view === 'teamStats' && activeTeam && (
-          <TeamStats clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} onOpenMatchStats={openStats} />
+          <TeamStats clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} leagueId={activeTeam.leagueId} onOpenMatchStats={openStats} />
         )}
         {view === 'club' && canManageClub && <ClubAdmin clubId={activeClubId} />}
         {view === 'staff' && canManageClub && <StaffAdmin clubId={activeClubId} />}
