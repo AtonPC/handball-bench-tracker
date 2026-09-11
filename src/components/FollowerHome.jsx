@@ -163,7 +163,14 @@ function LiveMatchSection({ clubId, teamId, team }) {
     prevOwnGoals.current = ownGoals.length;
   }, [ownGoals.length]);
 
-  const [detailView, setDetailView] = useState(null); // null | 'stats' | 'chronology'
+  // Por defecto se ve directamente la estadística DEL PARTIDO (no la
+  // acumulada de temporada, que va aparte y más abajo) — antes había que
+  // saber que existía el botón para encontrarla.
+  const [detailView, setDetailView] = useState('stats'); // null | 'stats' | 'chronology'
+
+  const lastOwnGoal = ownGoals[ownGoals.length - 1] || null;
+  const celebrationPlayer = lastOwnGoal ? playersById[lastOwnGoal.playerId] : null;
+  const celebrationAuthorized = lastOwnGoal ? authorizedById[lastOwnGoal.playerId] : true;
 
   const rivalExclCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
   const rivalExclNumbers = useMemo(() => Object.keys(rivalExclCounts).map(Number).sort((a, b) => a - b), [rivalExclCounts]);
@@ -194,6 +201,8 @@ function LiveMatchSection({ clubId, teamId, team }) {
           key={celebrationKey}
           crestUrl={team?.crestUrl}
           goalPhrase={team?.goalPhrase}
+          player={celebrationPlayer}
+          playerAuthorized={celebrationAuthorized}
           onDone={() => setCelebrationKey(null)}
         />
       )}
@@ -348,15 +357,17 @@ function AccumulatedSection({ clubId, teamId }) {
     [rows]
   );
 
-  if (loading) return <p className="modal-hint">Calculando…</p>;
-  if (finishedMatches.length === 0) {
-    return <p className="modal-hint">Todavía no hay partidos finalizados.</p>;
-  }
-
   return (
     <div style={{ marginTop: 'var(--space-5)' }}>
+      <h3 className="stats-section-title">Estadísticas de la temporada</h3>
+      {loading && <p className="modal-hint">Calculando…</p>}
+      {!loading && finishedMatches.length === 0 && (
+        <p className="modal-hint">Todavía no hay partidos finalizados.</p>
+      )}
+      {!loading && finishedMatches.length > 0 && (
+        <>
       <p className="modal-hint">
-        {finishedMatches.length} partido{finishedMatches.length === 1 ? '' : 's'} finalizado{finishedMatches.length === 1 ? '' : 's'}
+        Histórico de {finishedMatches.length} partido{finishedMatches.length === 1 ? '' : 's'} finalizado{finishedMatches.length === 1 ? '' : 's'} — no del partido en directo
       </p>
       <div className="card-grid" style={{ marginTop: 'var(--space-3)' }}>
         <div className="card">
@@ -406,6 +417,8 @@ function AccumulatedSection({ clubId, teamId }) {
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   );
 }
