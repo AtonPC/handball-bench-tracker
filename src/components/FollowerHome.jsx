@@ -163,6 +163,16 @@ function LiveMatchSection({ clubId, teamId, team }) {
     prevOwnGoals.current = ownGoals.length;
   }, [ownGoals.length]);
 
+  // Aviso de gol rival, completamente aparte del propio — nunca comparten
+  // datos ni disparador, para que un gol rival no pueda salir jamás con el
+  // escudo/color propios ni al revés.
+  const [rivalCelebrationKey, setRivalCelebrationKey] = useState(null);
+  const prevRivalGoals = useRef(rivalGoals.length);
+  useEffect(() => {
+    if (rivalGoals.length > prevRivalGoals.current) setRivalCelebrationKey(Date.now());
+    prevRivalGoals.current = rivalGoals.length;
+  }, [rivalGoals.length]);
+
   // Por defecto se ve directamente la estadística DEL PARTIDO (no la
   // acumulada de temporada, que va aparte y más abajo) — antes había que
   // saber que existía el botón para encontrarla.
@@ -171,6 +181,7 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const lastOwnGoal = ownGoals[ownGoals.length - 1] || null;
   const celebrationPlayer = lastOwnGoal ? playersById[lastOwnGoal.playerId] : null;
   const celebrationAuthorized = lastOwnGoal ? authorizedById[lastOwnGoal.playerId] : true;
+  const lastRivalGoal = rivalGoals[rivalGoals.length - 1] || null;
 
   const rivalExclCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
   const rivalExclNumbers = useMemo(() => Object.keys(rivalExclCounts).map(Number).sort((a, b) => a - b), [rivalExclCounts]);
@@ -211,6 +222,21 @@ function LiveMatchSection({ clubId, teamId, team }) {
           leftScore={leftScore}
           rightScore={rightScore}
           onDone={() => setCelebrationKey(null)}
+        />
+      )}
+
+      {rivalCelebrationKey && (
+        <GoalCelebration
+          key={rivalCelebrationKey}
+          variant="rival"
+          crestUrl={state.rivalCrestUrl}
+          player={lastRivalGoal ? { number: lastRivalGoal.number } : null}
+          minute={lastRivalGoal?.minute}
+          leftName={leftName}
+          rightName={rightName}
+          leftScore={leftScore}
+          rightScore={rightScore}
+          onDone={() => setRivalCelebrationKey(null)}
         />
       )}
 
