@@ -3,6 +3,7 @@ import { usePlayers } from '../hooks/usePlayers';
 import { useClubs } from '../hooks/useClubs';
 import { useTeams } from '../hooks/useTeams';
 import { POSITIONS, POSITION_ABBR } from '../positions';
+import PhotoCropModal from './PhotoCropModal';
 
 const emptyForm = {
   firstName: '',
@@ -91,6 +92,24 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
   const [moveBusy, setMoveBusy] = useState(false);
   const { clubs: allClubs } = useClubs(true);
   const { teams: moveClubTeams } = useTeams(moveClubId || clubId);
+  const [cropSource, setCropSource] = useState(null);
+  const photoFileInputRef = useRef(null);
+
+  function handlePhotoFileChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setCropSource(URL.createObjectURL(file));
+  }
+  function handleCropConfirm(dataUrl) {
+    setForm((f) => ({ ...f, photoUrl: dataUrl }));
+    if (cropSource) URL.revokeObjectURL(cropSource);
+    setCropSource(null);
+  }
+  function handleCropCancel() {
+    if (cropSource) URL.revokeObjectURL(cropSource);
+    setCropSource(null);
+  }
 
   const visiblePlayers = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -277,12 +296,29 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
           onChange={(e) => setForm({ ...form, number: e.target.value })}
           required
         />
-        <input
-          className="player-form-input"
-          placeholder="URL de foto (opcional)"
-          value={form.photoUrl}
-          onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
-        />
+        <div className="player-form-photo">
+          {form.photoUrl ? (
+            <img className="player-thumb" src={form.photoUrl} alt="" />
+          ) : (
+            <div className="player-thumb player-thumb--placeholder">?</div>
+          )}
+          <input
+            className="player-form-input"
+            placeholder="URL de foto (opcional)"
+            value={form.photoUrl}
+            onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
+          />
+          <input
+            ref={photoFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handlePhotoFileChange}
+          />
+          <button type="button" className="btn btn-timeout" onClick={() => photoFileInputRef.current?.click()}>
+            Subir y recortar
+          </button>
+        </div>
         <select
           className="player-form-input"
           value={form.position}
@@ -414,6 +450,10 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
         {players.length === 0 && <p className="modal-hint">No hay jugadores en este equipo todavía.</p>}
         {players.length > 0 && visiblePlayers.length === 0 && <p className="modal-hint">Ningún jugador coincide con la búsqueda.</p>}
       </div>
+
+      {cropSource && (
+        <PhotoCropModal imageSrc={cropSource} onConfirm={handleCropConfirm} onCancel={handleCropCancel} />
+      )}
     </div>
   );
 }

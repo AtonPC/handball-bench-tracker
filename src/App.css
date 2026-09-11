@@ -426,6 +426,20 @@
   color: var(--text-dim);
   font-size: 13px;
 }
+.player-form-photo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.player-form-photo .player-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+.player-form-photo .player-form-input {
+  flex: 1;
+  min-width: 0;
+}
 .btn-danger-text {
   color: var(--danger);
 }
@@ -1150,6 +1164,43 @@
   padding: 10px;
   min-height: 44px;
   cursor: pointer;
+}
+
+/* ---------- Recorte de foto de jugador/a ---------- */
+.photo-crop-modal {
+  max-width: 360px;
+  align-items: center;
+}
+.photo-crop-viewport {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #000;
+  touch-action: none;
+  cursor: grab;
+  align-self: center;
+}
+.photo-crop-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.photo-crop-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+.photo-crop-zoom {
+  width: 100%;
+  align-self: center;
 }
 
 /* ---------- Gol rival: teclado de dorsal y rejillas de zona ---------- */
