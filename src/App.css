@@ -1621,9 +1621,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  text-align: left;
 }
 .follower-oncourt-col--right {
   align-items: flex-end;
+  text-align: right;
 }
 .follower-oncourt-label {
   font-size: 10px;
