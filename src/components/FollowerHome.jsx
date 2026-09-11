@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeftRight, BarChart3, History } from 'lucide-react';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
-import { useRivalExclusions } from '../hooks/useRivalExclusions';
+import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { formatClock } from '../utils/time';
@@ -44,7 +45,7 @@ function buildChronology({ ownGoals, ownMisses, ownRecoveries, ownExclusions, ri
   return entries.sort((a, b) => b.minute - a.minute);
 }
 
-function ChronologyRow({ entry, playersById, authorizedById }) {
+function ChronologyRow({ entry, playersById, authorizedById, compact }) {
   const who = entry.side === 'own'
     ? ownPlayerLabel(playersById, authorizedById, entry.playerId)
     : `Rival #${entry.number}`;
@@ -55,6 +56,18 @@ function ChronologyRow({ entry, playersById, authorizedById }) {
     exclusion: entry.disqualified ? 'Expulsión' : 'Exclusión',
   }[entry.type];
 
+  if (compact) {
+    return (
+      <p>
+        {entry.minute}' {label}
+        {entry.type === 'exclusion' && (
+          <span className={`ref-card ref-card--${entry.disqualified ? 'red' : 'amber'}`} style={{ margin: '0 4px' }} />
+        )}
+        {' '}{who}
+      </p>
+    );
+  }
+
   return (
     <p>
       Min. {entry.minute}' — {label}
@@ -63,6 +76,42 @@ function ChronologyRow({ entry, playersById, authorizedById }) {
       )}
       {' '}{who}
     </p>
+  );
+}
+
+// Estadísticas del partido EN CURSO (no las acumuladas de temporada),
+// construidas directamente de state.players — sin tiempo jugado.
+function MatchStatsTable({ statePlayers, playersById, authorizedById }) {
+  const rows = Object.values(statePlayers).sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+  return (
+    <div className="stats-table-wrap">
+      <table className="stats-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jugador/a</th>
+            <th>Goles</th>
+            <th>Fallos</th>
+            <th>Paradas</th>
+            <th>Recup.</th>
+            <th>Excl.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((p) => (
+            <tr key={p.id}>
+              <td>{p.number}</td>
+              <td>{ownPlayerLabel(playersById, authorizedById, p.id)}{p.isGK ? ' (P)' : ''}</td>
+              <td>{p.goals}</td>
+              <td>{p.shots}</td>
+              <td>{p.saves || 0}</td>
+              <td>{p.recoveries}</td>
+              <td>{p.exclusionsCount || 0}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -97,6 +146,11 @@ function LiveMatchSection({ clubId, teamId, team }) {
     prevOwnGoals.current = ownGoals.length;
   }, [ownGoals.length]);
 
+  const [detailView, setDetailView] = useState(null); // null | 'stats' | 'chronology'
+
+  const rivalExclCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
+  const rivalExclNumbers = useMemo(() => Object.keys(rivalExclCounts).map(Number).sort((a, b) => a - b), [rivalExclCounts]);
+
   if (!liveMatch || !store.ready) {
     return <p className="modal-hint">Ahora mismo no hay ningún partido en directo.</p>;
   }
@@ -107,6 +161,9 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const leftCrest = state.isHome ? team?.crestUrl : state.rivalCrestUrl;
   const rightCrest = state.isHome ? state.rivalCrestUrl : team?.crestUrl;
   const onCourt = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
+  const leftOnCourt = state.isHome ? onCourt : null;
+  const rightOnCourt = state.isHome ? null : onCourt;
+  const recentEvents = chronology.slice(0, 4);
 
   return (
     <div>
@@ -119,47 +176,100 @@ function LiveMatchSection({ clubId, teamId, team }) {
         />
       )}
 
-      <header className="match-header">
-        {state.jornada != null && <p className="modal-hint" style={{ margin: 0 }}>Jornada {state.jornada}</p>}
-        <div className="header-row">
-          <div className="scoreboard">
-            {leftCrest && <img src={leftCrest} alt="" className="team-crest" />}
-            <span className="team-name team-name--own">{leftName}</span>
-            <span className="score-own">{state.isHome ? state.score.own : state.score.rival}</span>
-            <span className="score-sep">-</span>
-            <span className="score-rival">{state.isHome ? state.score.rival : state.score.own}</span>
-            <span className="team-name team-name--rival">{rightName}</span>
-            {rightCrest && <img src={rightCrest} alt="" className="team-crest" />}
+      <div className="follower-scoreboard">
+        {state.jornada != null && <p className="follower-jornada">Jornada {state.jornada}</p>}
+        <span className="follower-clock">
+          {state.clock.period}ª · {state.clock.periodRemainingMs < 0
+            ? `+${formatClock(-state.clock.periodRemainingMs)}`
+            : formatClock(state.clock.periodRemainingMs)}
+        </span>
+
+        <div className="follower-teams-row">
+          <span className="follower-team-pill follower-team-pill--own">
+            {leftCrest && <img src={leftCrest} alt="" className="team-crest" />}{leftName}
+          </span>
+          <ArrowLeftRight size={16} className="follower-swap-icon" />
+          <span className="follower-team-pill follower-team-pill--rival">
+            {rightCrest && <img src={rightCrest} alt="" className="team-crest" />}{rightName}
+          </span>
+        </div>
+
+        <div className="follower-score-row">
+          <span className="follower-score">{state.isHome ? state.score.own : state.score.rival}</span>
+          <div className="follower-ticker">
+            {recentEvents.length === 0 && <p>Todavía no ha pasado nada.</p>}
+            {recentEvents.map((entry) => (
+              <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} compact />
+            ))}
           </div>
-          <div className="master-clock">
-            <span className="period-label">{state.clock.period}ª parte</span>
-            <span className={`clock-time${state.clock.periodRemainingMs < 0 ? ' clock-time--over' : ''}`}>
-              {state.clock.periodRemainingMs < 0
-                ? `+${formatClock(-state.clock.periodRemainingMs)}`
-                : formatClock(state.clock.periodRemainingMs)}
-            </span>
+          <span className="follower-score">{state.isHome ? state.score.rival : state.score.own}</span>
+        </div>
+
+        <div className="follower-oncourt-row">
+          <div className="follower-oncourt">
+            {(leftOnCourt || []).map((p) => (
+              <span key={p.id} className={`follower-oncourt-badge${p.disqualified ? ' follower-oncourt-badge--disqualified' : p.excluded ? ' follower-oncourt-badge--excluded' : ''}`}>
+                {p.number}
+                {p.excluded && <span className="follower-oncourt-timer">{formatClock(p.exclusionRemainingMs)}</span>}
+              </span>
+            ))}
+            {!leftOnCourt && rivalExclNumbers.map((n) => (
+              <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
+                {n}
+              </span>
+            ))}
+          </div>
+          <div className="follower-oncourt follower-oncourt--right">
+            {(rightOnCourt || []).map((p) => (
+              <span key={p.id} className={`follower-oncourt-badge${p.disqualified ? ' follower-oncourt-badge--disqualified' : p.excluded ? ' follower-oncourt-badge--excluded' : ''}`}>
+                {p.number}
+                {p.excluded && <span className="follower-oncourt-timer">{formatClock(p.exclusionRemainingMs)}</span>}
+              </span>
+            ))}
+            {!rightOnCourt && rivalExclNumbers.map((n) => (
+              <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
+                {n}
+              </span>
+            ))}
           </div>
         </div>
-      </header>
 
-      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-        <h4>En pista ahora mismo</h4>
-        {onCourt.length === 0 && <p>Sin datos de la alineación.</p>}
-        {onCourt.map((p) => (
-          <p key={p.id}>
-            #{p.number} {authorizedById[p.id] === false ? '' : p.name}{p.isGK ? ' (P)' : ''}
-            {p.excluded && <span className="ref-card ref-card--amber" style={{ margin: '0 4px' }} />}
-          </p>
-        ))}
+        <div className="follower-actions-row">
+          <button
+            className={`follower-icon-btn${detailView === 'stats' ? ' follower-icon-btn--active' : ''}`}
+            onClick={() => setDetailView(detailView === 'stats' ? null : 'stats')}
+            title="Estadísticas del partido"
+            aria-label="Estadísticas del partido"
+          >
+            <BarChart3 size={18} />
+          </button>
+          <button
+            className={`follower-icon-btn${detailView === 'chronology' ? ' follower-icon-btn--active' : ''}`}
+            onClick={() => setDetailView(detailView === 'chronology' ? null : 'chronology')}
+            title="Cronología completa"
+            aria-label="Cronología completa"
+          >
+            <History size={18} />
+          </button>
+        </div>
       </div>
 
-      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-        <h4>Cronología</h4>
-        {chronology.length === 0 && <p>Todavía no ha pasado nada.</p>}
-        {chronology.map((entry) => (
-          <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
-        ))}
-      </div>
+      {detailView === 'stats' && (
+        <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+          <h4>Estadísticas del partido</h4>
+          <MatchStatsTable statePlayers={state.players} playersById={playersById} authorizedById={authorizedById} />
+        </div>
+      )}
+
+      {detailView === 'chronology' && (
+        <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+          <h4>Cronología completa</h4>
+          {chronology.length === 0 && <p>Todavía no ha pasado nada.</p>}
+          {chronology.map((entry) => (
+            <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

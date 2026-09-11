@@ -1499,3 +1499,184 @@
   padding: var(--space-1) 0;
   font-size: 14px;
 }
+
+/* ---------- Marcador de la vista de Seguidor: llamativo a propósito,
+   inspirado en apps de marcador digital, distinto del resto de la app ---------- */
+.follower-scoreboard {
+  position: relative;
+  background: linear-gradient(160deg, var(--team-primary) 0%, var(--panel) 65%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  overflow: hidden;
+}
+.follower-jornada {
+  margin: 0 0 var(--space-1);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.follower-clock {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 999px;
+  padding: 4px 16px;
+  font-variant-numeric: tabular-nums;
+}
+.follower-teams-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+.follower-team-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #fff;
+  padding: 7px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 42vw;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.follower-team-pill .team-crest {
+  width: 18px;
+  height: 18px;
+}
+.follower-team-pill--own {
+  background: rgba(0, 0, 0, 0.3);
+}
+.follower-team-pill--rival {
+  background: var(--rival);
+}
+.follower-swap-icon {
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+.follower-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+.follower-score {
+  flex: 1;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.follower-ticker {
+  flex: 1.6;
+  min-width: 0;
+  max-width: 45%;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.follower-ticker p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.follower-ticker p:first-child {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.follower-oncourt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-2);
+}
+.follower-oncourt {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.follower-oncourt--right {
+  justify-content: flex-end;
+}
+.follower-oncourt-badge {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+.follower-oncourt-badge--excluded {
+  background: var(--warning);
+  color: #10131a;
+}
+.follower-oncourt-badge--disqualified {
+  background: var(--danger);
+  color: #fff;
+}
+.follower-oncourt-timer {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--warning);
+  white-space: nowrap;
+}
+.follower-actions-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.follower-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.follower-icon-btn--active {
+  background: #fff;
+  color: var(--team-primary);
+  border-color: #fff;
+}
