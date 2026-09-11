@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, ClipboardCheck, Settings, Shield, UserCog } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardCheck, Eye, Settings, Shield, UserCog } from 'lucide-react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
@@ -36,6 +36,7 @@ export default function App() {
   const [view, setView] = useState('matches');
   const [openMatchId, setOpenMatchId] = useState(null);
   const [openSubView, setOpenSubView] = useState('bench');
+  const [followerPreview, setFollowerPreview] = useState(false);
 
   useEffect(() => {
     if (clubOptions.length === 0) {
@@ -135,17 +136,42 @@ export default function App() {
     );
   }
 
+  // Ver la app tal como la ve un Seguidor del equipo activo, sin pasar por
+  // la solicitud/aprobación — el staff ya tiene acceso real a ese equipo,
+  // esto es solo una previsualización para comprobar en directo qué están
+  // viendo las familias.
+  if (followerPreview && activeTeam) {
+    return (
+      <FollowerHome
+        identity={identity}
+        approvedTeamIds={[activeTeam.id]}
+        user={auth.user}
+        onLogout={() => setFollowerPreview(false)}
+        previewMode
+      />
+    );
+  }
+
   const roleLabel = isAdmin ? 'Administrador de Sistema' : managedClubs.length > 0 ? 'Gestor de Club' : 'Staff';
 
   const tabs = [
     teamsInActiveClub.length > 0 && { key: 'matches', label: 'Partidos', icon: CalendarDays },
     canManageRoster && { key: 'players', label: 'Plantilla', icon: UserCog },
     teamsInActiveClub.length > 0 && { key: 'teamStats', label: 'Estadísticas', icon: BarChart3 },
+    teamsInActiveClub.length > 0 && { key: 'followerPreview', label: 'Vista de Seguidor', icon: Eye },
     clubOptions.length > 0 && { key: 'club', label: 'Club', icon: Shield },
     clubOptions.length > 0 && { key: 'staff', label: 'Staff y Permisos', icon: UserCog },
     canManageClub && { key: 'requests', label: 'Solicitudes', icon: ClipboardCheck },
     isAdmin && { key: 'system', label: 'Sistema', icon: Settings },
   ].filter(Boolean);
+
+  function handleViewChange(key) {
+    if (key === 'followerPreview') {
+      setFollowerPreview(true);
+      return;
+    }
+    setView(key);
+  }
 
   return (
     <div className="app-layout" style={teamColorStyle(activeTeam)}>
@@ -159,7 +185,7 @@ export default function App() {
         onTeamChange={setActiveTeamId}
         tabs={tabs}
         view={view}
-        onViewChange={setView}
+        onViewChange={handleViewChange}
         onLogout={auth.logout}
       />
 

@@ -416,7 +416,7 @@ function AccumulatedSection({ clubId, teamId }) {
 // finalizados. Nunca muestra el tiempo jugado individual de un jugador
 // (para no dar munición a fricciones familia/entrenador), ni el nombre de
 // un jugador propio con imageAuthorized === false.
-export default function FollowerHome({ identity, approvedTeamIds, user, onLogout }) {
+export default function FollowerHome({ identity, approvedTeamIds, user, onLogout, previewMode }) {
   const teams = (identity.allTeams || []).filter((t) => approvedTeamIds.includes(t.id));
   const [teamId, setTeamId] = useState(teams[0]?.id || '');
 
@@ -429,8 +429,10 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
   return (
     <div className="app-shell" style={teamColorStyle(activeTeam)}>
       <nav className="admin-nav">
-        <span className="admin-nav-role">{user.displayName || user.email}</span>
-        {teams.length > 1 && (
+        <span className="admin-nav-role">
+          {previewMode ? 'Vista de Seguidor (previsualización)' : (user.displayName || user.email)}
+        </span>
+        {!previewMode && teams.length > 1 && (
           <select
             className="admin-role-select"
             value={teamId}
@@ -442,7 +444,7 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
             ))}
           </select>
         )}
-        <button className="btn btn-logout" onClick={onLogout}>SALIR</button>
+        <button className="btn btn-logout" onClick={onLogout}>{previewMode ? '← VOLVER' : 'SALIR'}</button>
       </nav>
       <div className="admin-panel">
         {activeTeam ? (
