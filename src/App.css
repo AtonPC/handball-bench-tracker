@@ -169,6 +169,7 @@
     overflow-y: auto;
   }
   .app-sidebar .sidebar-header {
+    flex: none;
     justify-content: space-between;
   }
   .app-sidebar .sidebar-role,
