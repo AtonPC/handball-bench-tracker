@@ -6,11 +6,35 @@ export default function MatchHeader({ store, onBack, onFinish, onOpenQuickStats 
   const leftName = isHome ? ownTeamName : rivalName;
   const rightName = isHome ? rivalName : ownTeamName;
 
+  // "Pausar" es solo para paradas del árbitro durante el juego (una lesión,
+  // lo que sea) — nunca termina la parte por sí sola. Terminar la parte es
+  // una acción aparte, explícita y con aviso, para no confundir una cosa
+  // con la otra.
+  function handleEndPeriod1() {
+    const ok = confirm('¿Dar por finalizado el primer tiempo? El cronómetro se detiene; podréis iniciar el segundo tiempo cuando estéis listos.');
+    if (ok) store.togglePause();
+  }
+
+  function handleFinish() {
+    const message = clock.period === 1
+      ? '¿Finalizar el partido ahora, sin jugar el segundo tiempo? Esto da el partido por terminado de forma definitiva y no se puede deshacer.'
+      : '¿Dar por finalizado el segundo tiempo? Esto da el partido por terminado de forma definitiva y no se puede deshacer.';
+    if (confirm(message)) onFinish();
+  }
+
   function renderClockButton() {
     if (clock.status === 'idle') {
       return <button className="btn btn-clock btn-start" onClick={store.startPeriod1}>INICIAR 1T</button>;
     }
     if (clock.status === 'running') {
+      if (clock.period === 1) {
+        return (
+          <div className="clock-btn-group">
+            <button className="btn btn-clock btn-pause" onClick={store.togglePause}>PAUSAR</button>
+            <button className="btn btn-clock" onClick={handleEndPeriod1}>FIN DEL 1T</button>
+          </div>
+        );
+      }
       return <button className="btn btn-clock btn-pause" onClick={store.togglePause}>PAUSAR</button>;
     }
     // paused
@@ -73,7 +97,7 @@ export default function MatchHeader({ store, onBack, onFinish, onOpenQuickStats 
             />
           </div>
         </div>
-        <button className="btn btn-pause" onClick={onFinish}>FINALIZAR</button>
+        <button className="btn btn-pause" onClick={handleFinish}>FINALIZAR</button>
       </div>
     </header>
   );

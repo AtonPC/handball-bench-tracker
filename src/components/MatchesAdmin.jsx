@@ -173,6 +173,14 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
   }
 
   async function handleStart(m) {
+    if (!m.startingLineupIds || m.startingLineupIds.length !== 7) {
+      alert('No se puede iniciar el partido: edita el partido y elige los 7 titulares primero.');
+      return;
+    }
+    if (!m.startingGoalkeeperId) {
+      alert('No se puede iniciar el partido: edita el partido y elige quién es el portero primero.');
+      return;
+    }
     try {
       await startMatch(m.id, m.callUpPlayerIds, rosterById, m.startingLineupIds, m.startingGoalkeeperId);
       onOpenMatch(m.id);
@@ -295,7 +303,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
           {callUpIds.length > 0 && (
             <>
               <p className="modal-hint">
-                Titulares ({startingIds.length}/7, opcional — si no eliges, empiezan los 7 primeros de la convocatoria)
+                Titulares ({startingIds.length}/7) — hace falta elegir los 7 antes de poder iniciar el partido
               </p>
               <div className="call-up-list">
                 {callUpIds.map((id) => {
@@ -311,7 +319,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
               </div>
 
               <p className="modal-hint">
-                Portero de este partido (opcional, independiente de la ficha del jugador)
+                Portero de este partido (independiente de la ficha del jugador) — hace falta elegirlo antes de poder iniciar el partido
               </p>
               <select className="player-form-input" value={startingGoalkeeperId} onChange={(e) => setStartingGoalkeeperId(e.target.value)}>
                 <option value="">Sin elegir</option>
