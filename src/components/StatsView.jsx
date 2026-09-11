@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
@@ -47,29 +47,47 @@ export default function StatsView({ store, identity, teamId }) {
     [matchEvents]
   );
   const canCoachPanel = hasCapability(identity, teamId, 'coachPanel');
+  const [search, setSearch] = useState('');
 
   const players = Object.values(state.players)
     .map((p) => ({ ...p, attempts: p.goals + p.shots, shotsFaced: (p.saves || 0) + state.score.rival }))
     .sort((a, b) => a.number - b.number);
+
+  const searchNeedle = search.trim().toLowerCase();
+  const visiblePlayers = searchNeedle
+    ? players.filter((p) => `${p.name || ''} ${p.number ?? ''}`.toLowerCase().includes(searchNeedle))
+    : players;
 
   const teamGoals = players.reduce((sum, p) => sum + p.goals, 0);
   const teamMisses = players.reduce((sum, p) => sum + p.shots, 0);
   const teamAttempts = teamGoals + teamMisses;
   const teamRecoveries = players.reduce((sum, p) => sum + p.recoveries, 0);
   const teamSaves = players.reduce((sum, p) => sum + (p.saves || 0), 0);
+  const teamShotsFaced = teamSaves + state.score.rival;
   const teamExclusions = players.reduce((sum, p) => sum + (p.exclusionsCount || 0), 0);
   const teamDisqualifications = players.filter((p) => p.disqualified).length;
 
-  // Para el entrenador (capacidad "coachPanel"): destacados del partido en
-  // curso — quién ha marcado más, recuperado más, y cómo se han repartido
-  // los minutos (para detectar rotación desigual de un vistazo).
   const topScorers = topN(players, (p) => p.goals, 5);
   const topRecoverers = topN(players, (p) => p.recoveries, 5);
+  const topSavers = topN(players.filter((p) => p.isGK), (p) => p.saves || 0, 5);
+
+  // Para el entrenador (capacidad "coachPanel"): cómo se han repartido los
+  // minutos, para detectar rotación desigual de un vistazo. Los máximos
+  // goleadores/recuperadores/paradores ya se ven arriba, para todo el staff.
   const mostMinutes = topN(players, (p) => p.accumulatedMs, 5, { allowZero: true });
   const leastMinutes = [...players].sort((a, b) => a.accumulatedMs - b.accumulatedMs).slice(0, 5);
 
   return (
     <div className="stats-view">
+      <div className="list-search">
+        <input
+          className="player-form-input"
+          placeholder="Filtrar por jugador o dorsal…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
       <div className="stats-summary">
         {state.jornada != null && (
           <div className="stats-summary-item">
@@ -78,28 +96,28 @@ export default function StatsView({ store, identity, teamId }) {
           </div>
         )}
         <div className="stats-summary-item stats-summary-item--score">
-          <span className="stats-summary-label">Marcador</span>
+          <span className="stats-summary-label">Resultado</span>
           <span className="stats-summary-value">{state.score.own} - {state.score.rival}</span>
         </div>
         <div className="stats-summary-item">
-          <span className="stats-summary-label">Tiempo de partido</span>
-          <span className="stats-summary-value">{formatClock(state.clock.elapsedMs)}</span>
+          <span className="stats-summary-label">Goles/Tiros</span>
+          <span className="stats-summary-value">{teamGoals}/{teamAttempts}</span>
         </div>
         <div className="stats-summary-item">
-          <span className="stats-summary-label">Tiros totales (goles + fallos)</span>
-          <span className="stats-summary-value">{teamAttempts}</span>
-        </div>
-        <div className="stats-summary-item">
-          <span className="stats-summary-label">% de acierto</span>
+          <span className="stats-summary-label">% Acierto</span>
           <span className="stats-summary-value">{pct(teamGoals, teamAttempts)}</span>
+        </div>
+        <div className="stats-summary-item">
+          <span className="stats-summary-label">Paradas/Tiros</span>
+          <span className="stats-summary-value">{teamSaves}/{teamShotsFaced}</span>
+        </div>
+        <div className="stats-summary-item">
+          <span className="stats-summary-label">% Paradas</span>
+          <span className="stats-summary-value">{pct(teamSaves, teamShotsFaced)}</span>
         </div>
         <div className="stats-summary-item">
           <span className="stats-summary-label">Recuperaciones</span>
           <span className="stats-summary-value">{teamRecoveries}</span>
-        </div>
-        <div className="stats-summary-item">
-          <span className="stats-summary-label">Paradas</span>
-          <span className="stats-summary-value">{teamSaves}</span>
         </div>
         <div className="stats-summary-item">
           <span className="stats-summary-label">Exclusiones</span>
@@ -115,12 +133,23 @@ export default function StatsView({ store, identity, teamId }) {
         </div>
       </div>
 
-      <PlayerStatsTable
-        rows={players}
-        minutesTotalMs={state.clock.elapsedMs}
-        showMinutes
-        rowClassName={exclusionRowClass}
-      />
+      <div className="card-grid" style={{ marginTop: 'var(--space-4)' }}>
+        <div className="card">
+          <h4>Máximos goleadores</h4>
+          {topScorers.length === 0 && <p>Todavía nadie ha marcado.</p>}
+          {topScorers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.goals} gol{p.goals === 1 ? '' : 'es'} · {pct(p.goals, p.attempts)} acierto</p>)}
+        </div>
+        <div className="card">
+          <h4>Máximos recuperadores</h4>
+          {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
+          {topRecoverers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup.</p>)}
+        </div>
+        <div className="card">
+          <h4>Más paradas</h4>
+          {topSavers.length === 0 && <p>Todavía nadie ha parado.</p>}
+          {topSavers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.saves} paradas · {pct(p.saves, p.shotsFaced)} paradas</p>)}
+        </div>
+      </div>
 
       {(rivalGoals.length > 0 || rivalExclusions.length > 0) && (
         <div className="card-grid" style={{ marginTop: 'var(--space-4)' }}>
@@ -144,20 +173,20 @@ export default function StatsView({ store, identity, teamId }) {
         </div>
       )}
 
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <PlayerStatsTable
+          rows={visiblePlayers}
+          minutesTotalMs={state.clock.elapsedMs}
+          showMinutes
+          rowClassName={exclusionRowClass}
+          emptyMessage="Ningún jugador coincide con el filtro."
+        />
+      </div>
+
       {canCoachPanel && (
         <div style={{ marginTop: 'var(--space-5)' }}>
-          <h3 className="stats-section-title">Destacados del partido (Entrenador)</h3>
+          <h3 className="stats-section-title">Reparto de minutos (Entrenador)</h3>
           <div className="card-grid" style={{ marginTop: 'var(--space-3)' }}>
-            <div className="card">
-              <h4>Máximos goleadores</h4>
-              {topScorers.length === 0 && <p>Todavía nadie ha marcado.</p>}
-              {topScorers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.goals} gol{p.goals === 1 ? '' : 'es'}</p>)}
-            </div>
-            <div className="card">
-              <h4>Máximas recuperadoras</h4>
-              {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
-              {topRecoverers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup.</p>)}
-            </div>
             <div className="card">
               <h4>Más minutos jugados</h4>
               {mostMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {formatClock(p.accumulatedMs)} ({pct(p.accumulatedMs, state.clock.elapsedMs)})</p>)}
