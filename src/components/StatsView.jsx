@@ -118,6 +118,7 @@ export default function StatsView({ store, identity, teamId }) {
       <PlayerStatsTable
         rows={players}
         minutesTotalMs={state.clock.elapsedMs}
+        showMinutes
         rowClassName={exclusionRowClass}
       />
 
@@ -159,11 +160,11 @@ export default function StatsView({ store, identity, teamId }) {
             </div>
             <div className="card">
               <h4>Más minutos jugados</h4>
-              {mostMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {pct(p.accumulatedMs, state.clock.elapsedMs)}</p>)}
+              {mostMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {formatClock(p.accumulatedMs)} ({pct(p.accumulatedMs, state.clock.elapsedMs)})</p>)}
             </div>
             <div className="card">
               <h4>Menos minutos jugados</h4>
-              {leastMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {pct(p.accumulatedMs, state.clock.elapsedMs)}</p>)}
+              {leastMinutes.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {formatClock(p.accumulatedMs)} ({pct(p.accumulatedMs, state.clock.elapsedMs)})</p>)}
             </div>
           </div>
         </div>

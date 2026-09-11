@@ -1,5 +1,6 @@
 import { useSortableTable } from '../hooks/useSortableTable';
 import SortableTh from './SortableTh';
+import { formatClock } from '../utils/time';
 
 function pct(part, total) {
   if (!total) return '—';
@@ -11,14 +12,13 @@ function ratio(part, total) {
 }
 
 // Misma tabla de estadísticas de jugador, tanto si es de un partido concreto
-// como del acumulado de la temporada, y tanto si la ve el staff como un
-// Seguidor — para que nunca vuelvan a desincronizarse entre sí. `minutesTotalMs`
-// es el total sobre el que se calcula "% Minutos": el tiempo del partido en
-// curso, o la suma de la duración de todos los partidos finalizados si es el
-// acumulado de temporada. Nunca se muestra el tiempo jugado en minutos, solo
-// el porcentaje — así de un vistazo se ve el reparto sin dar pie a discutir
-// "le has puesto 3 minutos menos" partido a partido.
-function buildPlayerStatsColumns({ minutesTotalMs, showMatches }) {
+// como del acumulado de la temporada — para que nunca vuelvan a
+// desincronizarse entre sí. `minutesTotalMs` es el total sobre el que se
+// calcula el minutaje: el tiempo del partido en curso, o la suma de la
+// duración de todos los partidos finalizados si es el acumulado de
+// temporada. El staff ve el minutaje (en total y en %); un Seguidor no ve
+// ninguno de los dos — se decide con `showMinutes`, nunca a medias.
+function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
   const columns = [
     { key: 'number', label: '#', value: (p) => p.number ?? 0, render: (p) => p.number },
     { key: 'name', label: 'Jugador/a', value: (p) => p.name || '', render: (p) => `${p.name}${p.isGK ? ' (P)' : ''}` },
@@ -29,8 +29,13 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches }) {
       { key: 'matchesCalledUp', label: 'Convocados', value: (p) => p.matchesCalledUp ?? 0, render: (p) => p.matchesCalledUp ?? 0 }
     );
   }
+  if (showMinutes) {
+    columns.push(
+      { key: 'minutes', label: 'Minutos', value: (p) => p.accumulatedMs, render: (p) => formatClock(p.accumulatedMs) },
+      { key: 'minutesPct', label: '% Minutos', value: (p) => ratio(p.accumulatedMs, minutesTotalMs), render: (p) => pct(p.accumulatedMs, minutesTotalMs) }
+    );
+  }
   columns.push(
-    { key: 'minutesPct', label: '% Minutos', value: (p) => ratio(p.accumulatedMs, minutesTotalMs), render: (p) => pct(p.accumulatedMs, minutesTotalMs) },
     { key: 'goals', label: 'Goles/Tiros', value: (p) => p.goals, render: (p) => `${p.goals}/${p.attempts}` },
     { key: 'accPct', label: '% Acierto', value: (p) => ratio(p.goals, p.attempts), render: (p) => pct(p.goals, p.attempts) },
     { key: 'saves', label: 'Paradas/Tiros', value: (p) => (p.isGK ? p.saves || 0 : -1), render: (p) => (p.isGK ? `${p.saves || 0}/${p.shotsFaced}` : '—') },
@@ -47,8 +52,8 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches }) {
 // `rows` ya trae `attempts` y `shotsFaced` calculados (quién concede qué gol
 // rival no se sabe por portero, así que `shotsFaced` es del equipo, no 1:1
 // del portero si hubo más de uno en el partido/temporada).
-export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, emptyMessage, rowClassName }) {
-  const columns = buildPlayerStatsColumns({ minutesTotalMs, showMatches });
+export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, showMinutes, emptyMessage, rowClassName }) {
+  const columns = buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes });
   const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(rows, columns, 'number');
 
   return (

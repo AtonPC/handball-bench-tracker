@@ -53,6 +53,7 @@ export default function TeamStats({ clubId, teamId, teamName, onOpenMatchStats }
             rows={visiblePlayers}
             minutesTotalMs={teamTotalMs}
             showMatches
+            showMinutes
             emptyMessage="Ningún jugador coincide con el filtro."
           />
 
