@@ -79,9 +79,20 @@ function ChronologyRow({ entry, playersById, authorizedById, compact }) {
   );
 }
 
+function pct(made, total) {
+  if (!total) return '—';
+  return `${Math.round((made / total) * 100)}%`;
+}
+
 // Estadísticas del partido EN CURSO (no las acumuladas de temporada),
 // construidas directamente de state.players — sin tiempo jugado.
-function MatchStatsTable({ statePlayers, playersById, authorizedById }) {
+// Goles/Paradas van "hechos/intentos" (p. ej. 3/5) con el % al lado, más
+// compacto que columnas separadas de goles y fallos.
+// "Tiros" de paradas = paradas + goles rivales encajados por el equipo —
+// no se sabe qué portero concreto encajó cada gol (no se registra quién
+// estaba en la portería en ese momento), así que es del equipo, no 1:1
+// del portero si hubo más de uno en el partido.
+function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoalsConceded }) {
   const rows = Object.values(statePlayers).sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
   return (
     <div className="stats-table-wrap">
@@ -90,25 +101,31 @@ function MatchStatsTable({ statePlayers, playersById, authorizedById }) {
           <tr>
             <th>#</th>
             <th>Jugador/a</th>
-            <th>Goles</th>
-            <th>Fallos</th>
-            <th>Paradas</th>
+            <th>Goles/Tiros</th>
+            <th>% Acierto</th>
+            <th>Paradas/Tiros</th>
+            <th>% Paradas</th>
             <th>Recup.</th>
             <th>Excl.</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => (
-            <tr key={p.id}>
-              <td>{p.number}</td>
-              <td>{ownPlayerLabel(playersById, authorizedById, p.id)}{p.isGK ? ' (P)' : ''}</td>
-              <td>{p.goals}</td>
-              <td>{p.shots}</td>
-              <td>{p.saves || 0}</td>
-              <td>{p.recoveries}</td>
-              <td>{p.exclusionsCount || 0}</td>
-            </tr>
-          ))}
+          {rows.map((p) => {
+            const attempts = p.goals + p.shots;
+            const shotsFaced = (p.saves || 0) + rivalGoalsConceded;
+            return (
+              <tr key={p.id}>
+                <td>{p.number}</td>
+                <td>{ownPlayerLabel(playersById, authorizedById, p.id)}{p.isGK ? ' (P)' : ''}</td>
+                <td>{p.goals}/{attempts}</td>
+                <td>{pct(p.goals, attempts)}</td>
+                <td>{p.isGK ? `${p.saves || 0}/${shotsFaced}` : '—'}</td>
+                <td>{p.isGK ? pct(p.saves || 0, shotsFaced) : '—'}</td>
+                <td>{p.recoveries}</td>
+                <td>{p.exclusionsCount || 0}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -161,8 +178,13 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const leftCrest = state.isHome ? team?.crestUrl : state.rivalCrestUrl;
   const rightCrest = state.isHome ? state.rivalCrestUrl : team?.crestUrl;
   const onCourt = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
-  const leftOnCourt = state.isHome ? onCourt : null;
-  const rightOnCourt = state.isHome ? null : onCourt;
+  // "En pista" son quienes están jugando de verdad ahora mismo — un excluido
+  // no está físicamente en la cancha esos 2 minutos, aunque el modelo lo
+  // siga contando como parte de los 7. Su estado va aparte, junto con las
+  // expulsiones (que si son permanentes ya no vuelven a "en pista").
+  const ownOnCourtActive = onCourt.filter((p) => !p.excluded && !p.disqualified);
+  const ownPenalized = Object.values(state.players).filter((p) => p.excluded || p.disqualified);
+  const isOwnLeft = state.isHome;
   const recentEvents = chronology.slice(0, 4);
 
   return (
@@ -206,32 +228,49 @@ function LiveMatchSection({ clubId, teamId, team }) {
         </div>
 
         <div className="follower-oncourt-row">
-          <div className="follower-oncourt">
-            {(leftOnCourt || []).map((p) => (
-              <span key={p.id} className={`follower-oncourt-badge${p.disqualified ? ' follower-oncourt-badge--disqualified' : p.excluded ? ' follower-oncourt-badge--excluded' : ''}`}>
-                {p.number}
-                {p.excluded && <span className="follower-oncourt-timer">{formatClock(p.exclusionRemainingMs)}</span>}
-              </span>
-            ))}
-            {!leftOnCourt && rivalExclNumbers.map((n) => (
-              <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
-                {n}
-              </span>
-            ))}
+          <div className={`follower-oncourt-col${isOwnLeft ? '' : ' follower-oncourt-col--right'}`}>
+            <span className="follower-oncourt-label">Equipo en pista</span>
+            <div className="follower-oncourt">
+              {ownOnCourtActive.map((p) => (
+                <span key={p.id} className="follower-oncourt-badge">{p.number}</span>
+              ))}
+              {ownOnCourtActive.length === 0 && <span className="follower-oncourt-empty">—</span>}
+            </div>
           </div>
-          <div className="follower-oncourt follower-oncourt--right">
-            {(rightOnCourt || []).map((p) => (
-              <span key={p.id} className={`follower-oncourt-badge${p.disqualified ? ' follower-oncourt-badge--disqualified' : p.excluded ? ' follower-oncourt-badge--excluded' : ''}`}>
-                {p.number}
-                {p.excluded && <span className="follower-oncourt-timer">{formatClock(p.exclusionRemainingMs)}</span>}
-              </span>
-            ))}
-            {!rightOnCourt && rivalExclNumbers.map((n) => (
-              <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
-                {n}
-              </span>
-            ))}
+          <div className={`follower-oncourt-col${isOwnLeft ? ' follower-oncourt-col--right' : ''}`} />
+        </div>
+
+        <div className="follower-oncourt-row">
+          <div className={`follower-oncourt-col${isOwnLeft ? '' : ' follower-oncourt-col--right'}`}>
+            <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
+            <div className={`follower-oncourt${isOwnLeft ? '' : ' follower-oncourt--right'}`}>
+              {ownPenalized.map((p) => (
+                <span key={p.id} className={`follower-oncourt-badge${p.disqualified ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
+                  {p.number}
+                  <span className="follower-oncourt-sub">{p.disqualified ? 'EXP.' : formatClock(p.exclusionRemainingMs)}</span>
+                </span>
+              ))}
+              {ownPenalized.length === 0 && <span className="follower-oncourt-empty">Ninguno</span>}
+            </div>
           </div>
+          <div className={`follower-oncourt-col${isOwnLeft ? ' follower-oncourt-col--right' : ''}`}>
+            <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
+            <div className={`follower-oncourt${isOwnLeft ? ' follower-oncourt--right' : ''}`}>
+              {rivalExclNumbers.map((n) => (
+                <span key={n} className={`follower-oncourt-badge${rivalExclCounts[n] >= 3 ? ' follower-oncourt-badge--disqualified' : ' follower-oncourt-badge--excluded'}`}>
+                  {n}
+                  <span className="follower-oncourt-sub">{rivalExclCounts[n] >= 3 ? 'EXP.' : `${rivalExclCounts[n]}/3`}</span>
+                </span>
+              ))}
+              {rivalExclNumbers.length === 0 && <span className="follower-oncourt-empty">Ninguno</span>}
+            </div>
+          </div>
+        </div>
+
+        <div className="follower-legend">
+          <span><span className="follower-legend-dot" /> En pista</span>
+          <span><span className="follower-legend-dot follower-legend-dot--excluded" /> Excluido (tiempo o nº de exclusiones)</span>
+          <span><span className="follower-legend-dot follower-legend-dot--disqualified" /> Expulsado</span>
         </div>
 
         <div className="follower-actions-row">
@@ -257,7 +296,12 @@ function LiveMatchSection({ clubId, teamId, team }) {
       {detailView === 'stats' && (
         <div className="card" style={{ marginTop: 'var(--space-4)' }}>
           <h4>Estadísticas del partido</h4>
-          <MatchStatsTable statePlayers={state.players} playersById={playersById} authorizedById={authorizedById} />
+          <MatchStatsTable
+            statePlayers={state.players}
+            playersById={playersById}
+            authorizedById={authorizedById}
+            rivalGoalsConceded={state.score.rival}
+          />
         </div>
       )}
 
@@ -338,9 +382,8 @@ function AccumulatedSection({ clubId, teamId }) {
               <th>Jugador/a</th>
               <th>Jugados</th>
               <th>Convocados</th>
-              <th>Goles</th>
-              <th>Fallos</th>
-              <th>Tiros</th>
+              <th>Goles/Tiros</th>
+              <th>% Acierto</th>
               <th>Recup.</th>
               <th>Excl.</th>
               <th>Expulsado</th>
@@ -353,9 +396,8 @@ function AccumulatedSection({ clubId, teamId }) {
                 <td>{p.displayName}{p.isGK ? ' (P)' : ''}</td>
                 <td>{p.matchesPlayed}</td>
                 <td>{p.matchesCalledUp}</td>
-                <td>{p.goals}</td>
-                <td>{p.shots}</td>
-                <td>{p.attempts}</td>
+                <td>{p.goals}/{p.attempts}</td>
+                <td>{pct(p.goals, p.attempts)}</td>
                 <td>{p.recoveries}</td>
                 <td>{p.exclusionsCount || 0}</td>
                 <td>{p.disqualifications ? 'Sí' : '—'}</td>
