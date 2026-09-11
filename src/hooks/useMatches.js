@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 
-const MATCH_SUBCOLLECTIONS = ['players', 'events', 'rivalGoals', 'shotEvents', 'saveEvents'];
+const MATCH_SUBCOLLECTIONS = [
+  'players', 'events', 'rivalGoals', 'shotEvents', 'saveEvents', 'rivalExclusions', 'recoveryEvents', 'exclusionEvents',
+];
 
 const matchesCol = collection(db, 'matches');
 
@@ -24,7 +26,7 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs }) => {
     const ref = await addDoc(matchesCol, {
       clubId,
       teamId,
@@ -33,6 +35,8 @@ export function useMatches(clubId, teamId) {
       venue,
       scheduledAt,
       ownTeamName,
+      jornada: jornada || null,
+      rivalCrestUrl: rivalCrestUrl || '',
       callUpPlayerIds,
       startingLineupIds: startingLineupIds || [],
       startingGoalkeeperId: startingGoalkeeperId || null,

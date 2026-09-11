@@ -655,11 +655,17 @@
 
 .scoreboard {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   font-weight: 700;
   font-size: 38px;
   font-variant-numeric: tabular-nums;
+}
+.team-crest {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .score-own,
 .score-rival,
@@ -1025,12 +1031,34 @@
   padding: 10px 12px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .rival-panel-label {
   flex: 1;
   font-size: 13px;
   color: var(--text-dim);
+}
+.rival-excl-badges {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rival-excl-badge {
+  border: 1px solid var(--warning);
+  background: var(--warning-dim);
+  color: var(--warning);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rival-excl-badge--disqualified {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
 }
 
 /* ---------- Modal de sustitución ---------- */

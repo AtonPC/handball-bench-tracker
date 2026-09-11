@@ -4,18 +4,22 @@ import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
 import SubstitutionModal from './SubstitutionModal';
 import RivalGoalModal from './RivalGoalModal';
+import RivalExclusionModal from './RivalExclusionModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
+import { useRivalExclusions } from '../hooks/useRivalExclusions';
 import { teamColorStyle } from '../utils/teamColors';
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
-  const { state } = store;
+  const { state, matchId } = store;
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
+  const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
   const [showQuickStats, setShowQuickStats] = useState(false);
+  const rivalExclusions = useRivalExclusions(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -68,9 +72,11 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       <RivalPanel
         rivalGoals={state.score.rival}
         rivalShots={state.rivalShots}
+        rivalExclusions={rivalExclusions}
         onGoal={store.rivalGoal}
         onShot={store.rivalShot}
         onOpenGoalDetail={() => setShowRivalGoalModal(true)}
+        onOpenExclusion={() => setShowRivalExclusionModal(true)}
       />
 
       {substitution && (
@@ -91,6 +97,16 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             setShowRivalGoalModal(false);
           }}
           onCancel={() => setShowRivalGoalModal(false)}
+        />
+      )}
+
+      {showRivalExclusionModal && (
+        <RivalExclusionModal
+          onConfirm={(detail) => {
+            store.rivalExclusion(detail.number);
+            setShowRivalExclusionModal(false);
+          }}
+          onCancel={() => setShowRivalExclusionModal(false)}
         />
       )}
 

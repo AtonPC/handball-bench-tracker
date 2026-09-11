@@ -233,6 +233,45 @@ service cloud.firestore {
           'benchConsole'
         );
       }
+
+      // Exclusión rival: solo dorsal y minuto, sin zonas.
+      match /rivalExclusions/{rivalExclusionId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
+
+      // Recuperación propia con minuto (antes solo un contador sin momento).
+      match /recoveryEvents/{recoveryEventId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
+
+      // Exclusión propia con minuto (disqualified=true en la 3ª = expulsión).
+      match /exclusionEvents/{exclusionEventId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
     }
   }
 }

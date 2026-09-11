@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useSortableTable } from '../hooks/useSortableTable';
@@ -35,6 +36,8 @@ export default function StatsView({ store }) {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [rivalGoals]);
 
+  const rivalExclusions = useRivalExclusions(matchId);
+  const rivalExclusionCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
   const shotEvents = useShotEvents(matchId);
   const saveEvents = useSaveEvents(matchId);
   const nameById = useMemo(() => {
@@ -103,6 +106,18 @@ export default function StatsView({ store }) {
     });
   }, [rivalGoals, rivalFilter]);
 
+  // --- Filtros de "Exclusiones rivales" ---
+  const [rivalExclFilter, setRivalExclFilter] = useState({ number: ANY, minMinute: '', maxMinute: '' });
+  const rivalExclNumbers = useMemo(() => [...new Set(rivalExclusions.map((e) => e.number))].sort((a, b) => a - b), [rivalExclusions]);
+  const filteredRivalExclusions = useMemo(() => {
+    return rivalExclusions.filter((e) => {
+      if (rivalExclFilter.number !== ANY && String(e.number) !== rivalExclFilter.number) return false;
+      if (rivalExclFilter.minMinute && e.minute < Number(rivalExclFilter.minMinute)) return false;
+      if (rivalExclFilter.maxMinute && e.minute > Number(rivalExclFilter.maxMinute)) return false;
+      return true;
+    });
+  }, [rivalExclusions, rivalExclFilter]);
+
   // --- Filtros de "Lanzamientos propios" ---
   const [shotFilter, setShotFilter] = useState({ playerId: ANY, type: ANY, shotZone: ANY, goalZone: ANY, minMinute: '', maxMinute: '' });
   const filteredShotEvents = useMemo(() => {
@@ -132,6 +147,12 @@ export default function StatsView({ store }) {
   return (
     <div className="stats-view">
       <div className="stats-summary">
+        {state.jornada != null && (
+          <div className="stats-summary-item">
+            <span className="stats-summary-label">Jornada</span>
+            <span className="stats-summary-value">{state.jornada}</span>
+          </div>
+        )}
         <div className="stats-summary-item stats-summary-item--score">
           <span className="stats-summary-label">Marcador</span>
           <span className="stats-summary-value">{state.score.own} - {state.score.rival}</span>
@@ -280,6 +301,44 @@ export default function StatsView({ store }) {
           </div>
           <p className="modal-hint">
             Por dorsal: {rivalGoalsByNumber.map(([number, count]) => `#${number} (${count})`).join(' · ')}
+          </p>
+        </>
+      )}
+
+      {rivalExclusions.length > 0 && (
+        <>
+          <h3 className="stats-section-title">Exclusiones rivales</h3>
+          <div className="list-filters">
+            <select className="player-form-input" value={rivalExclFilter.number} onChange={(e) => setRivalExclFilter({ ...rivalExclFilter, number: e.target.value })}>
+              <option value={ANY}>Todos los dorsales</option>
+              {rivalExclNumbers.map((n) => <option key={n} value={n}>#{n}</option>)}
+            </select>
+            <input className="player-form-input player-form-input--number" type="number" placeholder="Minuto desde" value={rivalExclFilter.minMinute} onChange={(e) => setRivalExclFilter({ ...rivalExclFilter, minMinute: e.target.value })} />
+            <input className="player-form-input player-form-input--number" type="number" placeholder="Minuto hasta" value={rivalExclFilter.maxMinute} onChange={(e) => setRivalExclFilter({ ...rivalExclFilter, maxMinute: e.target.value })} />
+          </div>
+          <div className="stats-table-wrap">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th>Min.</th>
+                  <th>Dorsal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRivalExclusions.map((e) => (
+                  <tr key={e.id}>
+                    <td>{e.minute}'</td>
+                    <td>#{e.number}</td>
+                  </tr>
+                ))}
+                {filteredRivalExclusions.length === 0 && (
+                  <tr><td colSpan={2}><p className="modal-hint">Ninguna exclusión rival coincide con el filtro.</p></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="modal-hint">
+            Por dorsal: {rivalExclNumbers.map((n) => `#${n} (${rivalExclusionCounts[n]}${rivalExclusionCounts[n] >= 3 ? ' — expulsado' : ''})`).join(' · ')}
           </p>
         </>
       )}

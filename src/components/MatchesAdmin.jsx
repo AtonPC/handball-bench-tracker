@@ -3,7 +3,7 @@ import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En juego', finished: 'Finalizado' };
-const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodDurationMinutes: 20 };
+const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodDurationMinutes: 20, jornada: '', rivalCrestUrl: '' };
 
 export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRoster, canUseBench, onOpenMatch, onOpenStats, onEditFinishedStats }) {
   const { matches, createMatch, updateMatch, removeMatch, startMatch } = useMatches(clubId, teamId);
@@ -122,6 +122,8 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       venue: m.venue || '',
       scheduledAt: m.scheduledAt ? new Date(m.scheduledAt).toISOString().slice(0, 16) : '',
       periodDurationMinutes: m.periodDurationMs ? m.periodDurationMs / 60000 : 20,
+      jornada: m.jornada ?? '',
+      rivalCrestUrl: m.rivalCrestUrl || '',
     });
     setCallUpIds(m.callUpPlayerIds || []);
     setStartingIds(m.startingLineupIds || []);
@@ -147,6 +149,8 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       venue: form.venue.trim(),
       scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).getTime() : Date.now(),
       ownTeamName,
+      jornada: form.jornada === '' ? null : Number(form.jornada),
+      rivalCrestUrl: form.rivalCrestUrl.trim(),
       callUpPlayerIds: callUpIds,
       startingLineupIds: startingIds,
       startingGoalkeeperId: startingGoalkeeperId || null,
@@ -233,6 +237,19 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
             type="datetime-local"
             value={form.scheduledAt}
             onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+          />
+          <input
+            className="player-form-input player-form-input--number"
+            type="number"
+            placeholder="Jornada (opcional)"
+            value={form.jornada}
+            onChange={(e) => setForm({ ...form, jornada: e.target.value })}
+          />
+          <input
+            className="player-form-input"
+            placeholder="URL del escudo rival (opcional)"
+            value={form.rivalCrestUrl}
+            onChange={(e) => setForm({ ...form, rivalCrestUrl: e.target.value })}
           />
           <label className="player-form-checkbox">
             Duración de cada tiempo (minutos)
@@ -373,6 +390,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
             )}
             <div className="admin-user-info">
               <span className="admin-user-name">
+                {m.jornada ? `J${m.jornada} · ` : ''}
                 {m.isHome ? `${m.ownTeamName || 'Mi equipo'} vs ${m.rivalName}` : `${m.rivalName} vs ${m.ownTeamName || 'Mi equipo'}`}
               </span>
               <span className="admin-user-email">

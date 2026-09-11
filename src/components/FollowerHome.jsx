@@ -3,6 +3,9 @@ import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
+import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
+import { useExclusionEvents } from '../hooks/useExclusionEvents';
+import { useRivalExclusions } from '../hooks/useRivalExclusions';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { formatClock } from '../utils/time';
@@ -10,12 +13,57 @@ import { teamColorStyle } from '../utils/teamColors';
 import GoalCelebration from './GoalCelebration';
 
 // Nombre a mostrar de un jugador propio, respetando imageAuthorized: si el
-// club no ha autorizado a mostrar su nombre, solo se ve el dorsal.
+// club no ha autorizado a mostrar su nombre, solo se ve el dorsal. Nunca se
+// muestra el tiempo jugado individual — solo quién está en pista.
 function ownPlayerLabel(playersById, authorizedById, playerId) {
   const p = playersById[playerId];
   if (!p) return 'Jugador/a';
-  if (authorizedById[playerId] === false) return `Jugador/a #${p.number ?? '?'}`;
+  if (authorizedById[playerId] === false) return `#${p.number ?? '?'}`;
   return p.name || `#${p.number ?? '?'}`;
+}
+
+// Cronología unificada: goles, fallos y recuperaciones propias, y goles y
+// exclusiones de ambos equipos, ordenados de más reciente a más antiguo.
+// Las exclusiones rivales no traen guardado si fueron la 3ª de ese dorsal
+// (a diferencia de las propias) — se calcula aquí, en orden cronológico.
+function buildChronology({ ownGoals, ownMisses, ownRecoveries, ownExclusions, rivalGoals, rivalExclusions }) {
+  const entries = [];
+  for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, type: 'goal', side: 'own', playerId: g.playerId });
+  for (const m of ownMisses) entries.push({ id: `om-${m.id}`, minute: m.minute, type: 'miss', side: 'own', playerId: m.playerId });
+  for (const r of ownRecoveries) entries.push({ id: `or-${r.id}`, minute: r.minute, type: 'recovery', side: 'own', playerId: r.playerId });
+  for (const e of ownExclusions) entries.push({ id: `oe-${e.id}`, minute: e.minute, type: 'exclusion', side: 'own', playerId: e.playerId, disqualified: e.disqualified });
+  for (const g of rivalGoals) entries.push({ id: `rg-${g.id}`, minute: g.minute, type: 'goal', side: 'rival', number: g.number });
+
+  const rivalCounts = {};
+  const sortedRivalExclusions = [...rivalExclusions].sort((a, b) => a.minute - b.minute);
+  for (const e of sortedRivalExclusions) {
+    rivalCounts[e.number] = (rivalCounts[e.number] || 0) + 1;
+    entries.push({ id: `re-${e.id}`, minute: e.minute, type: 'exclusion', side: 'rival', number: e.number, disqualified: rivalCounts[e.number] >= 3 });
+  }
+
+  return entries.sort((a, b) => b.minute - a.minute);
+}
+
+function ChronologyRow({ entry, playersById, authorizedById }) {
+  const who = entry.side === 'own'
+    ? ownPlayerLabel(playersById, authorizedById, entry.playerId)
+    : `Rival #${entry.number}`;
+  const label = {
+    goal: 'Gol',
+    miss: 'Fallo',
+    recovery: 'Recuperación',
+    exclusion: entry.disqualified ? 'Expulsión' : 'Exclusión',
+  }[entry.type];
+
+  return (
+    <p>
+      Min. {entry.minute}' — {label}
+      {entry.type === 'exclusion' && (
+        <span className={`ref-card ref-card--${entry.disqualified ? 'red' : 'amber'}`} style={{ margin: '0 4px' }} />
+      )}
+      {' '}{who}
+    </p>
+  );
 }
 
 function LiveMatchSection({ clubId, teamId, team }) {
@@ -23,7 +71,10 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const liveMatch = useMemo(() => matches.find((m) => m.lifecycle === 'live') || null, [matches]);
   const store = useMatchStore(liveMatch?.id || null, !!liveMatch);
   const rivalGoals = useRivalGoals(liveMatch?.id || null);
+  const rivalExclusions = useRivalExclusions(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
+  const recoveryEvents = useRecoveryEvents(liveMatch?.id || null);
+  const exclusionEvents = useExclusionEvents(liveMatch?.id || null);
   const { players } = usePlayers(clubId, teamId);
 
   const authorizedById = useMemo(
@@ -32,6 +83,12 @@ function LiveMatchSection({ clubId, teamId, team }) {
   );
   const playersById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p])), [players]);
   const ownGoals = useMemo(() => shotEvents.filter((e) => e.type === 'goal'), [shotEvents]);
+  const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
+
+  const chronology = useMemo(
+    () => buildChronology({ ownGoals, ownMisses, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
+    [ownGoals, ownMisses, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
+  );
 
   const [celebrationKey, setCelebrationKey] = useState(null);
   const prevOwnGoals = useRef(ownGoals.length);
@@ -47,7 +104,9 @@ function LiveMatchSection({ clubId, teamId, team }) {
   const { state } = store;
   const leftName = state.isHome ? state.ownTeamName : state.rivalName;
   const rightName = state.isHome ? state.rivalName : state.ownTeamName;
-  const courtExclusions = state.courtSlots.map((id) => state.players[id]).filter((p) => p?.excluded);
+  const leftCrest = state.isHome ? team?.crestUrl : state.rivalCrestUrl;
+  const rightCrest = state.isHome ? state.rivalCrestUrl : team?.crestUrl;
+  const onCourt = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
 
   return (
     <div>
@@ -61,13 +120,16 @@ function LiveMatchSection({ clubId, teamId, team }) {
       )}
 
       <header className="match-header">
+        {state.jornada != null && <p className="modal-hint" style={{ margin: 0 }}>Jornada {state.jornada}</p>}
         <div className="header-row">
           <div className="scoreboard">
+            {leftCrest && <img src={leftCrest} alt="" className="team-crest" />}
             <span className="team-name team-name--own">{leftName}</span>
             <span className="score-own">{state.isHome ? state.score.own : state.score.rival}</span>
             <span className="score-sep">-</span>
             <span className="score-rival">{state.isHome ? state.score.rival : state.score.own}</span>
             <span className="team-name team-name--rival">{rightName}</span>
+            {rightCrest && <img src={rightCrest} alt="" className="team-crest" />}
           </div>
           <div className="master-clock">
             <span className="period-label">{state.clock.period}ª parte</span>
@@ -80,32 +142,23 @@ function LiveMatchSection({ clubId, teamId, team }) {
         </div>
       </header>
 
-      {courtExclusions.length > 0 && (
-        <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-          <h4>Exclusiones en pista</h4>
-          {courtExclusions.map((p) => (
-            <p key={p.id}>
-              #{p.number} {authorizedById[p.id] === false ? '' : p.name} — {formatClock(p.exclusionRemainingMs)}
-            </p>
-          ))}
-        </div>
-      )}
+      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+        <h4>En pista ahora mismo</h4>
+        {onCourt.length === 0 && <p>Sin datos de la alineación.</p>}
+        {onCourt.map((p) => (
+          <p key={p.id}>
+            #{p.number} {authorizedById[p.id] === false ? '' : p.name}{p.isGK ? ' (P)' : ''}
+            {p.excluded && <span className="ref-card ref-card--amber" style={{ margin: '0 4px' }} />}
+          </p>
+        ))}
+      </div>
 
-      <div className="card-grid" style={{ marginTop: 'var(--space-4)' }}>
-        <div className="card">
-          <h4>Goles de {state.ownTeamName}</h4>
-          {ownGoals.length === 0 && <p>Todavía no ha marcado nadie.</p>}
-          {ownGoals.map((g) => (
-            <p key={g.id}>Min. {g.minute} — {ownPlayerLabel(playersById, authorizedById, g.playerId)}</p>
-          ))}
-        </div>
-        <div className="card">
-          <h4>Goles de {state.rivalName}</h4>
-          {rivalGoals.length === 0 && <p>Todavía no ha marcado nadie.</p>}
-          {rivalGoals.map((g) => (
-            <p key={g.id}>Min. {g.minute} — Dorsal {g.number}</p>
-          ))}
-        </div>
+      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+        <h4>Cronología</h4>
+        {chronology.length === 0 && <p>Todavía no ha pasado nada.</p>}
+        {chronology.map((entry) => (
+          <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
+        ))}
       </div>
     </div>
   );
@@ -126,6 +179,7 @@ function AccumulatedSection({ clubId, teamId }) {
     () => Object.entries(totals).map(([id, p]) => ({
       id,
       ...p,
+      attempts: p.goals + p.shots,
       displayName: authorizedById[id] === false ? `Jugador/a #${p.number ?? '?'}` : p.name,
     })),
     [totals, authorizedById]
@@ -175,7 +229,11 @@ function AccumulatedSection({ clubId, teamId }) {
               <th>Jugados</th>
               <th>Convocados</th>
               <th>Goles</th>
+              <th>Fallos</th>
+              <th>Tiros</th>
               <th>Recup.</th>
+              <th>Excl.</th>
+              <th>Expulsado</th>
             </tr>
           </thead>
           <tbody>
@@ -186,7 +244,11 @@ function AccumulatedSection({ clubId, teamId }) {
                 <td>{p.matchesPlayed}</td>
                 <td>{p.matchesCalledUp}</td>
                 <td>{p.goals}</td>
+                <td>{p.shots}</td>
+                <td>{p.attempts}</td>
                 <td>{p.recoveries}</td>
+                <td>{p.exclusionsCount || 0}</td>
+                <td>{p.disqualifications ? 'Sí' : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -196,9 +258,12 @@ function AccumulatedSection({ clubId, teamId }) {
   );
 }
 
-// Vista de Seguidor/tutor: marcador y goles en directo del equipo aprobado,
-// y estadísticas acumuladas de los partidos finalizados. Nunca muestra el
-// nombre de un jugador propio con imageAuthorized === false.
+// Vista de Seguidor/tutor: información del partido en directo (marcador,
+// escudos, minuto, alineación en pista y cronología de goles/fallos/
+// recuperaciones/exclusiones) y estadísticas acumuladas de los partidos
+// finalizados. Nunca muestra el tiempo jugado individual de un jugador
+// (para no dar munición a fricciones familia/entrenador), ni el nombre de
+// un jugador propio con imageAuthorized === false.
 export default function FollowerHome({ identity, approvedTeamIds, user, onLogout }) {
   const teams = (identity.allTeams || []).filter((t) => approvedTeamIds.includes(t.id));
   const [teamId, setTeamId] = useState(teams[0]?.id || '');

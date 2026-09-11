@@ -270,6 +270,22 @@ export function useMatchStore(matchId, enabled) {
     [match, recordEvent]
   );
 
+  // Exclusión rival: solo el dorsal, sin zonas — a diferencia del gol rival,
+  // no cambia el marcador. Se guarda en matches/{id}/rivalExclusions para
+  // poder contar cuántas lleva cada dorsal (ver rivalExclusionCounts en
+  // el estado) y para la cronología de la vista de Seguidor.
+  const rivalExclusion = useCallback(
+    (number) => {
+      if (!match) return;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'rivalExclusions'));
+      recordEvent(`Exclusión rival #${number}`, {}, {}, {
+        create: { ref, data: { number, minute, period: match.period, createdAt: Date.now() } },
+      });
+    },
+    [match, matchId, liveElapsedMs, recordEvent]
+  );
+
   // --- Tiempos muertos ---
   const timeout = useCallback(
     (team, delta = 1) => {
@@ -337,12 +353,23 @@ export function useMatchStore(matchId, enabled) {
     [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
+  // El "+1" real queda registrado con su minuto en matches/{id}/recoveryEvents
+  // (para la cronología de la vista de Seguidor); el "-1" es una corrección
+  // de un toque accidental, no un suceso nuevo, así que no crea evento.
   const playerRecovery = useCallback(
     (playerId, delta = 1) => {
       const next = Math.max(0, players[playerId].recoveries + delta);
-      recordEvent(delta > 0 ? 'Recuperación' : 'Recuperación (-1)', {}, { [playerId]: { recoveries: next } });
+      if (delta > 0 && match) {
+        const minute = Math.floor(liveElapsedMs / 60000) + 1;
+        const ref = doc(collection(db, 'matches', matchId, 'recoveryEvents'));
+        recordEvent('Recuperación', {}, { [playerId]: { recoveries: next } }, {
+          create: { ref, data: { playerId, minute, period: match.period, createdAt: Date.now() } },
+        });
+      } else {
+        recordEvent('Recuperación (-1)', {}, { [playerId]: { recoveries: next } });
+      }
     },
-    [players, recordEvent]
+    [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
   // Solo tiene sentido para quien juega de portero en este partido.
@@ -380,11 +407,17 @@ export function useMatchStore(matchId, enabled) {
   // pueda abrir el cambio en el momento.
   const playerExclusion = useCallback(
     (playerId) => {
+      if (!match) return false;
       const nowMs = Date.now();
       const p = players[playerId];
       const nextCount = p.exclusionsCount + 1;
       const accumulatedMs = p.onCourtSinceMs ? p.accumulatedMs + (nowMs - p.onCourtSinceMs) : p.accumulatedMs;
       const willDisqualify = nextCount >= 3;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'exclusionEvents'));
+      const extra = {
+        create: { ref, data: { playerId, minute, period: match.period, disqualified: willDisqualify, createdAt: Date.now() } },
+      };
       if (willDisqualify) {
         recordEvent('Expulsión (3ª exclusión)', {}, {
           [playerId]: {
@@ -395,7 +428,7 @@ export function useMatchStore(matchId, enabled) {
             accumulatedMs,
             onCourtSinceMs: null,
           },
-        });
+        }, extra);
       } else {
         recordEvent('Exclusión 2min', {}, {
           [playerId]: {
@@ -405,11 +438,11 @@ export function useMatchStore(matchId, enabled) {
             accumulatedMs,
             onCourtSinceMs: null,
           },
-        });
+        }, extra);
       }
       return willDisqualify;
     },
-    [players, recordEvent]
+    [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
   // Cancela una exclusión en curso (toque accidental): el jugador vuelve a
@@ -502,7 +535,9 @@ export function useMatchStore(matchId, enabled) {
     () => ({
       lifecycle: match?.lifecycle || 'scheduled',
       rivalName: match?.rivalName || 'Rival',
+      rivalCrestUrl: match?.rivalCrestUrl || '',
       ownTeamName: match?.ownTeamName || 'Mi equipo',
+      jornada: match?.jornada ?? null,
       isHome: match?.isHome ?? true,
       venue: match?.venue || '',
       scheduledAt: match?.scheduledAt || null,
@@ -536,6 +571,7 @@ export function useMatchStore(matchId, enabled) {
     rivalGoal,
     rivalGoalWithDetail,
     rivalShot,
+    rivalExclusion,
     timeout,
     playerGoal,
     playerGoalWithDetail,
