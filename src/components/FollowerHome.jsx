@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, History } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, CalendarDays, History, Radio, Shield, Users } from 'lucide-react';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -14,99 +14,13 @@ import { formatClock } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
 import GoalCelebration from './GoalCelebration';
 import PlayerStatsTable from './PlayerStatsTable';
-
-// La plantilla (colección "players") no tiene un campo "name" — solo
-// displayName (o firstName/lastName) —, a diferencia de los jugadores ya
-// copiados a un partido, que sí lo tienen. Mismo criterio que startMatch.
-function rosterDisplayName(p) {
-  return p.displayName || `${p.firstName || ''} ${p.lastName || ''}`.trim();
-}
-
-// Nombre a mostrar de un jugador propio, respetando imageAuthorized: si el
-// club no ha autorizado a mostrar su nombre, solo se ve el dorsal. Nunca se
-// muestra el tiempo jugado individual — solo quién está en pista.
-function ownPlayerLabel(playersById, authorizedById, playerId) {
-  const p = playersById[playerId];
-  if (!p) return 'Jugador/a';
-  if (authorizedById[playerId] === false) return `#${p.number ?? '?'}`;
-  return rosterDisplayName(p) || `#${p.number ?? '?'}`;
-}
-
-// Cronología unificada: goles, fallos y recuperaciones propias, y goles y
-// exclusiones de ambos equipos, ordenados de más reciente a más antiguo.
-// Las exclusiones rivales no traen guardado si fueron la 3ª de ese dorsal
-// (a diferencia de las propias) — se calcula aquí, en orden cronológico.
-function buildChronology({ ownGoals, ownMisses, ownRecoveries, ownExclusions, rivalGoals, rivalExclusions }) {
-  const entries = [];
-  for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, type: 'goal', side: 'own', playerId: g.playerId });
-  for (const m of ownMisses) entries.push({ id: `om-${m.id}`, minute: m.minute, type: 'miss', side: 'own', playerId: m.playerId });
-  for (const r of ownRecoveries) entries.push({ id: `or-${r.id}`, minute: r.minute, type: 'recovery', side: 'own', playerId: r.playerId });
-  for (const e of ownExclusions) entries.push({ id: `oe-${e.id}`, minute: e.minute, type: 'exclusion', side: 'own', playerId: e.playerId, disqualified: e.disqualified });
-  for (const g of rivalGoals) entries.push({ id: `rg-${g.id}`, minute: g.minute, type: 'goal', side: 'rival', number: g.number });
-
-  const rivalCounts = {};
-  const sortedRivalExclusions = [...rivalExclusions].sort((a, b) => a.minute - b.minute);
-  for (const e of sortedRivalExclusions) {
-    rivalCounts[e.number] = (rivalCounts[e.number] || 0) + 1;
-    entries.push({ id: `re-${e.id}`, minute: e.minute, type: 'exclusion', side: 'rival', number: e.number, disqualified: rivalCounts[e.number] >= 3 });
-  }
-
-  return entries.sort((a, b) => b.minute - a.minute);
-}
-
-function ChronologyRow({ entry, playersById, authorizedById, compact }) {
-  const who = entry.side === 'own'
-    ? ownPlayerLabel(playersById, authorizedById, entry.playerId)
-    : `Rival #${entry.number}`;
-  const label = {
-    goal: 'Gol',
-    miss: 'Fallo',
-    recovery: 'Recuperación',
-    exclusion: entry.disqualified ? 'Expulsión' : 'Exclusión',
-  }[entry.type];
-
-  if (compact) {
-    return (
-      <p>
-        {entry.minute}' {label}
-        {entry.type === 'exclusion' && (
-          <span className={`ref-card ref-card--${entry.disqualified ? 'red' : 'amber'}`} style={{ margin: '0 4px' }} />
-        )}
-        {' '}{who}
-      </p>
-    );
-  }
-
-  return (
-    <p>
-      Min. {entry.minute}' — {label}
-      {entry.type === 'exclusion' && (
-        <span className={`ref-card ref-card--${entry.disqualified ? 'red' : 'amber'}`} style={{ margin: '0 4px' }} />
-      )}
-      {' '}{who}
-    </p>
-  );
-}
-
-// Estadísticas del partido EN CURSO (no las acumuladas de temporada),
-// construidas directamente de state.players. Misma tabla que ve el staff
-// (PlayerStatsTable): Goles/Tiros, % Acierto, Paradas/Tiros y % Paradas
-// (portero), Recuperaciones, Exclusiones, Expulsado y % Minutos jugados del
-// partido — nunca el tiempo jugado en minutos, solo el reparto en %.
-// "Tiros" de paradas = paradas + goles rivales encajados por el equipo —
-// no se sabe qué portero concreto encajó cada gol (no se registra quién
-// estaba en la portería en ese momento), así que es del equipo, no 1:1
-// del portero si hubo más de uno en el partido.
-function MatchStatsTable({ statePlayers, playersById, authorizedById, rivalGoalsConceded, matchElapsedMs }) {
-  const rows = Object.values(statePlayers).map((p) => ({
-    ...p,
-    attempts: p.goals + p.shots,
-    shotsFaced: (p.saves || 0) + rivalGoalsConceded,
-    name: ownPlayerLabel(playersById, authorizedById, p.id),
-  }));
-
-  return <PlayerStatsTable rows={rows} minutesTotalMs={matchElapsedMs} />;
-}
+import AppSidebar from './AppSidebar';
+import FollowerRoster from './FollowerRoster';
+import FollowerMatches from './FollowerMatches';
+import FollowerClub from './FollowerClub';
+import ChronologyRow from './ChronologyRow';
+import MatchStatsTable from './FollowerMatchStatsTable';
+import { rosterDisplayName, buildChronology } from '../utils/followerHelpers';
 
 function LiveMatchSection({ clubId, teamId, team, logView }) {
   const { matches } = useMatches(clubId, teamId);
@@ -452,7 +366,7 @@ function AccumulatedSection({ clubId, teamId }) {
 // partido, no lo acumulado del equipo — pero siguen a un clic si hace
 // falta consultarlas. Sin partido en directo no tiene sentido esconderlas:
 // son lo único que hay que mostrar en ese momento.
-function TeamFollowerContent({ clubId, teamId, team, logView }) {
+function FollowerLiveTab({ clubId, teamId, team, logView }) {
   const { matches } = useMatches(clubId, teamId);
   const hasLiveMatch = matches.some((m) => m.lifecycle === 'live');
   const [showSeason, setShowSeason] = useState(!hasLiveMatch);
@@ -486,15 +400,24 @@ function TeamFollowerContent({ clubId, teamId, team, logView }) {
   );
 }
 
-// Vista de Seguidor/tutor: información del partido en directo (marcador,
-// escudos, minuto, alineación en pista y cronología de goles/fallos/
-// recuperaciones/exclusiones) y estadísticas acumuladas de los partidos
-// finalizados. Nunca muestra el tiempo jugado individual de un jugador
-// (para no dar munición a fricciones familia/entrenador), ni el nombre de
-// un jugador propio con imageAuthorized === false.
+const FOLLOWER_TABS = [
+  { key: 'live', label: 'Partido en Directo', icon: Radio },
+  { key: 'roster', label: 'Plantilla', icon: Users },
+  { key: 'matches', label: 'Partidos', icon: CalendarDays },
+  { key: 'club', label: 'Club', icon: Shield },
+];
+
+// Vista de Seguidor/tutor: mismo patrón de menú lateral que el staff, pero
+// con solo cuatro secciones de solo lectura — partido en directo (marcador,
+// escudos, minuto, alineación en pista y cronología), plantilla, partidos
+// (pasados y programados, con estadísticas de los finalizados) y club.
+// Nunca muestra el tiempo jugado individual de un jugador (para no dar
+// munición a fricciones familia/entrenador), ni el nombre de un jugador
+// propio con imageAuthorized === false.
 export default function FollowerHome({ identity, approvedTeamIds, user, onLogout, previewMode }) {
   const teams = (identity.allTeams || []).filter((t) => approvedTeamIds.includes(t.id));
   const [teamId, setTeamId] = useState(teams[0]?.id || '');
+  const [view, setView] = useState('live');
 
   useEffect(() => {
     if (!teams.some((t) => t.id === teamId)) setTeamId(teams[0]?.id || '');
@@ -514,33 +437,42 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
     clubId: activeTeam?.clubId,
   });
 
-  return (
-    <div className="app-shell" style={teamColorStyle(activeTeam)}>
-      <nav className="admin-nav">
-        <span className="admin-nav-role">
-          {previewMode ? 'Vista de Seguidor (previsualización)' : (user.displayName || user.email)}
-        </span>
-        {!previewMode && teams.length > 1 && (
-          <select
-            className="admin-role-select"
-            value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
-            title="Equipo seguido"
-          >
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        )}
-        <button className="btn btn-logout" onClick={onLogout}>{previewMode ? '← VOLVER' : 'SALIR'}</button>
-      </nav>
-      <div className="admin-panel">
-        {activeTeam ? (
-          <TeamFollowerContent clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} />
-        ) : (
+  if (!activeTeam) {
+    return (
+      <div className="app-shell">
+        <nav className="admin-nav">
+          <span className="admin-nav-role">{previewMode ? 'Vista de Seguidor (previsualización)' : (user.displayName || user.email)}</span>
+          <button className="btn btn-logout" onClick={onLogout}>{previewMode ? '← VOLVER' : 'SALIR'}</button>
+        </nav>
+        <div className="admin-panel">
           <p className="modal-hint">No se encuentra el equipo aprobado.</p>
-        )}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="app-layout" style={teamColorStyle(activeTeam)}>
+      <AppSidebar
+        roleLabel={previewMode ? 'Vista de Seguidor (previsualización)' : (user.displayName || user.email)}
+        clubOptions={[]}
+        teamsInActiveClub={!previewMode && teams.length > 1 ? teams : []}
+        activeTeamId={teamId}
+        onTeamChange={setTeamId}
+        tabs={FOLLOWER_TABS}
+        view={view}
+        onViewChange={setView}
+        onLogout={onLogout}
+        logoutLabel={previewMode ? 'VOLVER' : 'SALIR'}
+      />
+      <main className="app-main">
+        {view === 'live' && (
+          <FollowerLiveTab clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} />
+        )}
+        {view === 'roster' && <FollowerRoster clubId={activeTeam.clubId} teamId={activeTeam.id} />}
+        {view === 'matches' && <FollowerMatches clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
+        {view === 'club' && <FollowerClub clubId={activeTeam.clubId} team={activeTeam} />}
+      </main>
     </div>
   );
 }

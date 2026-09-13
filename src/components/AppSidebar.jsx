@@ -13,6 +13,7 @@ export default function AppSidebar({
   view,
   onViewChange,
   onLogout,
+  logoutLabel = 'SALIR',
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -78,7 +79,7 @@ export default function AppSidebar({
 
       <button className="btn btn-logout sidebar-logout" onClick={onLogout}>
         <LogOut size={16} />
-        <span className="sidebar-tab-label">SALIR</span>
+        <span className="sidebar-tab-label">{logoutLabel}</span>
       </button>
     </nav>
   );
