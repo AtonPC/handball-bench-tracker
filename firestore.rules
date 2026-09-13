@@ -129,9 +129,12 @@ service cloud.firestore {
     }
 
     match /staffMemberships/{membershipDocId} {
+      // Además de la propia persona/admin/gestor, cualquiera con acceso de
+      // lectura al equipo (staff activo, o Seguidor/tutela aprobados) puede
+      // ver quién es el staff — solo lectura, sigue sin poder tocar nada.
       allow read: if isSignedIn() && (
         resource.data.personUid == request.auth.uid ||
-        isSystemAdmin() || isClubManager(resource.data.clubId)
+        canViewTeamData(resource.data.clubId, resource.data.teamId)
       );
       allow create: if isSystemAdmin() || isClubManager(request.resource.data.clubId);
       allow update, delete: if isSystemAdmin() || isClubManager(resource.data.clubId);

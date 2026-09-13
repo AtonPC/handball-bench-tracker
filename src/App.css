@@ -127,6 +127,9 @@
   box-shadow: var(--shadow-card);
   overflow-y: auto;
 }
+.app-sidebar--expanded .sidebar-header {
+  flex: none;
+}
 .app-sidebar--expanded .sidebar-role,
 .app-sidebar--expanded .sidebar-select {
   display: block;

@@ -471,7 +471,7 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
         )}
         {view === 'roster' && <FollowerRoster clubId={activeTeam.clubId} teamId={activeTeam.id} />}
         {view === 'matches' && <FollowerMatches clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
-        {view === 'club' && <FollowerClub clubId={activeTeam.clubId} team={activeTeam} />}
+        {view === 'club' && <FollowerClub clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
       </main>
     </div>
   );

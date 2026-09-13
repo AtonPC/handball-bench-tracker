@@ -18,10 +18,11 @@ export function useStaffMemberships(teamId) {
     return unsub;
   }, [teamId]);
 
-  const addMembership = useCallback((clubId, personUid, label) => {
+  const addMembership = useCallback((clubId, personUid, label, personDisplayName) => {
     const id = membershipDocId(teamId, personUid);
     return setDoc(doc(db, 'staffMemberships', id), {
       personUid,
+      personDisplayName: personDisplayName || '',
       teamId,
       clubId,
       label,

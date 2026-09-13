@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTeams } from '../hooks/useTeams';
 import { useStaffMemberships } from '../hooks/useStaffMemberships';
 import { useUsersDirectory } from '../hooks/useUsersDirectory';
@@ -17,10 +17,24 @@ export default function StaffAdmin({ clubId }) {
     return users.find((u) => u.id === uid);
   }
 
+  // Rellena personDisplayName para membresías creadas antes de que este
+  // campo existiera — es un espejo público (como rosterDirectory) para que
+  // un Seguidor pueda ver quién es el staff sin necesitar leer "users",
+  // que sigue bloqueado para cualquiera que no sea admin/gestor.
+  useEffect(() => {
+    for (const m of memberships) {
+      if (!m.personDisplayName) {
+        const name = usersById(m.personUid)?.displayName;
+        if (name) updateMembership(m.id, { personDisplayName: name });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberships, users]);
+
   async function handleAdd(e) {
     e.preventDefault();
     if (!activeTeamId || !personUid) return;
-    await addMembership(clubId, personUid, label);
+    await addMembership(clubId, personUid, label, usersById(personUid)?.displayName);
     setPersonUid('');
   }
 
