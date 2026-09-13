@@ -1081,6 +1081,10 @@
 .btn-change-icon:active {
   transform: scale(0.95);
 }
+.btn-change-icon:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 
 /* ---------- Panel rival ---------- */
 .rival-panel {

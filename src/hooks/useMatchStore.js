@@ -541,6 +541,7 @@ export function useMatchStore(matchId, enabled) {
   // rol — el portero es un papel del partido, no de la ficha del jugador.
   const substitute = useCallback(
     (outPlayerId, inPlayerId) => {
+      if (!match || match.status !== 'running') return;
       const nowMs = Date.now();
       const outP = players[outPlayerId];
       const courtSlots = match.courtSlots.map((id) => (id === outPlayerId ? inPlayerId : id));
@@ -567,6 +568,7 @@ export function useMatchStore(matchId, enabled) {
   // el rol de portero si el expulsado lo tenía.
   const substituteDisqualified = useCallback(
     (outPlayerId, inPlayerId) => {
+      if (!match || match.status !== 'running') return;
       const nowMs = Date.now();
       const outP = players[outPlayerId];
       const courtSlots = match.courtSlots.map((id) => (id === outPlayerId ? inPlayerId : id));
