@@ -7,6 +7,7 @@ export default function ChronologyRow({ entry, playersById, authorizedById, comp
   const label = {
     goal: 'Gol',
     miss: 'Fallo',
+    save: 'Parada',
     recovery: 'Recuperación',
     exclusion: entry.disqualified ? 'Expulsión' : 'Exclusión',
   }[entry.type];

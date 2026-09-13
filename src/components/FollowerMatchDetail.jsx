@@ -4,6 +4,7 @@ import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalExclusions } from '../hooks/useRivalExclusions';
 import { useShotEvents } from '../hooks/useShotEvents';
+import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
 import { usePlayers } from '../hooks/usePlayers';
@@ -21,6 +22,7 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
   const rivalGoals = useRivalGoals(matchId);
   const rivalExclusions = useRivalExclusions(matchId);
   const shotEvents = useShotEvents(matchId);
+  const saveEvents = useSaveEvents(matchId);
   const recoveryEvents = useRecoveryEvents(matchId);
   const exclusionEvents = useExclusionEvents(matchId);
   const { players } = usePlayers(clubId, teamId);
@@ -34,8 +36,8 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
-    [ownGoals, ownMisses, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
+    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
   );
 
   return (

@@ -4,6 +4,7 @@ import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
+import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
@@ -29,6 +30,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const rivalGoals = useRivalGoals(liveMatch?.id || null);
   const rivalExclusions = useRivalExclusionsLive(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
+  const saveEvents = useSaveEvents(liveMatch?.id || null);
   const recoveryEvents = useRecoveryEvents(liveMatch?.id || null);
   const exclusionEvents = useExclusionEvents(liveMatch?.id || null);
   const { players } = usePlayers(clubId, teamId);
@@ -42,8 +44,8 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
-    [ownGoals, ownMisses, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
+    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
   );
 
   const [celebrationKey, setCelebrationKey] = useState(null);
@@ -68,13 +70,22 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   // saber que existía el botón para encontrarla.
   const [detailView, setDetailView] = useState('stats'); // null | 'stats' | 'chronology'
 
-  const lastOwnGoal = ownGoals[ownGoals.length - 1] || null;
+  // El más reciente por createdAt, no el último del array: shotEvents/
+  // rivalGoals se piden ordenados por "minute", y dos goles en el mismo
+  // minuto pueden llegar en cualquier orden entre sí (el desempate de
+  // Firestore no es el de inserción) — eso hacía que la celebración
+  // mostrara a veces al goleador anterior en vez del que acaba de marcar.
+  const lastOwnGoal = ownGoals.length
+    ? ownGoals.reduce((a, b) => (b.createdAt > a.createdAt ? b : a))
+    : null;
   const celebrationRosterPlayer = lastOwnGoal ? playersById[lastOwnGoal.playerId] : null;
   const celebrationPlayer = celebrationRosterPlayer
     ? { ...celebrationRosterPlayer, name: rosterDisplayName(celebrationRosterPlayer) }
     : null;
   const celebrationAuthorized = lastOwnGoal ? authorizedById[lastOwnGoal.playerId] : true;
-  const lastRivalGoal = rivalGoals[rivalGoals.length - 1] || null;
+  const lastRivalGoal = rivalGoals.length
+    ? rivalGoals.reduce((a, b) => (b.createdAt > a.createdAt ? b : a))
+    : null;
 
   const rivalExclSummary = useMemo(() => summarizeRivalExclusions(rivalExclusions), [rivalExclusions]);
 
@@ -466,12 +477,14 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
         logoutLabel={previewMode ? 'VOLVER' : 'SALIR'}
       />
       <main className="app-main">
-        {view === 'live' && (
-          <FollowerLiveTab clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} />
-        )}
-        {view === 'roster' && <FollowerRoster clubId={activeTeam.clubId} teamId={activeTeam.id} />}
-        {view === 'matches' && <FollowerMatches clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
-        {view === 'club' && <FollowerClub clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
+        <div className="admin-panel">
+          {view === 'live' && (
+            <FollowerLiveTab clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} />
+          )}
+          {view === 'roster' && <FollowerRoster clubId={activeTeam.clubId} teamId={activeTeam.id} />}
+          {view === 'matches' && <FollowerMatches clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
+          {view === 'club' && <FollowerClub clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
+        </div>
       </main>
     </div>
   );

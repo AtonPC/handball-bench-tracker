@@ -405,6 +405,9 @@
   border-radius: 8px;
   padding: 8px;
 }
+.call-up-list > * {
+  flex-shrink: 0;
+}
 .call-up-item {
   display: flex;
   align-items: center;
@@ -449,11 +452,20 @@
 
 .stats-view {
   flex: 1;
+  min-height: 0;
   padding: 12px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* Flex items encogen por defecto (flex-shrink:1) — sin esto, si el
+   contenido no cabe, en vez de desbordar y dejar hacer scroll (que es lo
+   que queremos, con overflow-y:auto arriba), el navegador comprimía cada
+   bloque (tarjetas, tabla...) para que todo encajase igual, dejando texto
+   y filas aplastados en vez de simplemente scrollear hasta verlos. */
+.stats-view > * {
+  flex-shrink: 0;
 }
 .stats-section-title {
   margin: 0;
@@ -796,11 +808,19 @@
 /* ---------- Panel de jugadores ---------- */
 .player-panel {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 8px;
   overflow-y: auto;
+}
+/* Mismo problema que .stats-view: sin esto, con muchos convocados las
+   filas se comprimían para caber todas en vez de desbordar y scrollear —
+   era el bloqueo real de "no se puede hacer scroll en el panel del
+   partido donde se anotan los datos". */
+.player-panel > * {
+  flex-shrink: 0;
 }
 
 .player-row {
@@ -1108,9 +1128,13 @@
   width: 100%;
   max-width: 420px;
   max-height: 80svh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.modal > * {
+  flex-shrink: 0;
 }
 .modal h2 {
   margin: 0;
@@ -1130,6 +1154,9 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+}
+.bench-list > * {
+  flex-shrink: 0;
 }
 .bench-option {
   display: flex;

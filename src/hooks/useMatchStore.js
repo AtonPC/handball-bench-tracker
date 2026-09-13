@@ -77,11 +77,24 @@ export function useMatchStore(matchId, enabled) {
     };
   }, [enabled, matchId, matchRef, playersCol, eventsCol]);
 
-  // Ticker local: solo fuerza el recálculo de los relojes en pantalla, no escribe en Firestore.
+  // Ticker local: solo fuerza el recálculo de los relojes en pantalla, no
+  // escribe en Firestore. El navegador (sobre todo en móvil, con la
+  // pantalla bloqueada o la pestaña en segundo plano) puede retrasar
+  // setInterval varios segundos de golpe — el reloj entonces "salta" al
+  // volver, aunque el valor real (siempre Date.now() menos el inicio, no
+  // un acumulador) nunca estuvo mal. Forzar un recálculo inmediato al
+  // volver a estar visible acorta al máximo ese salto visible.
   useEffect(() => {
     if (!match || match.status !== 'running') return undefined;
+    function resync() {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    }
+    document.addEventListener('visibilitychange', resync);
     const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', resync);
+    };
   }, [match?.status]);
 
   // Cierra automáticamente las exclusiones que ya han cumplido sus 2 minutos.
