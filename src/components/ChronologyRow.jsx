@@ -10,6 +10,7 @@ export default function ChronologyRow({ entry, playersById, authorizedById, comp
     save: 'Parada',
     recovery: 'Recuperación',
     exclusion: entry.disqualified ? 'Expulsión' : 'Exclusión',
+    sevenMeter: '7 metros',
   }[entry.type];
 
   if (compact) {

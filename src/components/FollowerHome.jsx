@@ -8,6 +8,7 @@ import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
+import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { useFollowerSession } from '../hooks/useFollowerSession';
@@ -29,6 +30,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const store = useMatchStore(liveMatch?.id || null, !!liveMatch);
   const rivalGoals = useRivalGoals(liveMatch?.id || null);
   const rivalExclusions = useRivalExclusionsLive(liveMatch?.id || null);
+  const rivalSevenMeters = useRivalSevenMeters(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
   const saveEvents = useSaveEvents(liveMatch?.id || null);
   const recoveryEvents = useRecoveryEvents(liveMatch?.id || null);
@@ -44,8 +46,8 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
-    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
+    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters]
   );
 
   const [celebrationKey, setCelebrationKey] = useState(null);

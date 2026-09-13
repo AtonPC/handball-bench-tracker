@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalExclusions } from '../hooks/useRivalExclusions';
+import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
@@ -21,6 +22,7 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
   const store = useMatchStore(matchId, !!matchId);
   const rivalGoals = useRivalGoals(matchId);
   const rivalExclusions = useRivalExclusions(matchId);
+  const rivalSevenMeters = useRivalSevenMeters(matchId);
   const shotEvents = useShotEvents(matchId);
   const saveEvents = useSaveEvents(matchId);
   const recoveryEvents = useRecoveryEvents(matchId);
@@ -36,8 +38,8 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions }),
-    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions]
+    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters]
   );
 
   return (

@@ -16,26 +16,31 @@ export function ownPlayerLabel(playersById, authorizedById, playerId) {
 }
 
 // Cronología unificada: goles, fallos, paradas y recuperaciones propias, y
-// goles y exclusiones de ambos equipos, ordenados de más reciente a más
+// goles, exclusiones y 7 metros del rival, ordenados de más reciente a más
 // antiguo. Las exclusiones rivales no traen guardado si fueron la 3ª de
 // ese dorsal (a diferencia de las propias) — se calcula aquí, en orden
 // cronológico. Se usa tanto para el partido en directo como para el
 // detalle de un partido finalizado — la lógica es la misma en los dos casos.
-export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, ownExclusions, rivalGoals, rivalExclusions }) {
+// El desempate por createdAt es necesario: dos sucesos del mismo minuto
+// pueden venir de colecciones distintas (o de la misma, con el desempate
+// de Firestore sin relación con el orden real) — sin él no salían en el
+// orden en que pasaron de verdad, solo agrupados por tipo de suceso.
+export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, ownExclusions, rivalGoals, rivalExclusions, rivalSevenMeters }) {
   const entries = [];
-  for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, type: 'goal', side: 'own', playerId: g.playerId });
-  for (const m of ownMisses) entries.push({ id: `om-${m.id}`, minute: m.minute, type: 'miss', side: 'own', playerId: m.playerId });
-  for (const s of ownSaves || []) entries.push({ id: `os-${s.id}`, minute: s.minute, type: 'save', side: 'own', playerId: s.playerId });
-  for (const r of ownRecoveries) entries.push({ id: `or-${r.id}`, minute: r.minute, type: 'recovery', side: 'own', playerId: r.playerId });
-  for (const e of ownExclusions) entries.push({ id: `oe-${e.id}`, minute: e.minute, type: 'exclusion', side: 'own', playerId: e.playerId, disqualified: e.disqualified });
-  for (const g of rivalGoals) entries.push({ id: `rg-${g.id}`, minute: g.minute, type: 'goal', side: 'rival', number: g.number });
+  for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'own', playerId: g.playerId });
+  for (const m of ownMisses) entries.push({ id: `om-${m.id}`, minute: m.minute, createdAt: m.createdAt, type: 'miss', side: 'own', playerId: m.playerId });
+  for (const s of ownSaves || []) entries.push({ id: `os-${s.id}`, minute: s.minute, createdAt: s.createdAt, type: 'save', side: 'own', playerId: s.playerId });
+  for (const r of ownRecoveries) entries.push({ id: `or-${r.id}`, minute: r.minute, createdAt: r.createdAt, type: 'recovery', side: 'own', playerId: r.playerId });
+  for (const e of ownExclusions) entries.push({ id: `oe-${e.id}`, minute: e.minute, createdAt: e.createdAt, type: 'exclusion', side: 'own', playerId: e.playerId, disqualified: e.disqualified });
+  for (const g of rivalGoals) entries.push({ id: `rg-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'rival', number: g.number });
+  for (const s of rivalSevenMeters || []) entries.push({ id: `rs-${s.id}`, minute: s.minute, createdAt: s.createdAt, type: 'sevenMeter', side: 'rival', number: s.number });
 
   const rivalCounts = {};
   const sortedRivalExclusions = [...rivalExclusions].sort((a, b) => a.minute - b.minute);
   for (const e of sortedRivalExclusions) {
     rivalCounts[e.number] = (rivalCounts[e.number] || 0) + 1;
-    entries.push({ id: `re-${e.id}`, minute: e.minute, type: 'exclusion', side: 'rival', number: e.number, disqualified: rivalCounts[e.number] >= 3 });
+    entries.push({ id: `re-${e.id}`, minute: e.minute, createdAt: e.createdAt, type: 'exclusion', side: 'rival', number: e.number, disqualified: rivalCounts[e.number] >= 3 });
   }
 
-  return entries.sort((a, b) => b.minute - a.minute);
+  return entries.sort((a, b) => b.minute - a.minute || (b.createdAt || 0) - (a.createdAt || 0));
 }

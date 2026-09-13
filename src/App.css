@@ -1318,20 +1318,19 @@
   max-width: 280px;
   margin: 0 auto;
 }
-.goal-frame {
-  fill: none;
-  stroke: var(--text-dim);
-  stroke-width: 4;
-  rx: 4;
-}
-.court-arc {
-  fill: var(--panel-alt);
+.goal-net-line {
   stroke: var(--border);
-  stroke-dasharray: 4 3;
-  pointer-events: none;
+  stroke-width: 1;
+}
+.goal-post-red {
+  fill: var(--danger);
+}
+.goal-post-white {
+  fill: var(--text);
 }
 .zone-shape {
   fill: var(--panel-alt);
+  fill-opacity: 0.55;
   stroke: var(--border);
   stroke-width: 1;
   transition: fill 0.1s, stroke 0.1s;
