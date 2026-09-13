@@ -4,11 +4,12 @@ import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
 import SubstitutionModal from './SubstitutionModal';
 import RivalGoalModal from './RivalGoalModal';
-import RivalExclusionModal from './RivalExclusionModal';
+import DorsalNumberModal from './DorsalNumberModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
+import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { teamColorStyle } from '../utils/teamColors';
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
@@ -16,10 +17,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
+  const [showRivalSevenMeterModal, setShowRivalSevenMeterModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
   const [showQuickStats, setShowQuickStats] = useState(false);
   const rivalExclusionsLive = useRivalExclusionsLive(matchId);
+  const rivalSevenMeters = useRivalSevenMeters(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -64,6 +67,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
               saveDec: () => store.playerSave(player.id, -1),
               exclusionStart: () => handleExclusionStart(player.id),
               exclusionCancel: () => store.cancelExclusion(player.id),
+              sevenMeterInc: () => store.playerSevenMeterCommitted(player.id, 1),
+              sevenMeterDec: () => store.playerSevenMeterCommitted(player.id, -1),
             }}
           />
         ))}
@@ -73,11 +78,14 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         rivalGoals={state.score.rival}
         rivalShots={state.rivalShots}
         rivalExclusionsLive={rivalExclusionsLive}
+        rivalSevenMeters={rivalSevenMeters}
         onGoal={store.rivalGoal}
         onShot={store.rivalShot}
         onOpenGoalDetail={() => setShowRivalGoalModal(true)}
         onOpenExclusion={() => setShowRivalExclusionModal(true)}
         onCancelExclusion={store.cancelRivalExclusion}
+        onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
+        onCancelSevenMeter={store.cancelRivalSevenMeter}
       />
 
       {substitution && (
@@ -102,12 +110,26 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       )}
 
       {showRivalExclusionModal && (
-        <RivalExclusionModal
+        <DorsalNumberModal
+          title="Exclusión rival — ¿qué dorsal?"
+          confirmLabel="REGISTRAR EXCLUSIÓN"
           onConfirm={(detail) => {
             store.rivalExclusion(detail.number);
             setShowRivalExclusionModal(false);
           }}
           onCancel={() => setShowRivalExclusionModal(false)}
+        />
+      )}
+
+      {showRivalSevenMeterModal && (
+        <DorsalNumberModal
+          title="7 metros rival — ¿qué dorsal ha cometido la falta?"
+          confirmLabel="REGISTRAR 7 METROS"
+          onConfirm={(detail) => {
+            store.rivalSevenMeter(detail.number);
+            setShowRivalSevenMeterModal(false);
+          }}
+          onCancel={() => setShowRivalSevenMeterModal(false)}
         />
       )}
 

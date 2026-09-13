@@ -3,7 +3,7 @@ import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateD
 import { db } from '../firebase';
 
 const MATCH_SUBCOLLECTIONS = [
-  'players', 'events', 'rivalGoals', 'shotEvents', 'saveEvents', 'rivalExclusions', 'recoveryEvents', 'exclusionEvents',
+  'players', 'events', 'rivalGoals', 'shotEvents', 'saveEvents', 'rivalExclusions', 'recoveryEvents', 'exclusionEvents', 'rivalSevenMeters',
 ];
 
 const matchesCol = collection(db, 'matches');

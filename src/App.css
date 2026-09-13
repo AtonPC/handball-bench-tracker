@@ -1311,6 +1311,61 @@
   color: var(--danger);
 }
 
+/* ---------- Diagrama visual de portería + cancha ---------- */
+.shot-zone-diagram {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+.goal-frame {
+  fill: none;
+  stroke: var(--text-dim);
+  stroke-width: 4;
+  rx: 4;
+}
+.court-arc {
+  fill: var(--panel-alt);
+  stroke: var(--border);
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.zone-shape {
+  fill: var(--panel-alt);
+  stroke: var(--border);
+  stroke-width: 1;
+  transition: fill 0.1s, stroke 0.1s;
+}
+.zone-shape--active {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.zone-shape--out {
+  stroke-dasharray: 3 3;
+}
+.zone-shape--out.zone-shape--active {
+  fill: var(--danger-dim);
+  stroke: var(--danger);
+}
+.zone-shape--seven {
+  stroke-width: 2;
+}
+.zone-shape-label {
+  font-size: 11px;
+  fill: var(--text-dim);
+  pointer-events: none;
+  user-select: none;
+}
+.zone-shape-stat {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--text);
+  pointer-events: none;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Tablet en horizontal / pantallas anchas: todo más grande ---------- */
 @media (min-width: 900px) {
   .btn {

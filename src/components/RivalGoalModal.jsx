@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SHOT_ZONES, GOAL_ZONES } from '../shotZones';
+import ShotZoneDiagram from './ShotZoneDiagram';
 
 const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
@@ -43,33 +43,15 @@ export default function RivalGoalModal({ onConfirm, onCancel }) {
           ))}
         </div>
 
-        <p className="modal-hint">Zona de lanzamiento (opcional)</p>
-        <div className="zone-grid">
-          {SHOT_ZONES.map((z) => (
-            <button
-              key={z}
-              type="button"
-              className={`zone-btn${shotZone === z ? ' zone-btn--active' : ''}`}
-              onClick={() => setShotZone(shotZone === z ? null : z)}
-            >
-              {z}
-            </button>
-          ))}
-        </div>
-
-        <p className="modal-hint">Zona de entrada a portería (opcional)</p>
-        <div className="zone-grid">
-          {GOAL_ZONES.map((z) => (
-            <button
-              key={z}
-              type="button"
-              className={`zone-btn${goalZone === z ? ' zone-btn--active' : ''}`}
-              onClick={() => setGoalZone(goalZone === z ? null : z)}
-            >
-              {z}
-            </button>
-          ))}
-        </div>
+        <p className="modal-hint">De dónde vino y por dónde entró (opcional)</p>
+        <ShotZoneDiagram
+          showGoal
+          showOrigin
+          shotZone={shotZone}
+          onShotZone={setShotZone}
+          goalZone={goalZone}
+          onGoalZone={setGoalZone}
+        />
 
         <div className="player-form-actions">
           <button className="btn btn-clock btn-start" disabled={!number} onClick={handleConfirm}>

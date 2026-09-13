@@ -49,6 +49,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions }) {
             <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
           </>
         )}
+        <StatStepper icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
       </div>
     </div>
   );

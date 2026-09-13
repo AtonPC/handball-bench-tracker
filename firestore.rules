@@ -288,6 +288,20 @@ service cloud.firestore {
           'benchConsole'
         );
       }
+
+      // 7 metros provocado por el rival: solo dorsal y minuto, sin cuenta
+      // atrás (no es una sanción temporal como una exclusión).
+      match /rivalSevenMeters/{rivalSevenMeterId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
     }
   }
 }

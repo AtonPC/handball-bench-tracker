@@ -2,8 +2,10 @@ import { useState } from 'react';
 
 const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
-// Exclusión rival: solo el dorsal, sin zonas — a diferencia del gol rival.
-export default function RivalExclusionModal({ onConfirm, onCancel }) {
+// Teclado numérico para anotar una acción rival identificada solo por
+// dorsal, sin zonas (exclusión, 7 metros cometido...). Genérico: título y
+// texto del botón los pone quien lo abre.
+export default function DorsalNumberModal({ title, confirmLabel, onConfirm, onCancel }) {
   const [number, setNumber] = useState('');
 
   function pressDigit(key) {
@@ -24,7 +26,7 @@ export default function RivalExclusionModal({ onConfirm, onCancel }) {
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal rival-goal-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Exclusión rival — ¿qué dorsal?</h2>
+        <h2>{title}</h2>
 
         <div className="rival-goal-display">{number || '—'}</div>
 
@@ -43,7 +45,7 @@ export default function RivalExclusionModal({ onConfirm, onCancel }) {
 
         <div className="player-form-actions">
           <button className="btn btn-clock btn-start" disabled={!number} onClick={handleConfirm}>
-            REGISTRAR EXCLUSIÓN
+            {confirmLabel}
           </button>
           <button className="modal-cancel" onClick={onCancel}>Cancelar</button>
         </div>

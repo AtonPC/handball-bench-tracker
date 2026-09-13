@@ -1,8 +1,11 @@
-// Rejillas simples para registrar de dónde vino un lanzamiento y por dónde
-// entró a portería. Es la versión funcional de la "zona de tiro" del
-// Cuaderno de Juego — el diagrama visual de cancha/portería llega con el
-// diseño; el dato que se guarda es el mismo.
-export const SHOT_ZONES = ['Izquierda', 'Centro', 'Derecha'];
+// Zonas para registrar de dónde vino un lanzamiento y por dónde entró a
+// portería, mostradas sobre un diagrama visual de cancha/portería
+// (ShotZoneDiagram.jsx) en vez de las rejillas de botones originales — el
+// dato que se guarda es el mismo de siempre.
+// "7 metros" no tiene lado (izq/centro/der): es un lanzamiento aparte,
+// siempre desde el mismo punto, así que es una 4ª opción de origen, no una
+// marca independiente.
+export const SHOT_ZONES = ['Izquierda', 'Centro', 'Derecha', '7 metros'];
 
 export const GOAL_ZONES = [
   'Arriba izquierda', 'Arriba centro', 'Arriba derecha',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SHOT_ZONES, GOAL_ZONES, OUT_ZONES } from '../shotZones';
+import ShotZoneDiagram from './ShotZoneDiagram';
 
 // Se abre al marcar Gol o Fallo de un jugador propio: zonas opcionales, igual
 // que en el gol rival — si no hay tiempo, se pulsa Registrar sin elegir nada.
@@ -14,43 +14,18 @@ export default function ShotDetailModal({ playerName, kind, onConfirm, onCancel 
       <div className="modal rival-goal-modal" onClick={(e) => e.stopPropagation()}>
         <h2>{kind === 'goal' ? 'Gol' : 'Fallo'} — {playerName}</h2>
 
-        <p className="modal-hint">Zona de lanzamiento (opcional)</p>
-        <div className="zone-grid">
-          {SHOT_ZONES.map((z) => (
-            <button
-              key={z}
-              type="button"
-              className={`zone-btn${shotZone === z ? ' zone-btn--active' : ''}`}
-              onClick={() => setShotZone(shotZone === z ? null : z)}
-            >
-              {z}
-            </button>
-          ))}
-        </div>
-
-        <p className="modal-hint">{kind === 'goal' ? 'Zona de entrada a portería (opcional)' : 'Por dónde falló: parada o fuera (opcional)'}</p>
-        <div className="zone-grid">
-          {GOAL_ZONES.map((z) => (
-            <button
-              key={z}
-              type="button"
-              className={`zone-btn${goalZone === z ? ' zone-btn--active' : ''}`}
-              onClick={() => setGoalZone(goalZone === z ? null : z)}
-            >
-              {z}
-            </button>
-          ))}
-          {kind === 'miss' && OUT_ZONES.map((z) => (
-            <button
-              key={z}
-              type="button"
-              className={`zone-btn zone-btn--out${goalZone === z ? ' zone-btn--active' : ''}`}
-              onClick={() => setGoalZone(goalZone === z ? null : z)}
-            >
-              {z}
-            </button>
-          ))}
-        </div>
+        <p className="modal-hint">
+          {kind === 'goal' ? 'De dónde vino y por dónde entró (opcional)' : 'De dónde vino y por dónde falló: parada o fuera (opcional)'}
+        </p>
+        <ShotZoneDiagram
+          showGoal
+          showOut={kind === 'miss'}
+          showOrigin
+          shotZone={shotZone}
+          onShotZone={setShotZone}
+          goalZone={goalZone}
+          onGoalZone={setGoalZone}
+        />
 
         <div className="player-form-actions">
           <button

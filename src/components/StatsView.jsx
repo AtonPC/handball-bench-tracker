@@ -3,8 +3,14 @@ import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
 import { useMatchEvents } from '../hooks/useMatchEvents';
+import { useShotEvents } from '../hooks/useShotEvents';
+import { useSaveEvents } from '../hooks/useSaveEvents';
 import { hasCapability } from '../permissions';
 import PlayerStatsTable from './PlayerStatsTable';
+import ShotZoneDiagram from './ShotZoneDiagram';
+import { fieldPlayerZoneStats, goalkeeperZoneStats } from '../utils/zoneStats';
+
+const ANY = '';
 
 const SUBSTITUTION_LABELS = new Set(['Cambio', 'Cambio por expulsión']);
 
@@ -48,6 +54,9 @@ export default function StatsView({ store, identity, teamId }) {
   );
   const canCoachPanel = hasCapability(identity, teamId, 'coachPanel');
   const [search, setSearch] = useState('');
+  const [zonePlayerId, setZonePlayerId] = useState(ANY);
+  const shotEvents = useShotEvents(matchId);
+  const saveEvents = useSaveEvents(matchId);
 
   const players = Object.values(state.players)
     .map((p) => ({ ...p, attempts: p.goals + p.shots, shotsFaced: (p.saves || 0) + state.score.rival }))
@@ -70,6 +79,20 @@ export default function StatsView({ store, identity, teamId }) {
   const topScorers = topN(players, (p) => p.goals, 5);
   const topRecoverers = topN(players, (p) => p.recoveries, 5);
   const topSavers = topN(players.filter((p) => p.isGK), (p) => p.saves || 0, 5);
+
+  // Mapa de tiros y paradas: por defecto el equipo entero (tiros propios y
+  // paradas propias, cada uno con su diagrama), o de un jugador concreto —
+  // de campo (goles/tiros) o portero (paradas), según lo que sea. En un
+  // portero, "tiros a puerta" es una aproximación de equipo si hubo más de
+  // uno en el partido (no se sabe qué portero concreto encajó cada gol
+  // rival) — misma limitación ya aceptada en el resto de la app.
+  const zonePlayer = zonePlayerId ? players.find((p) => p.id === zonePlayerId) : null;
+  const zoneShotEvents = zonePlayer ? shotEvents.filter((e) => e.playerId === zonePlayerId) : shotEvents;
+  const zoneSaveEvents = zonePlayer ? saveEvents.filter((e) => e.playerId === zonePlayerId) : saveEvents;
+  const showFieldZoneMap = !zonePlayer || !zonePlayer.isGK;
+  const showGkZoneMap = !zonePlayer || zonePlayer.isGK;
+  const fieldZoneStats = showFieldZoneMap ? fieldPlayerZoneStats(zoneShotEvents) : null;
+  const gkZoneStats = showGkZoneMap ? goalkeeperZoneStats(zoneSaveEvents, rivalGoals) : null;
 
   // Para el entrenador (capacidad "coachPanel"): cómo se han repartido los
   // minutos, para detectar rotación desigual de un vistazo. Los máximos
@@ -148,6 +171,30 @@ export default function StatsView({ store, identity, teamId }) {
           <h4>Más paradas</h4>
           {topSavers.length === 0 && <p>Todavía nadie ha parado.</p>}
           {topSavers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.saves} paradas · {pct(p.saves, p.shotsFaced)} paradas</p>)}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 'var(--space-5)' }}>
+        <h3 className="stats-section-title">Mapa de tiros y paradas</h3>
+        <div className="list-search" style={{ marginTop: 'var(--space-3)' }}>
+          <select className="player-form-input" value={zonePlayerId} onChange={(e) => setZonePlayerId(e.target.value)}>
+            <option value={ANY}>Equipo (todos)</option>
+            {players.map((p) => <option key={p.id} value={p.id}>#{p.number} {p.name}</option>)}
+          </select>
+        </div>
+        <div className="card-grid" style={{ marginTop: 'var(--space-3)' }}>
+          {showFieldZoneMap && (
+            <div className="card">
+              <h4>{zonePlayer ? 'Tiros' : 'Tiros del equipo'}</h4>
+              <ShotZoneDiagram readOnly showGoal showOrigin originStats={fieldZoneStats.origin} goalStats={fieldZoneStats.entry} />
+            </div>
+          )}
+          {showGkZoneMap && (
+            <div className="card">
+              <h4>{zonePlayer ? 'Paradas' : 'Paradas del equipo'}</h4>
+              <ShotZoneDiagram readOnly showGoal showOrigin originStats={gkZoneStats.origin} goalStats={gkZoneStats.entry} />
+            </div>
+          )}
         </div>
       </div>
 

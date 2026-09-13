@@ -315,6 +315,31 @@ export function useMatchStore(matchId, enabled) {
     [matchId]
   );
 
+  // 7 metros provocado por el rival: solo dorsal y minuto, igual que una
+  // exclusión rival — no cambia el marcador (el gol/fallo de 7m resultante
+  // se anota aparte, como un gol/fallo propio normal con zona "7 metros").
+  const rivalSevenMeter = useCallback(
+    (number) => {
+      if (!match) return;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'rivalSevenMeters'));
+      recordEvent(`7 metros cometido por rival #${number}`, {}, {}, {
+        create: { ref, data: { number, minute, period: match.period, createdAt: Date.now() } },
+      });
+    },
+    [match, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Anula un 7m rival marcado por error — borrado duro, igual que anular
+  // una exclusión rival.
+  const cancelRivalSevenMeter = useCallback(
+    (rivalSevenMeterId) => {
+      if (!matchId) return;
+      return deleteDoc(doc(db, 'matches', matchId, 'rivalSevenMeters', rivalSevenMeterId));
+    },
+    [matchId]
+  );
+
   // --- Tiempos muertos ---
   const timeout = useCallback(
     (team, delta = 1) => {
@@ -401,6 +426,17 @@ export function useMatchStore(matchId, enabled) {
     [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
+  // Falta propia que provoca un lanzamiento de 7 metros para el rival —
+  // contador simple por jugador, igual que las recuperaciones, sin zona ni
+  // documento de detalle propio.
+  const playerSevenMeterCommitted = useCallback(
+    (playerId, delta = 1) => {
+      const next = Math.max(0, (players[playerId].sevenMetersCommitted || 0) + delta);
+      recordEvent(delta > 0 ? '7 metros cometido' : '7 metros cometido (-1)', {}, { [playerId]: { sevenMetersCommitted: next } });
+    },
+    [players, recordEvent]
+  );
+
   // Solo tiene sentido para quien juega de portero en este partido.
   const playerSave = useCallback(
     (playerId, delta = 1) => {
@@ -413,7 +449,7 @@ export function useMatchStore(matchId, enabled) {
   // Parada con zona: se guarda como documento propio en
   // matches/{id}/saveEvents, igual que el gol/fallo propio.
   const playerSaveWithDetail = useCallback(
-    (playerId, { goalZone }) => {
+    (playerId, { shotZone, goalZone }) => {
       if (!match) return;
       const next = Math.max(0, players[playerId].saves + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -421,7 +457,7 @@ export function useMatchStore(matchId, enabled) {
       recordEvent('Parada', {}, { [playerId]: { saves: next } }, {
         create: {
           ref,
-          data: { playerId, minute, period: match.period, goalZone: goalZone || null, createdAt: Date.now() },
+          data: { playerId, minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
         },
       });
     },
@@ -602,12 +638,15 @@ export function useMatchStore(matchId, enabled) {
     rivalShot,
     rivalExclusion,
     cancelRivalExclusion,
+    rivalSevenMeter,
+    cancelRivalSevenMeter,
     timeout,
     playerGoal,
     playerGoalWithDetail,
     playerShot,
     playerShotWithDetail,
     playerRecovery,
+    playerSevenMeterCommitted,
     playerSave,
     playerSaveWithDetail,
     playerExclusion,
