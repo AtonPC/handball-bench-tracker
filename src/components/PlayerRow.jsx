@@ -10,8 +10,13 @@ function exclusionRowClass(player) {
   return '';
 }
 
-export default function PlayerRow({ player, onOpenSubstitution, actions }) {
-  const disabled = !!player.disqualified;
+export default function PlayerRow({ player, onOpenSubstitution, actions, matchRunning }) {
+  // El cambio se queda siempre disponible (en balonmano se cambia incluso
+  // con el reloj parado, en un tiempo muerto o al descanso) — lo que se
+  // bloquea si el partido no está en marcha es todo lo que anota un
+  // suceso con minuto (goles, exclusiones...), para no generar datos con
+  // un minuto que no tiene sentido.
+  const disabled = !!player.disqualified || !matchRunning;
   const dots = '●'.repeat(Math.min(player.exclusionsCount || 0, 2));
 
   return (
@@ -28,7 +33,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions }) {
           <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
         </div>
 
-        <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} />
+        <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} disabled={!matchRunning} />
 
         <button className="btn-change-icon" onClick={onOpenSubstitution} aria-label="Cambio">
           <Repeat size={20} />

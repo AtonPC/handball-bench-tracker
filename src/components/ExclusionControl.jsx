@@ -3,7 +3,7 @@ import { formatClock } from '../utils/time';
 
 // La tarjeta roja se reserva para la expulsión definitiva (3ª exclusión) —
 // una exclusión normal de 2 minutos usa la tarjeta ámbar, no la roja.
-export default function ExclusionControl({ player, onStart, onCancel }) {
+export default function ExclusionControl({ player, onStart, onCancel, disabled }) {
   const count = player.exclusionsCount || 0;
 
   if (player.disqualified) {
@@ -24,7 +24,7 @@ export default function ExclusionControl({ player, onStart, onCancel }) {
   }
 
   return (
-    <button className="excl-btn" onClick={onStart} aria-label="Exclusión 2 minutos">
+    <button className="excl-btn" onClick={onStart} disabled={disabled} aria-label="Exclusión 2 minutos">
       <Timer size={14} /> 2'
       <span className="excl-count">{count}/3</span>
     </button>

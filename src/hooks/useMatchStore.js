@@ -242,6 +242,7 @@ export function useMatchStore(matchId, enabled) {
   // --- Marcador y acciones rivales (delta: +1 o -1, para poder corregir toques) ---
   const rivalGoal = useCallback(
     (delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, match.score.rival + delta);
       recordEvent(delta > 0 ? 'Gol rival' : 'Gol rival (-1)', { 'score.rival': next }, {});
     },
@@ -254,7 +255,7 @@ export function useMatchStore(matchId, enabled) {
   // no solo como un +1 al marcador.
   const rivalGoalWithDetail = useCallback(
     ({ number, shotZone, goalZone }) => {
-      if (!match) return;
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, match.score.rival + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'rivalGoals'));
@@ -277,6 +278,7 @@ export function useMatchStore(matchId, enabled) {
 
   const rivalShot = useCallback(
     (delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, match.rivalShots + delta);
       recordEvent(delta > 0 ? 'Tiro rival' : 'Tiro rival (-1)', { rivalShots: next }, {});
     },
@@ -290,7 +292,7 @@ export function useMatchStore(matchId, enabled) {
   // saber si una exclusión rival seguía activa en cada momento.
   const rivalExclusion = useCallback(
     (number) => {
-      if (!match) return;
+      if (!match || match.status !== 'running') return;
       const nowMs = Date.now();
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'rivalExclusions'));
@@ -320,7 +322,7 @@ export function useMatchStore(matchId, enabled) {
   // se anota aparte, como un gol/fallo propio normal con zona "7 metros").
   const rivalSevenMeter = useCallback(
     (number) => {
-      if (!match) return;
+      if (!match || match.status !== 'running') return;
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'rivalSevenMeters'));
       recordEvent(`7 metros cometido por rival #${number}`, {}, {}, {
@@ -355,6 +357,7 @@ export function useMatchStore(matchId, enabled) {
   // --- Acciones por jugador (delta: +1 o -1, para poder corregir toques) ---
   const playerGoal = useCallback(
     (playerId, delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const nextGoals = Math.max(0, players[playerId].goals + delta);
       const nextScore = Math.max(0, match.score.own + delta);
       recordEvent(delta > 0 ? 'Gol' : 'Gol (-1)', { 'score.own': nextScore }, {
@@ -366,17 +369,18 @@ export function useMatchStore(matchId, enabled) {
 
   const playerShot = useCallback(
     (playerId, delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].shots + delta);
       recordEvent(delta > 0 ? 'Lanzamiento' : 'Lanzamiento (-1)', {}, { [playerId]: { shots: next } });
     },
-    [players, recordEvent]
+    [match, players, recordEvent]
   );
 
   // Gol/Fallo con zona (lanzamiento y, si es gol, entrada a portería), igual
   // que el gol rival: se guarda como documento propio en matches/{id}/shotEvents.
   const playerGoalWithDetail = useCallback(
     (playerId, { shotZone, goalZone }) => {
-      if (!match) return;
+      if (!match || match.status !== 'running') return;
       const nextGoals = Math.max(0, players[playerId].goals + 1);
       const nextScore = Math.max(0, match.score.own + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -393,7 +397,7 @@ export function useMatchStore(matchId, enabled) {
 
   const playerShotWithDetail = useCallback(
     (playerId, { shotZone, goalZone }) => {
-      if (!match) return;
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].shots + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'shotEvents'));
@@ -412,6 +416,7 @@ export function useMatchStore(matchId, enabled) {
   // de un toque accidental, no un suceso nuevo, así que no crea evento.
   const playerRecovery = useCallback(
     (playerId, delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].recoveries + delta);
       if (delta > 0 && match) {
         const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -431,26 +436,28 @@ export function useMatchStore(matchId, enabled) {
   // documento de detalle propio.
   const playerSevenMeterCommitted = useCallback(
     (playerId, delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, (players[playerId].sevenMetersCommitted || 0) + delta);
       recordEvent(delta > 0 ? '7 metros cometido' : '7 metros cometido (-1)', {}, { [playerId]: { sevenMetersCommitted: next } });
     },
-    [players, recordEvent]
+    [match, players, recordEvent]
   );
 
   // Solo tiene sentido para quien juega de portero en este partido.
   const playerSave = useCallback(
     (playerId, delta = 1) => {
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].saves + delta);
       recordEvent(delta > 0 ? 'Parada' : 'Parada (-1)', {}, { [playerId]: { saves: next } });
     },
-    [players, recordEvent]
+    [match, players, recordEvent]
   );
 
   // Parada con zona: se guarda como documento propio en
   // matches/{id}/saveEvents, igual que el gol/fallo propio.
   const playerSaveWithDetail = useCallback(
     (playerId, { shotZone, goalZone }) => {
-      if (!match) return;
+      if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].saves + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'saveEvents'));
@@ -472,7 +479,7 @@ export function useMatchStore(matchId, enabled) {
   // pueda abrir el cambio en el momento.
   const playerExclusion = useCallback(
     (playerId) => {
-      if (!match) return false;
+      if (!match || match.status !== 'running') return false;
       const nowMs = Date.now();
       const p = players[playerId];
       const nextCount = p.exclusionsCount + 1;

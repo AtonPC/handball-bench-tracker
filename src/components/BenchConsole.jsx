@@ -14,6 +14,7 @@ import { teamColorStyle } from '../utils/teamColors';
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
   const { state, matchId } = store;
+  const isRunning = state.clock.status === 'running';
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
@@ -50,11 +51,20 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     <div className="bench-console" style={teamColorStyle(team)}>
       <MatchHeader store={store} onBack={onBack} onFinish={onFinish} onOpenQuickStats={() => setShowQuickStats(true)} />
 
+      {!isRunning && (
+        <div className="match-not-running-banner">
+          {state.clock.status === 'idle'
+            ? '⏸ PARTIDO NO INICIADO — pulsa INICIAR 1T arriba para poder anotar'
+            : '⏸ PARTIDO EN PAUSA — pulsa REANUDAR arriba para poder seguir anotando'}
+        </div>
+      )}
+
       <div className="player-panel">
         {courtPlayers.map((player) => (
           <PlayerRow
             key={player.id}
             player={player}
+            matchRunning={isRunning}
             onOpenSubstitution={() => setSubstitution({ outPlayerId: player.id, forced: false })}
             actions={{
               goalInc: () => setShotDetailFor({ playerId: player.id, kind: 'goal' }),
@@ -86,6 +96,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         onCancelExclusion={store.cancelRivalExclusion}
         onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
         onCancelSevenMeter={store.cancelRivalSevenMeter}
+        matchRunning={isRunning}
       />
 
       {substitution && (

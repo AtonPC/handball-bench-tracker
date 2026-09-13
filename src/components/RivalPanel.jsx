@@ -14,7 +14,7 @@ import { formatClock } from '../utils/time';
 export default function RivalPanel({
   rivalGoals, rivalShots, rivalExclusionsLive, rivalSevenMeters,
   onGoal, onShot, onOpenGoalDetail, onOpenExclusion, onCancelExclusion,
-  onOpenSevenMeter, onCancelSevenMeter,
+  onOpenSevenMeter, onCancelSevenMeter, matchRunning,
 }) {
   const exclusionSummary = summarizeRivalExclusions(rivalExclusionsLive);
   const sevenMeterSummary = summarizeRivalSevenMeters(rivalSevenMeters);
@@ -34,13 +34,13 @@ export default function RivalPanel({
       <span className="rival-panel-label">Equipo rival</span>
       <div className="stepper-group">
         <span className="stepper-caption">Goles</span>
-        <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} />
+        <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />
       </div>
       <div className="stepper-group">
         <span className="stepper-caption">Tiros</span>
-        <StatStepper icon="TIRO" label="Tiros rival" count={rivalShots} onInc={() => onShot(1)} onDec={() => onShot(-1)} />
+        <StatStepper icon="TIRO" label="Tiros rival" count={rivalShots} onInc={() => onShot(1)} onDec={() => onShot(-1)} disabled={!matchRunning} />
       </div>
-      <button className="btn btn-timeout" onClick={onOpenExclusion}>EXCLUSIÓN RIVAL</button>
+      <button className="btn btn-timeout" onClick={onOpenExclusion} disabled={!matchRunning}>EXCLUSIÓN RIVAL</button>
       {exclusionSummary.length > 0 && (
         <div className="rival-excl-badges">
           {exclusionSummary.map((entry) => (
@@ -60,7 +60,7 @@ export default function RivalPanel({
           ))}
         </div>
       )}
-      <button className="btn btn-timeout" onClick={onOpenSevenMeter}>7 METROS RIVAL</button>
+      <button className="btn btn-timeout" onClick={onOpenSevenMeter} disabled={!matchRunning}>7 METROS RIVAL</button>
       {sevenMeterSummary.length > 0 && (
         <div className="rival-excl-badges">
           {sevenMeterSummary.map((entry) => (

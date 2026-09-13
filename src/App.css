@@ -322,6 +322,25 @@
   margin: 0 0 16px;
 }
 
+/* Aviso de que el partido no está en marcha (no iniciado o en pausa) —
+   deliberadamente muy llamativo: si no se ve de un vistazo, alguien puede
+   pensar que se está anotando en directo cuando el reloj sigue parado. */
+.match-not-running-banner {
+  flex-shrink: 0;
+  background: var(--danger);
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  padding: 10px 14px;
+  animation: match-not-running-pulse 1.6s ease-in-out infinite;
+}
+@keyframes match-not-running-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 .matches-header {
   display: flex;
   align-items: center;
