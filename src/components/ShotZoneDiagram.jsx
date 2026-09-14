@@ -1,13 +1,13 @@
 import { GOAL_ZONES, OUT_ZONES } from '../shotZones';
 
-// Diagrama visual de portería + cancha, en dos modos:
-// - Interactivo (por defecto): tocar una zona la selecciona (mismo dato de
-//   siempre — shotZone/goalZone son las cadenas de shotZones.js — solo
-//   cambia cómo se elige, ahora sobre un dibujo en vez de una rejilla de
-//   botones).
-// - Solo lectura (`readOnly`): cada zona muestra el texto que le pase
-//   `originStats`/`goalStats` (p. ej. "3/5" y "60%") en vez de reaccionar
-//   al toque — para las estadísticas de después del partido.
+// Diagrama visual de portería + cancha. No hay un modo "solo lectura"
+// rígido: cada mitad (origen/entrada) es clicable si se le pasa su
+// `onShotZone`/`onGoalZone`, punto — da igual si también le pasas
+// `originStats`/`goalStats` (el texto de "3/5"/"60%" que se ve en vez de
+// la etiqueta normal). Eso es justo lo que usa `ActionStatsView.jsx` para
+// dejar tocar una zona de estadísticas como filtro (ver `shotZone`/
+// `goalZone` ahí abajo: no tienen que ser "la zona que se está anotando
+// ahora", pueden ser "la zona por la que se está filtrando la vista").
 // La portería se dibuja como una portería de verdad (postes/larguero a
 // rayas, red de fondo), pegada directamente al área. Debajo: el área de
 // 6m en azul sólido — con el lado plano pegado a la portería y solo el
@@ -136,8 +136,7 @@ export default function ShotZoneDiagram({
   showOrigin = true,
   shotZone, onShotZone,
   goalZone, onGoalZone,
-  readOnly = false,
-  originStats, // { [zone]: string[] } — líneas de texto a mostrar en modo lectura
+  originStats, // { [zone]: string[] } — líneas de texto a mostrar en vez de la etiqueta normal
   goalStats,
   originColors, // { [zone]: color } — mapa de calor opcional, solo en modo lectura
   goalColors,
@@ -200,7 +199,7 @@ export default function ShotZoneDiagram({
                 key={z}
                 {...r}
                 active={goalZone === z}
-                onClick={readOnly ? undefined : () => onGoalZone(goalZone === z ? null : z)}
+                onClick={onGoalZone ? () => onGoalZone(goalZone === z ? null : z) : undefined}
                 statLines={goalStats?.[z]}
                 fillColor={goalColors?.[z]}
               />
@@ -222,7 +221,7 @@ export default function ShotZoneDiagram({
                 h={outRects[z].h}
                 dashed
                 active={goalZone === z}
-                onClick={readOnly ? undefined : () => onGoalZone(goalZone === z ? null : z)}
+                onClick={onGoalZone ? () => onGoalZone(goalZone === z ? null : z) : undefined}
                 statLines={goalStats?.[z]}
                 fillColor={goalColors?.[z]}
               />
@@ -245,7 +244,7 @@ export default function ShotZoneDiagram({
                 key={z}
                 shape={{ d: innerWedgePath(a1, a2, NINE_M_R), labelX: mid.x, labelY: mid.y }}
                 active={shotZone === z}
-                onClick={readOnly ? undefined : () => onShotZone(shotZone === z ? null : z)}
+                onClick={onShotZone ? () => onShotZone(shotZone === z ? null : z) : undefined}
                 statLines={originStats?.[z]}
                 fillColor={originColors?.[z]}
               />
@@ -263,7 +262,7 @@ export default function ShotZoneDiagram({
                 key={z}
                 shape={{ d: wedgePath(a1, a2, NINE_M_R, OUTER_R1), labelX: mid.x, labelY: mid.y }}
                 active={shotZone === z}
-                onClick={readOnly ? undefined : () => onShotZone(shotZone === z ? null : z)}
+                onClick={onShotZone ? () => onShotZone(shotZone === z ? null : z) : undefined}
                 statLines={originStats?.[z]}
                 fillColor={originColors?.[z]}
               />
@@ -271,8 +270,8 @@ export default function ShotZoneDiagram({
           })}
 
           <g
-            onClick={readOnly ? undefined : () => onShotZone(shotZone === '7 metros' ? null : '7 metros')}
-            style={{ cursor: readOnly ? 'default' : 'pointer' }}
+            onClick={onShotZone ? () => onShotZone(shotZone === '7 metros' ? null : '7 metros') : undefined}
+            style={{ cursor: onShotZone ? 'pointer' : 'default' }}
           >
             <circle
               cx={FAN_CX} cy={FAN_CY + SEVEN_M_R} r={12}

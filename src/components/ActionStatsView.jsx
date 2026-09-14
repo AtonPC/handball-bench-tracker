@@ -19,10 +19,19 @@ const ANY = '';
 // El rival SOLO tiene "Goles" disponible: no registramos sus fallos con
 // zona (solo un contador total del partido), así que ni Fallos ni Paradas
 // tienen datos que mostrar para él — decisión explícita, no un descuido.
+//
+// Además de los tres selectores, cada zona del dibujo es en sí misma un
+// filtro: tocar una zona de origen (p. ej. "7 metros") recalcula SOLO el
+// mapa de entrada (por dónde entraron esos goles/fallos/paradas de 7m) —
+// el mapa de origen se queda mostrando el global, con esa zona resaltada.
+// Tocar una zona de entrada hace lo mismo al revés (recalcula el origen).
+// Solo una zona a la vez (de una lista u otra, no las dos) — tocarla de
+// nuevo, o cambiar de equipo/tipo, la quita.
 export default function ActionStatsView({ shotEvents = [], saveEvents = [], rivalGoals = [], players = [] }) {
   const [team, setTeam] = useState('own'); // 'own' | 'rival'
   const [tipo, setTipo] = useState('goles'); // 'goles' | 'fallos' | 'paradas'
   const [playerId, setPlayerId] = useState(ANY);
+  const [filterZone, setFilterZone] = useState(null); // { dim: 'origin'|'entry', zone: string } | null
 
   const effectiveTipo = team === 'rival' ? 'goles' : tipo;
 
@@ -46,29 +55,42 @@ export default function ActionStatsView({ shotEvents = [], saveEvents = [], riva
   const filteredShotEvents = player ? shotEvents.filter((e) => e.playerId === effectivePlayerId) : shotEvents;
   const filteredSaveEvents = player ? saveEvents.filter((e) => e.playerId === effectivePlayerId) : saveEvents;
 
+  // Además del jugador, filtra por la zona tocada (si hay una) — solo para
+  // recalcular la OTRA mitad del dibujo; la mitad que se tocó se queda con
+  // su propio global, así no se pierde el contexto de conjunto.
+  function byZone(events) {
+    if (!filterZone) return events;
+    const field = filterZone.dim === 'origin' ? 'shotZone' : 'goalZone';
+    return events.filter((e) => e[field] === filterZone.zone);
+  }
+
   let originStats, entryStats, originColors, goalColors, title, hasGradient;
   if (team === 'rival') {
-    const s = rivalGoalZoneStats(rivalGoals);
-    originStats = s.origin;
-    entryStats = s.entry;
+    const full = rivalGoalZoneStats(rivalGoals);
+    const filtered = rivalGoalZoneStats(byZone(rivalGoals));
+    originStats = filterZone?.dim === 'entry' ? filtered.origin : full.origin;
+    entryStats = filterZone?.dim === 'origin' ? filtered.entry : full.entry;
     originColors = {};
     goalColors = {};
     title = 'Goles del rival';
     hasGradient = false;
   } else if (effectiveTipo === 'paradas') {
-    const s = goalkeeperZoneStats(filteredSaveEvents, rivalGoals);
-    originStats = s.origin;
-    entryStats = s.entry;
-    originColors = zoneHeatColors(s.originRatios);
-    goalColors = zoneHeatColors(s.entryRatios);
+    const full = goalkeeperZoneStats(filteredSaveEvents, rivalGoals);
+    const filtered = goalkeeperZoneStats(byZone(filteredSaveEvents), byZone(rivalGoals));
+    originStats = filterZone?.dim === 'entry' ? filtered.origin : full.origin;
+    entryStats = filterZone?.dim === 'origin' ? filtered.entry : full.entry;
+    originColors = zoneHeatColors(filterZone?.dim === 'entry' ? filtered.originRatios : full.originRatios);
+    goalColors = zoneHeatColors(filterZone?.dim === 'origin' ? filtered.entryRatios : full.entryRatios);
     title = 'Paradas';
     hasGradient = true;
   } else {
-    const s = fieldPlayerZoneStats(filteredShotEvents, { mirror: effectiveTipo === 'fallos' });
-    originStats = s.origin;
-    entryStats = s.entry;
-    originColors = zoneHeatColors(s.originRatios);
-    goalColors = zoneHeatColors(s.entryRatios);
+    const opts = { mirror: effectiveTipo === 'fallos' };
+    const full = fieldPlayerZoneStats(filteredShotEvents, opts);
+    const filtered = fieldPlayerZoneStats(byZone(filteredShotEvents), opts);
+    originStats = filterZone?.dim === 'entry' ? filtered.origin : full.origin;
+    entryStats = filterZone?.dim === 'origin' ? filtered.entry : full.entry;
+    originColors = zoneHeatColors(filterZone?.dim === 'entry' ? filtered.originRatios : full.originRatios);
+    goalColors = zoneHeatColors(filterZone?.dim === 'origin' ? filtered.entryRatios : full.entryRatios);
     title = effectiveTipo === 'fallos' ? 'Fallos' : 'Goles';
     hasGradient = true;
   }
@@ -79,7 +101,7 @@ export default function ActionStatsView({ shotEvents = [], saveEvents = [], riva
         <select
           className="player-form-input"
           value={team}
-          onChange={(e) => { setTeam(e.target.value); setPlayerId(ANY); }}
+          onChange={(e) => { setTeam(e.target.value); setPlayerId(ANY); setFilterZone(null); }}
         >
           <option value="own">Nuestro equipo</option>
           <option value="rival">Rival</option>
@@ -87,7 +109,7 @@ export default function ActionStatsView({ shotEvents = [], saveEvents = [], riva
         <select
           className="player-form-input"
           value={effectiveTipo}
-          onChange={(e) => setTipo(e.target.value)}
+          onChange={(e) => { setTipo(e.target.value); setFilterZone(null); }}
           disabled={team === 'rival'}
         >
           <option value="goles">Goles</option>
@@ -105,13 +127,22 @@ export default function ActionStatsView({ shotEvents = [], saveEvents = [], riva
       <div className="card" style={{ marginTop: 'var(--space-3)' }}>
         <h4>{title}{player ? ` — #${player.number} ${player.name}` : team === 'own' ? ' del equipo' : ''}</h4>
         {hasGradient && (
-          <p className="modal-hint">Color de la zona: rojo (0% de acierto) a verde (100%) — sin pintar si no hay datos todavía.</p>
+          <p className="modal-hint">Color de la zona: rojo (0% de acierto) a verde (100%) — sin pintar si no hay datos todavía. Toca una zona para ver solo lo suyo en la otra mitad del dibujo.</p>
+        )}
+        {filterZone && (
+          <p className="modal-hint">
+            Filtrado por <b>{filterZone.zone}</b> ({filterZone.dim === 'origin' ? 'de dónde vino' : 'por dónde entró'}) —{' '}
+            <button type="button" className="link-button" onClick={() => setFilterZone(null)}>quitar filtro</button>
+          </p>
         )}
         <ShotZoneDiagram
-          readOnly
           showGoal
           showOut
           showOrigin
+          shotZone={filterZone?.dim === 'origin' ? filterZone.zone : null}
+          onShotZone={(z) => setFilterZone(z ? { dim: 'origin', zone: z } : null)}
+          goalZone={filterZone?.dim === 'entry' ? filterZone.zone : null}
+          onGoalZone={(z) => setFilterZone(z ? { dim: 'entry', zone: z } : null)}
           originStats={originStats}
           goalStats={entryStats}
           originColors={originColors}
