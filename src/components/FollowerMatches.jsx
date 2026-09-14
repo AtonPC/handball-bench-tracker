@@ -11,7 +11,7 @@ export default function FollowerMatches({ clubId, teamId, team }) {
   const sorted = [...matches].sort((a, b) => (b.scheduledAt || 0) - (a.scheduledAt || 0));
 
   if (selectedMatchId) {
-    return <FollowerMatchDetail clubId={clubId} teamId={teamId} matchId={selectedMatchId} onBack={() => setSelectedMatchId(null)} />;
+    return <FollowerMatchDetail clubId={clubId} teamId={teamId} team={team} matchId={selectedMatchId} onBack={() => setSelectedMatchId(null)} />;
   }
 
   return (

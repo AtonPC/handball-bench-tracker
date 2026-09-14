@@ -35,7 +35,18 @@ const ANY = '';
 export default function ActionStatsView({
   shotEvents = [], saveEvents = [], rivalGoals = [], rivalMisses = [], players = [],
   ownTeamName = 'Nuestro equipo', rivalName = 'Rival',
+  ownPrimaryColor, ownSecondaryColor,
 }) {
+  // El cuadrito del botón de equipo es dos triángulos (un gradiente en
+  // diagonal partido justo al 50%) con los colores reales del equipo. El
+  // rival todavía no tiene colores propios registrados (es solo texto
+  // libre en el partido, no una entidad con ficha) — se deja un marcador
+  // con el rojo de "rival" repetido, para que en cuanto exista esa ficha
+  // (mejora pendiente) solo haga falta pasarle sus dos colores aquí.
+  const ownColor1 = ownPrimaryColor || 'var(--own)';
+  const ownColor2 = ownSecondaryColor || ownColor1;
+  const rivalColor1 = 'var(--rival)';
+  const rivalColor2 = 'var(--rival)';
   const [team, setTeam] = useState('own'); // 'own' | 'rival'
   const [tipo, setTipo] = useState('goles'); // 'goles' | 'fallos' | 'paradas'
   const [playerId, setPlayerId] = useState(ANY);
@@ -114,12 +125,22 @@ export default function ActionStatsView({
 
   return (
     <div>
-      <div className="home-away-toggle">
-        <button type="button" className={`btn btn-timeout${team === 'own' ? ' admin-nav-tab--active' : ''}`} onClick={() => selectTeam('own')}>
-          {ownTeamName}
+      <div className="team-select-row">
+        <button
+          type="button"
+          className={`team-select-btn${team === 'own' ? ' team-select-btn--active' : ''}`}
+          onClick={() => selectTeam('own')}
+        >
+          <span className="team-select-swatch" style={{ background: `linear-gradient(to bottom right, ${ownColor1} 50%, ${ownColor2} 50%)` }} />
+          <span className="team-select-name">{ownTeamName}</span>
         </button>
-        <button type="button" className={`btn btn-timeout${team === 'rival' ? ' admin-nav-tab--active' : ''}`} onClick={() => selectTeam('rival')}>
-          {rivalName}
+        <button
+          type="button"
+          className={`team-select-btn${team === 'rival' ? ' team-select-btn--active' : ''}`}
+          onClick={() => selectTeam('rival')}
+        >
+          <span className="team-select-swatch" style={{ background: `linear-gradient(to bottom right, ${rivalColor1} 50%, ${rivalColor2} 50%)` }} />
+          <span className="team-select-name">{rivalName}</span>
         </button>
       </div>
 

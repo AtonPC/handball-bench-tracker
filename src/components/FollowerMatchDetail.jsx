@@ -21,7 +21,7 @@ import MatchSummaryView from './MatchSummaryView';
 // también puede querer revisar uno ya jugado). useMatchStore funciona
 // igual en ambos casos: un partido finalizado deja de tener el reloj en
 // marcha, así que sus estadísticas quedan congeladas en su valor final.
-export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack }) {
+export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onBack }) {
   const store = useMatchStore(matchId, !!matchId);
   const rivalGoals = useRivalGoals(matchId);
   const rivalMisses = useRivalMisses(matchId);
@@ -163,6 +163,8 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
                 players={actionPlayers}
                 ownTeamName={store.state.ownTeamName}
                 rivalName={store.state.rivalName}
+                ownPrimaryColor={team?.primaryColor}
+                ownSecondaryColor={team?.secondaryColor}
               />
             </div>
           )}

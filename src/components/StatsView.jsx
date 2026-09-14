@@ -33,7 +33,7 @@ function topN(players, value, n, { allowZero } = {}) {
     .slice(0, n);
 }
 
-export default function StatsView({ store, identity, teamId }) {
+export default function StatsView({ store, identity, teamId, team }) {
   const { state, matchId } = store;
   const rivalGoals = useRivalGoals(matchId);
   const rivalGoalsByNumber = useMemo(() => {
@@ -183,6 +183,8 @@ export default function StatsView({ store, identity, teamId }) {
           players={players}
           ownTeamName={state.ownTeamName}
           rivalName={state.rivalName}
+          ownPrimaryColor={team?.primaryColor}
+          ownSecondaryColor={team?.secondaryColor}
         />
       </div>
 

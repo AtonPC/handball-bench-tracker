@@ -1282,6 +1282,50 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Selector de equipo en Estadísticas de Acciones: dos botones a partes
+   iguales (50% cada uno), nombre a la izquierda junto a un cuadrito con
+   los colores reales del equipo (dos triángulos en diagonal). */
+.team-select-row {
+  display: flex;
+  gap: 8px;
+}
+.team-select-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 14px;
+  min-height: 48px;
+  cursor: pointer;
+}
+.team-select-btn--active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.team-select-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.team-select-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bench-list {
   display: flex;
   flex-direction: column;

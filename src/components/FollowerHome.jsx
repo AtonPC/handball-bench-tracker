@@ -342,6 +342,8 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
             players={actionPlayers}
             ownTeamName={state.ownTeamName}
             rivalName={state.rivalName}
+            ownPrimaryColor={team?.primaryColor}
+            ownSecondaryColor={team?.secondaryColor}
           />
         </div>
       )}
