@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3, History, Target } from 'lucide-react';
+import { ArrowLeft, BarChart3, GitCompare, History, Target } from 'lucide-react';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalExclusions } from '../hooks/useRivalExclusions';
 import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { useShotEvents } from '../hooks/useShotEvents';
@@ -13,6 +14,7 @@ import { buildChronology } from '../utils/followerHelpers';
 import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
 import ActionStatsView from './ActionStatsView';
+import MatchSummaryView from './MatchSummaryView';
 
 // Detalle de UN partido concreto (en directo o ya finalizado — la consola
 // solo se usa para partidos en directo desde el marcador, pero un Seguidor
@@ -22,6 +24,7 @@ import ActionStatsView from './ActionStatsView';
 export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack }) {
   const store = useMatchStore(matchId, !!matchId);
   const rivalGoals = useRivalGoals(matchId);
+  const rivalMisses = useRivalMisses(matchId);
   const rivalExclusions = useRivalExclusions(matchId);
   const rivalSevenMeters = useRivalSevenMeters(matchId);
   const shotEvents = useShotEvents(matchId);
@@ -50,7 +53,7 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
     [store.state]
   );
 
-  const [detailView, setDetailView] = useState('stats'); // 'stats' | 'chronology' | 'actionStats'
+  const [detailView, setDetailView] = useState('summary'); // 'summary' | 'actionStats' | 'stats' | 'chronology'
 
   return (
     <div>
@@ -77,6 +80,22 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
 
           <div className="follower-actions-row" style={{ marginTop: 'var(--space-3)' }}>
             <button
+              className={`follower-icon-btn${detailView === 'summary' ? ' follower-icon-btn--active' : ''}`}
+              onClick={() => setDetailView('summary')}
+              title="Resumen del partido"
+              aria-label="Resumen del partido"
+            >
+              <GitCompare size={18} />
+            </button>
+            <button
+              className={`follower-icon-btn${detailView === 'actionStats' ? ' follower-icon-btn--active' : ''}`}
+              onClick={() => setDetailView('actionStats')}
+              title="Estadísticas de Acciones"
+              aria-label="Estadísticas de Acciones"
+            >
+              <Target size={18} />
+            </button>
+            <button
               className={`follower-icon-btn${detailView === 'stats' ? ' follower-icon-btn--active' : ''}`}
               onClick={() => setDetailView('stats')}
               title="Estadísticas del partido"
@@ -92,15 +111,23 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
             >
               <History size={18} />
             </button>
-            <button
-              className={`follower-icon-btn${detailView === 'actionStats' ? ' follower-icon-btn--active' : ''}`}
-              onClick={() => setDetailView('actionStats')}
-              title="Estadísticas de Acciones"
-              aria-label="Estadísticas de Acciones"
-            >
-              <Target size={18} />
-            </button>
           </div>
+
+          {detailView === 'summary' && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <h3 className="stats-section-title">Resumen del partido</h3>
+              <MatchSummaryView
+                statePlayers={store.state.players}
+                shotEvents={shotEvents}
+                saveEvents={saveEvents}
+                rivalGoals={rivalGoals}
+                rivalMisses={rivalMisses}
+                rivalExclusions={rivalExclusions}
+                ownTeamName={store.state.ownTeamName}
+                rivalName={store.state.rivalName}
+              />
+            </div>
+          )}
 
           {detailView === 'stats' && (
             <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -128,7 +155,15 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
           {detailView === 'actionStats' && (
             <div style={{ marginTop: 'var(--space-4)' }}>
               <h3 className="stats-section-title">Estadísticas de Acciones</h3>
-              <ActionStatsView shotEvents={shotEvents} saveEvents={saveEvents} rivalGoals={rivalGoals} players={actionPlayers} />
+              <ActionStatsView
+                shotEvents={shotEvents}
+                saveEvents={saveEvents}
+                rivalGoals={rivalGoals}
+                rivalMisses={rivalMisses}
+                players={actionPlayers}
+                ownTeamName={store.state.ownTeamName}
+                rivalName={store.state.rivalName}
+              />
             </div>
           )}
         </>

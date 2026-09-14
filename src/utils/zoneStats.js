@@ -94,25 +94,47 @@ export function goalkeeperZoneStats(saveEvents, rivalGoals) {
   };
 }
 
-// Goles del rival por zona: solo recuento, sin ratio ni color — no
-// registramos los fallos del rival con zona (solo un contador total del
-// partido, sin detalle), así que no hay forma de saber cuántos intentos
-// tuvo en cada zona, solo cuántos goles marcó ahí.
-export function rivalGoalZoneStats(rivalGoals) {
+// Tiros del rival por zona: sus goles cuentan como acierto, y tanto
+// nuestras paradas (rivalMisses no, esas ya son un fallo aparte — una
+// parada nuestra es un tiro fallado del suyo) como sus fallos por fuera
+// cuentan como intento sin acierto. Con los tres orígenes junto al gol
+// rival, "Tiros del rival" y su % de acierto por zona son un dato real,
+// no una aproximación — antes solo había goles, sin denominador.
+export function rivalShotZoneStats(rivalGoals, saveEvents, rivalMisses, { mirror = false } = {}) {
   function countsByZone(zoneField) {
     const map = {};
     for (const g of rivalGoals) {
       const zone = g[zoneField];
       if (!zone) continue;
-      map[zone] = (map[zone] || 0) + 1;
+      const cur = map[zone] || { made: 0, total: 0 };
+      cur.made += 1;
+      cur.total += 1;
+      map[zone] = cur;
     }
-    const lines = {};
-    for (const [zone, count] of Object.entries(map)) {
-      lines[zone] = [`${count}`, count === 1 ? 'gol' : 'goles'];
+    for (const s of saveEvents) {
+      const zone = s[zoneField];
+      if (!zone) continue;
+      const cur = map[zone] || { made: 0, total: 0 };
+      cur.total += 1;
+      map[zone] = cur;
     }
-    return lines;
+    for (const m of rivalMisses) {
+      const zone = m[zoneField];
+      if (!zone) continue;
+      const cur = map[zone] || { made: 0, total: 0 };
+      cur.total += 1;
+      map[zone] = cur;
+    }
+    return map;
   }
-  return { origin: countsByZone('shotZone'), entry: countsByZone('goalZone') };
+  const originCounts = countsByZone('shotZone');
+  const entryCounts = countsByZone('goalZone');
+  return {
+    origin: statLines(originCounts, { mirror }),
+    entry: statLines(entryCounts, { mirror }),
+    originRatios: ratios(originCounts),
+    entryRatios: ratios(entryCounts),
+  };
 }
 
 // Verde (100% de acierto) a rojo (0%), pasando por ámbar en el medio —

@@ -5,7 +5,7 @@ export default function SubstitutionModal({ outPlayer, benchPlayers, disqualifie
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>
-          {forced ? 'Expulsión — ' : 'Cambio por '}
+          {forced ? 'Roja — ' : 'Cambio por '}
           #{outPlayer.number} {outPlayer.name}
         </h2>
         <p className="modal-hint">
@@ -26,7 +26,7 @@ export default function SubstitutionModal({ outPlayer, benchPlayers, disqualifie
             <div key={p.id} className="bench-option bench-option--disabled" aria-disabled="true">
               <span className="bench-number">#{p.number}</span>
               <span className="bench-name">{p.name}</span>
-              <span className="bench-stats">Expulsado — no puede entrar</span>
+              <span className="bench-stats">Roja — no puede entrar</span>
             </div>
           ))}
         </div>

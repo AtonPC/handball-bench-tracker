@@ -4,7 +4,7 @@ import PlayerStatsTable from './PlayerStatsTable';
 // Estadísticas del partido (en curso o ya finalizado, la lógica es la
 // misma), construidas directamente de state.players. Misma tabla que ve el
 // staff (PlayerStatsTable): Goles/Tiros, % Acierto, Paradas/Tiros y
-// % Paradas (portero), Recuperaciones, Exclusiones, Expulsado y % Minutos
+// % Paradas (portero), Recuperaciones, Exclusiones, Roja y % Minutos
 // jugados del partido — nunca el tiempo jugado en minutos, solo el
 // reparto en %.
 // "Tiros" de paradas = paradas + goles rivales encajados por el equipo —

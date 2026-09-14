@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { formatClock } from '../utils/time';
 import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalExclusions, rivalExclusionCountsByNumber } from '../hooks/useRivalExclusions';
 import { useMatchEvents } from '../hooks/useMatchEvents';
 import { useShotEvents } from '../hooks/useShotEvents';
@@ -8,6 +9,7 @@ import { useSaveEvents } from '../hooks/useSaveEvents';
 import { hasCapability } from '../permissions';
 import PlayerStatsTable from './PlayerStatsTable';
 import ActionStatsView from './ActionStatsView';
+import MatchSummaryView from './MatchSummaryView';
 
 const SUBSTITUTION_LABELS = new Set(['Cambio', 'Cambio por expulsión']);
 
@@ -53,6 +55,7 @@ export default function StatsView({ store, identity, teamId }) {
   const [search, setSearch] = useState('');
   const shotEvents = useShotEvents(matchId);
   const saveEvents = useSaveEvents(matchId);
+  const rivalMisses = useRivalMisses(matchId);
 
   const players = Object.values(state.players)
     .map((p) => ({ ...p, attempts: p.goals + p.shots, shotsFaced: (p.saves || 0) + state.score.rival }))
@@ -93,7 +96,21 @@ export default function StatsView({ store, identity, teamId }) {
         />
       </div>
 
-      <div className="stats-summary">
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <h3 className="stats-section-title">Resumen del partido</h3>
+        <MatchSummaryView
+          statePlayers={state.players}
+          shotEvents={shotEvents}
+          saveEvents={saveEvents}
+          rivalGoals={rivalGoals}
+          rivalMisses={rivalMisses}
+          rivalExclusions={rivalExclusions}
+          ownTeamName={state.ownTeamName}
+          rivalName={state.rivalName}
+        />
+      </div>
+
+      <div className="stats-summary" style={{ marginTop: 'var(--space-4)' }}>
         {state.jornada != null && (
           <div className="stats-summary-item">
             <span className="stats-summary-label">Jornada</span>
@@ -129,7 +146,7 @@ export default function StatsView({ store, identity, teamId }) {
           <span className="stats-summary-value">{teamExclusions}</span>
         </div>
         <div className="stats-summary-item">
-          <span className="stats-summary-label">Expulsiones</span>
+          <span className="stats-summary-label">Rojas</span>
           <span className="stats-summary-value">{teamDisqualifications}</span>
         </div>
         <div className="stats-summary-item">
@@ -158,7 +175,15 @@ export default function StatsView({ store, identity, teamId }) {
 
       <div style={{ marginTop: 'var(--space-5)' }}>
         <h3 className="stats-section-title">Estadísticas de Acciones</h3>
-        <ActionStatsView shotEvents={shotEvents} saveEvents={saveEvents} rivalGoals={rivalGoals} players={players} />
+        <ActionStatsView
+          shotEvents={shotEvents}
+          saveEvents={saveEvents}
+          rivalGoals={rivalGoals}
+          rivalMisses={rivalMisses}
+          players={players}
+          ownTeamName={state.ownTeamName}
+          rivalName={state.rivalName}
+        />
       </div>
 
       {(rivalGoals.length > 0 || rivalExclusions.length > 0) && (
@@ -175,7 +200,7 @@ export default function StatsView({ store, identity, teamId }) {
               <p>
                 {Object.keys(rivalExclusionCounts)
                   .sort((a, b) => a - b)
-                  .map((n) => `#${n} (${rivalExclusionCounts[n]}${rivalExclusionCounts[n] >= 3 ? ' — expulsado' : ''})`)
+                  .map((n) => `#${n} (${rivalExclusionCounts[n]}${rivalExclusionCounts[n] >= 3 ? ' — roja' : ''})`)
                   .join(' · ')}
               </p>
             </div>

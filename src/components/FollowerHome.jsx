@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, CalendarDays, History, Radio, Shield, Target, Users } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, CalendarDays, GitCompare, History, Radio, Shield, Target, Users } from 'lucide-react';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
@@ -23,6 +24,7 @@ import FollowerClub from './FollowerClub';
 import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
 import ActionStatsView from './ActionStatsView';
+import MatchSummaryView from './MatchSummaryView';
 import { rosterDisplayName, buildChronology } from '../utils/followerHelpers';
 
 function LiveMatchSection({ clubId, teamId, team, logView }) {
@@ -30,6 +32,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const liveMatch = useMemo(() => matches.find((m) => m.lifecycle === 'live') || null, [matches]);
   const store = useMatchStore(liveMatch?.id || null, !!liveMatch);
   const rivalGoals = useRivalGoals(liveMatch?.id || null);
+  const rivalMisses = useRivalMisses(liveMatch?.id || null);
   const rivalExclusions = useRivalExclusionsLive(liveMatch?.id || null);
   const rivalSevenMeters = useRivalSevenMeters(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
@@ -76,10 +79,10 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
     prevRivalGoals.current = rivalGoals.length;
   }, [rivalGoals.length]);
 
-  // Por defecto se ve directamente la estadística DEL PARTIDO (no la
+  // Por defecto se ve directamente el Resumen del partido (no la estadística
   // acumulada de temporada, que va aparte y más abajo) — antes había que
   // saber que existía el botón para encontrarla.
-  const [detailView, setDetailView] = useState('stats'); // null | 'stats' | 'chronology'
+  const [detailView, setDetailView] = useState('summary'); // null | 'summary' | 'actionStats' | 'stats' | 'chronology'
 
   // El más reciente por createdAt, no el último del array: shotEvents/
   // rivalGoals se piden ordenados por "minute", y dos goles en el mismo
@@ -210,7 +213,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
 
         <div className="follower-oncourt-row">
           <div className={`follower-oncourt-col${isOwnLeft ? '' : ' follower-oncourt-col--right'}`}>
-            <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
+            <span className="follower-oncourt-label">Jugadores con exclusión o roja</span>
             <div className={`follower-oncourt${isOwnLeft ? '' : ' follower-oncourt--right'}`}>
               {ownPenalized.map((p) => {
                 const state3 = p.disqualified ? 'disqualified' : p.excluded ? 'active' : 'past';
@@ -221,7 +224,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
                   >
                     {p.number}
                     <span className="follower-oncourt-sub">
-                      {state3 === 'disqualified' ? 'EXP.' : state3 === 'active' ? formatClock(p.exclusionRemainingMs) : `${p.exclusionsCount}/3`}
+                      {state3 === 'disqualified' ? 'ROJA' : state3 === 'active' ? formatClock(p.exclusionRemainingMs) : `${p.exclusionsCount}/3`}
                     </span>
                   </span>
                 );
@@ -230,7 +233,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
             </div>
           </div>
           <div className={`follower-oncourt-col${isOwnLeft ? ' follower-oncourt-col--right' : ''}`}>
-            <span className="follower-oncourt-label">Jugadores con exclusión o expulsión</span>
+            <span className="follower-oncourt-label">Jugadores con exclusión o roja</span>
             <div className={`follower-oncourt${isOwnLeft ? ' follower-oncourt--right' : ''}`}>
               {rivalExclSummary.map((entry) => {
                 const cls = entry.disqualified
@@ -242,7 +245,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
                   <span key={entry.number} className={`follower-oncourt-badge ${cls}`}>
                     {entry.number}
                     <span className="follower-oncourt-sub">
-                      {entry.disqualified ? 'EXP.' : entry.activeRemainingMs > 0 ? formatClock(entry.activeRemainingMs) : `${entry.count}/3`}
+                      {entry.disqualified ? 'ROJA' : entry.activeRemainingMs > 0 ? formatClock(entry.activeRemainingMs) : `${entry.count}/3`}
                     </span>
                   </span>
                 );
@@ -257,10 +260,34 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
           <span><span className="follower-legend-dot follower-legend-dot--gk" /> Portero</span>
           <span><span className="follower-legend-dot follower-legend-dot--excluded" /> Excluido ahora (cuenta atrás)</span>
           <span><span className="follower-legend-dot follower-legend-dot--excluded-past" /> Ya cumplió una exclusión (nº de exclusiones)</span>
-          <span><span className="follower-legend-dot follower-legend-dot--disqualified" /> Expulsado</span>
+          <span><span className="follower-legend-dot follower-legend-dot--disqualified" /> Roja</span>
         </div>
 
         <div className="follower-actions-row">
+          <button
+            className={`follower-icon-btn${detailView === 'summary' ? ' follower-icon-btn--active' : ''}`}
+            onClick={() => {
+              const next = detailView === 'summary' ? null : 'summary';
+              setDetailView(next);
+              if (next) logView('match-summary');
+            }}
+            title="Resumen del partido"
+            aria-label="Resumen del partido"
+          >
+            <GitCompare size={18} />
+          </button>
+          <button
+            className={`follower-icon-btn${detailView === 'actionStats' ? ' follower-icon-btn--active' : ''}`}
+            onClick={() => {
+              const next = detailView === 'actionStats' ? null : 'actionStats';
+              setDetailView(next);
+              if (next) logView('action-stats');
+            }}
+            title="Estadísticas de Acciones"
+            aria-label="Estadísticas de Acciones"
+          >
+            <Target size={18} />
+          </button>
           <button
             className={`follower-icon-btn${detailView === 'stats' ? ' follower-icon-btn--active' : ''}`}
             onClick={() => {
@@ -285,25 +312,37 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
           >
             <History size={18} />
           </button>
-          <button
-            className={`follower-icon-btn${detailView === 'actionStats' ? ' follower-icon-btn--active' : ''}`}
-            onClick={() => {
-              const next = detailView === 'actionStats' ? null : 'actionStats';
-              setDetailView(next);
-              if (next) logView('action-stats');
-            }}
-            title="Estadísticas de Acciones"
-            aria-label="Estadísticas de Acciones"
-          >
-            <Target size={18} />
-          </button>
         </div>
       </div>
+
+      {detailView === 'summary' && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <h3 className="stats-section-title">Resumen del partido</h3>
+          <MatchSummaryView
+            statePlayers={state.players}
+            shotEvents={shotEvents}
+            saveEvents={saveEvents}
+            rivalGoals={rivalGoals}
+            rivalMisses={rivalMisses}
+            rivalExclusions={rivalExclusions}
+            ownTeamName={state.ownTeamName}
+            rivalName={state.rivalName}
+          />
+        </div>
+      )}
 
       {detailView === 'actionStats' && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <h3 className="stats-section-title">Estadísticas de Acciones</h3>
-          <ActionStatsView shotEvents={shotEvents} saveEvents={saveEvents} rivalGoals={rivalGoals} players={actionPlayers} />
+          <ActionStatsView
+            shotEvents={shotEvents}
+            saveEvents={saveEvents}
+            rivalGoals={rivalGoals}
+            rivalMisses={rivalMisses}
+            players={actionPlayers}
+            ownTeamName={state.ownTeamName}
+            rivalName={state.rivalName}
+          />
         </div>
       )}
 

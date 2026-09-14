@@ -200,7 +200,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
                 <th>Paradas</th>
                 <th>Recup.</th>
                 <th>Excl.</th>
-                <th>Expulsado</th>
+                <th>Roja</th>
                 <th></th>
               </tr>
             </thead>

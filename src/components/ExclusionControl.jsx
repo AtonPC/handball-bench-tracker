@@ -8,8 +8,8 @@ export default function ExclusionControl({ player, onStart, onCancel, disabled }
 
   if (player.disqualified) {
     return (
-      <span className="excl-btn excl-btn--disqualified" aria-label="Expulsado del partido">
-        <span className="ref-card ref-card--red" /> Expulsado
+      <span className="excl-btn excl-btn--disqualified" aria-label="Roja — no puede seguir jugando">
+        <span className="ref-card ref-card--red" /> Roja
       </span>
     );
   }

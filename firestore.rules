@@ -224,6 +224,20 @@ service cloud.firestore {
         );
       }
 
+      // Detalle de cada fallo rival (tiró fuera, sin parada nuestra):
+      // dorsal, minuto y zonas (opcional).
+      match /rivalMisses/{rivalMissId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
+
       // Detalle de cada gol/fallo propio: jugador, minuto y zonas (opcional).
       match /shotEvents/{shotEventId} {
         allow read: if canViewTeamData(

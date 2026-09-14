@@ -527,6 +527,81 @@
   font-size: 32px;
 }
 
+/* ---------- Resumen del partido: comparación propio vs rival ---------- */
+.match-compare-teams {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: var(--space-4);
+}
+.match-compare-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.match-compare-team--rival {
+  flex-direction: row-reverse;
+}
+.match-compare-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.match-compare-dot--own {
+  background: var(--own);
+}
+.match-compare-dot--rival {
+  background: var(--rival);
+}
+.match-compare-row {
+  margin-bottom: var(--space-4);
+}
+.match-compare-row:last-of-type {
+  margin-bottom: 0;
+}
+.match-compare-values {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 6px;
+}
+.match-compare-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.match-compare-value--own {
+  color: var(--own);
+}
+.match-compare-value--rival {
+  color: var(--rival);
+}
+.match-compare-label {
+  color: var(--text-dim);
+  font-size: 13px;
+  text-align: center;
+}
+.match-compare-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--panel-alt);
+}
+.match-compare-bar-own {
+  background: var(--own);
+}
+.match-compare-bar-rival {
+  background: var(--rival);
+}
+
 .stats-table-wrap {
   overflow-x: auto;
   overflow-y: hidden;

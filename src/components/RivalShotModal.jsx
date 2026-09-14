@@ -3,7 +3,12 @@ import ShotZoneDiagram from './ShotZoneDiagram';
 
 const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
-export default function RivalGoalModal({ onConfirm, onCancel }) {
+// Gol o fallo del rival — mismo teclado de dorsal + mismo diagrama que
+// ShotDetailModal usa para los propios, con showOut solo en un Fallo (un
+// gol, por definición, entró). Antes esto era RivalGoalModal, solo para
+// goles; ahora también registra un fallo rival (tiró fuera, sin que
+// parásemos nada) — necesario para que "Tiros del rival" sea un dato real.
+export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
   const [number, setNumber] = useState('');
   const [shotZone, setShotZone] = useState(null);
   const [goalZone, setGoalZone] = useState(null);
@@ -26,7 +31,7 @@ export default function RivalGoalModal({ onConfirm, onCancel }) {
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal rival-goal-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Gol rival — ¿qué dorsal ha marcado?</h2>
+        <h2>{kind === 'goal' ? 'Gol rival' : 'Fallo rival'} — ¿qué dorsal ha {kind === 'goal' ? 'marcado' : 'fallado'}?</h2>
 
         <div className="rival-goal-display">{number || '—'}</div>
 
@@ -43,9 +48,12 @@ export default function RivalGoalModal({ onConfirm, onCancel }) {
           ))}
         </div>
 
-        <p className="modal-hint">De dónde vino y por dónde entró (opcional)</p>
+        <p className="modal-hint">
+          {kind === 'goal' ? 'De dónde vino y por dónde entró (opcional)' : 'De dónde vino y por dónde falló: parada o fuera (opcional)'}
+        </p>
         <ShotZoneDiagram
           showGoal
+          showOut={kind === 'miss'}
           showOrigin
           shotZone={shotZone}
           onShotZone={setShotZone}
@@ -55,7 +63,7 @@ export default function RivalGoalModal({ onConfirm, onCancel }) {
 
         <div className="player-form-actions">
           <button className="btn btn-clock btn-start" disabled={!number} onClick={handleConfirm}>
-            REGISTRAR GOL
+            {kind === 'goal' ? 'REGISTRAR GOL' : 'REGISTRAR FALLO'}
           </button>
           <button className="modal-cancel" onClick={onCancel}>Cancelar</button>
         </div>

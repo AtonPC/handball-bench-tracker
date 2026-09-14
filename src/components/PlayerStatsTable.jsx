@@ -44,7 +44,7 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
     { key: 'exclusions', label: 'Excl.', value: (p) => p.exclusionsCount || 0, render: (p) => p.exclusionsCount || 0 },
     // En un partido, `disqualified` es un booleano (Sí/—); en el acumulado de
     // temporada es cuántas veces ha pasado (0 se muestra igual como "—").
-    { key: 'disqualified', label: 'Expulsado', value: (p) => Number(p.disqualified) || 0, render: (p) => (typeof p.disqualified === 'number' ? p.disqualified || '—' : (p.disqualified ? 'Sí' : '—')) }
+    { key: 'disqualified', label: 'Roja', value: (p) => Number(p.disqualified) || 0, render: (p) => (typeof p.disqualified === 'number' ? p.disqualified || '—' : (p.disqualified ? 'Sí' : '—')) }
   );
   return columns;
 }

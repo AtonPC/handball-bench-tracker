@@ -3,13 +3,14 @@ import MatchHeader from './MatchHeader';
 import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
 import SubstitutionModal from './SubstitutionModal';
-import RivalGoalModal from './RivalGoalModal';
+import RivalShotModal from './RivalShotModal';
 import DorsalNumberModal from './DorsalNumberModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
 import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
+import { useRivalMisses } from '../hooks/useRivalMisses';
 import { teamColorStyle } from '../utils/teamColors';
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
@@ -17,6 +18,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const isRunning = state.clock.status === 'running';
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
+  const [showRivalMissModal, setShowRivalMissModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
   const [showRivalSevenMeterModal, setShowRivalSevenMeterModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
@@ -24,6 +26,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [showQuickStats, setShowQuickStats] = useState(false);
   const rivalExclusionsLive = useRivalExclusionsLive(matchId);
   const rivalSevenMeters = useRivalSevenMeters(matchId);
+  const rivalMisses = useRivalMisses(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -86,12 +89,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
 
       <RivalPanel
         rivalGoals={state.score.rival}
-        rivalShots={state.rivalShots}
+        rivalMissesCount={rivalMisses.length}
         rivalExclusionsLive={rivalExclusionsLive}
         rivalSevenMeters={rivalSevenMeters}
         onGoal={store.rivalGoal}
-        onShot={store.rivalShot}
         onOpenGoalDetail={() => setShowRivalGoalModal(true)}
+        onOpenMissDetail={() => setShowRivalMissModal(true)}
         onOpenExclusion={() => setShowRivalExclusionModal(true)}
         onCancelExclusion={store.cancelRivalExclusion}
         onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
@@ -111,12 +114,24 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       )}
 
       {showRivalGoalModal && (
-        <RivalGoalModal
+        <RivalShotModal
+          kind="goal"
           onConfirm={(detail) => {
             store.rivalGoalWithDetail(detail);
             setShowRivalGoalModal(false);
           }}
           onCancel={() => setShowRivalGoalModal(false)}
+        />
+      )}
+
+      {showRivalMissModal && (
+        <RivalShotModal
+          kind="miss"
+          onConfirm={(detail) => {
+            store.rivalMiss(detail);
+            setShowRivalMissModal(false);
+          }}
+          onCancel={() => setShowRivalMissModal(false)}
         />
       )}
 

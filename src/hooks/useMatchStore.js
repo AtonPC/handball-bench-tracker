@@ -285,6 +285,26 @@ export function useMatchStore(matchId, enabled) {
     [match, recordEvent]
   );
 
+  // Fallo rival: tiró y se fue fuera, sin que el portero parara nada — no
+  // cambia el marcador. Se guarda en matches/{id}/rivalMisses, con dorsal y
+  // zonas (opcional), igual que un gol rival. Sin esto, "Tiros del rival"
+  // solo podía contar sus goles + nuestras paradas, quedándose corto (un
+  // tiro que se va fuera no pasa por ninguno de los dos).
+  const rivalMiss = useCallback(
+    ({ number, shotZone, goalZone }) => {
+      if (!match || match.status !== 'running') return;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'rivalMisses'));
+      recordEvent(`Fallo rival #${number}`, {}, {}, {
+        create: {
+          ref,
+          data: { number, minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
+        },
+      });
+    },
+    [match, matchId, liveElapsedMs, recordEvent]
+  );
+
   // Exclusión rival: solo el dorsal, sin zonas — a diferencia del gol rival,
   // no cambia el marcador. Se guarda en matches/{id}/rivalExclusions con su
   // propia cuenta atrás (endsAtMs) para poder mostrarla en directo, igual
@@ -454,9 +474,12 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // Parada con zona: se guarda como documento propio en
-  // matches/{id}/saveEvents, igual que el gol/fallo propio.
+  // matches/{id}/saveEvents, igual que el gol/fallo propio. Una parada
+  // nuestra es, a la vez, un tiro fallado del rival — rivalNumber (opcional)
+  // es el dorsal de quien tiró, para poder sacar "tiros por dorsal" del
+  // rival igual que ya existe para sus goles.
   const playerSaveWithDetail = useCallback(
-    (playerId, { shotZone, goalZone }) => {
+    (playerId, { shotZone, goalZone, rivalNumber }) => {
       if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].saves + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -464,7 +487,12 @@ export function useMatchStore(matchId, enabled) {
       recordEvent('Parada', {}, { [playerId]: { saves: next } }, {
         create: {
           ref,
-          data: { playerId, minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
+          data: {
+            playerId, minute, period: match.period,
+            shotZone: shotZone || null, goalZone: goalZone || null,
+            rivalNumber: rivalNumber || null,
+            createdAt: Date.now(),
+          },
         },
       });
     },
@@ -645,6 +673,7 @@ export function useMatchStore(matchId, enabled) {
     rivalGoal,
     rivalGoalWithDetail,
     rivalShot,
+    rivalMiss,
     rivalExclusion,
     cancelRivalExclusion,
     rivalSevenMeter,

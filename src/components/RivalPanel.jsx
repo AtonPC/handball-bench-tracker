@@ -12,8 +12,8 @@ import { formatClock } from '../utils/time';
 // badges de 7 metros son iguales pero más simples (sin cuenta atrás ni
 // expulsión, un 7m no es una sanción temporal).
 export default function RivalPanel({
-  rivalGoals, rivalShots, rivalExclusionsLive, rivalSevenMeters,
-  onGoal, onShot, onOpenGoalDetail, onOpenExclusion, onCancelExclusion,
+  rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalSevenMeters,
+  onGoal, onOpenGoalDetail, onOpenMissDetail, onOpenExclusion, onCancelExclusion,
   onOpenSevenMeter, onCancelSevenMeter, matchRunning,
 }) {
   const exclusionSummary = summarizeRivalExclusions(rivalExclusionsLive);
@@ -37,8 +37,10 @@ export default function RivalPanel({
         <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />
       </div>
       <div className="stepper-group">
-        <span className="stepper-caption">Tiros</span>
-        <StatStepper icon="TIRO" label="Tiros rival" count={rivalShots} onInc={() => onShot(1)} onDec={() => onShot(-1)} disabled={!matchRunning} />
+        <span className="stepper-caption">Fallos</span>
+        <button className="btn btn-timeout" onClick={onOpenMissDetail} disabled={!matchRunning}>
+          FALLO RIVAL{rivalMissesCount ? ` (${rivalMissesCount})` : ''}
+        </button>
       </div>
       <button className="btn btn-timeout" onClick={onOpenExclusion} disabled={!matchRunning}>EXCLUSIÓN RIVAL</button>
       {exclusionSummary.length > 0 && (
@@ -52,7 +54,7 @@ export default function RivalPanel({
               title="Tocar para anular la última exclusión de este dorsal"
             >
               #{entry.number} · {entry.disqualified
-                ? 'EXPULSADO'
+                ? 'ROJA'
                 : entry.activeRemainingMs > 0
                   ? formatClock(entry.activeRemainingMs)
                   : `${entry.count}/3`}

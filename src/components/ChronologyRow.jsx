@@ -9,7 +9,7 @@ export default function ChronologyRow({ entry, playersById, authorizedById, comp
     miss: 'Fallo',
     save: 'Parada',
     recovery: 'Recuperación',
-    exclusion: entry.disqualified ? 'Expulsión' : 'Exclusión',
+    exclusion: entry.disqualified ? 'Roja' : 'Exclusión',
     sevenMeter: '7 metros',
   }[entry.type];
 
