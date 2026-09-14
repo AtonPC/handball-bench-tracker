@@ -42,8 +42,8 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters }),
-    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters]
+    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters]
   );
 
   // Jugadores del PARTIDO, no de la plantilla — igual que en el partido en
@@ -143,12 +143,20 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
           )}
 
           {detailView === 'chronology' && (
-            <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-              <h4>Cronología completa</h4>
-              {chronology.length === 0 && <p>Todavía no ha pasado nada.</p>}
-              {chronology.map((entry) => (
-                <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
-              ))}
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <div className="chrono-team-banners">
+                <div className="chrono-team-banner chrono-team-banner--own">{store.state.ownTeamName}</div>
+                <div className="chrono-team-banner chrono-team-banner--rival">{store.state.rivalName}</div>
+              </div>
+              {chronology.length === 0 ? (
+                <p className="modal-hint">Todavía no ha pasado nada.</p>
+              ) : (
+                <div className="chrono-rows">
+                  {chronology.map((entry) => (
+                    <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
