@@ -33,6 +33,11 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
 
         <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} disabled={!matchRunning} />
 
+        {/* Compacto y aparte de los stats de disparo: un 7m cometido es raro,
+            no hace falta el mismo peso visual que Gol/Fallo/Recup — mismo
+            trato que la exclusión, con su propio contador editable. */}
+        <StatStepper compact icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
+
         <button className="btn-change-icon" onClick={onOpenSubstitution} disabled={!matchRunning} aria-label="Cambio">
           <Repeat size={20} />
         </button>
@@ -52,7 +57,6 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
             <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
           </>
         )}
-        <StatStepper icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
       </div>
     </div>
   );

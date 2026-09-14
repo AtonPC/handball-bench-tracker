@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, CalendarDays, History, Radio, Shield, Users } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, CalendarDays, History, Radio, Shield, Target, Users } from 'lucide-react';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -22,6 +22,7 @@ import FollowerMatches from './FollowerMatches';
 import FollowerClub from './FollowerClub';
 import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
+import ActionStatsView from './ActionStatsView';
 import { rosterDisplayName, buildChronology } from '../utils/followerHelpers';
 
 function LiveMatchSection({ clubId, teamId, team, logView }) {
@@ -48,6 +49,14 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const chronology = useMemo(
     () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters }),
     [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters]
+  );
+
+  // Jugadores del PARTIDO (con id/nombre/dorsal ya resueltos por
+  // useMatchStore), no de la plantilla — es lo que espera ActionStatsView
+  // para filtrar shotEvents/saveEvents por playerId.
+  const actionPlayers = useMemo(
+    () => Object.values(store.state.players).sort((a, b) => a.number - b.number),
+    [store.state.players]
   );
 
   const [celebrationKey, setCelebrationKey] = useState(null);
@@ -276,8 +285,27 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
           >
             <History size={18} />
           </button>
+          <button
+            className={`follower-icon-btn${detailView === 'actionStats' ? ' follower-icon-btn--active' : ''}`}
+            onClick={() => {
+              const next = detailView === 'actionStats' ? null : 'actionStats';
+              setDetailView(next);
+              if (next) logView('action-stats');
+            }}
+            title="Estadísticas de Acciones"
+            aria-label="Estadísticas de Acciones"
+          >
+            <Target size={18} />
+          </button>
         </div>
       </div>
+
+      {detailView === 'actionStats' && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <h3 className="stats-section-title">Estadísticas de Acciones</h3>
+          <ActionStatsView shotEvents={shotEvents} saveEvents={saveEvents} rivalGoals={rivalGoals} players={actionPlayers} />
+        </div>
+      )}
 
       {detailView === 'stats' && (
         <div className="card" style={{ marginTop: 'var(--space-4)' }}>

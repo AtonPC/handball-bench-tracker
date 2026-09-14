@@ -1011,6 +1011,31 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Variante compacta: mismo peso visual que el botón de exclusión, para
+   stats poco frecuentes (7m cometidos) que no necesitan el tamaño grande
+   de Gol/Fallo/Recup. */
+.stat-stepper--compact {
+  flex-shrink: 0;
+  height: 44px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+.stat-stepper--compact .stat-btn {
+  width: 22px;
+  height: 38px;
+  font-size: 15px;
+}
+.stat-stepper--compact .stat-display {
+  min-width: 30px;
+  padding: 0 2px;
+}
+.stat-stepper--compact .stat-icon {
+  font-size: 8px;
+}
+.stat-stepper--compact .stat-count {
+  font-size: 14px;
+}
+
 .excl-btn {
   flex-shrink: 0;
   display: inline-flex;
@@ -1338,7 +1363,7 @@
 .shot-zone-diagram {
   display: block;
   width: 100%;
-  max-width: 280px;
+  max-width: 340px;
   margin: 0 auto;
 }
 .goal-net-line {
@@ -1351,15 +1376,50 @@
 .goal-post-white {
   fill: var(--text);
 }
+.wood-plank-a {
+  fill: #caa06a;
+}
+.wood-plank-b {
+  fill: #b8874f;
+}
+.wood-grain-line {
+  stroke: #7a5628;
+  stroke-width: 0.6;
+  opacity: 0.4;
+}
+.court-divider-line {
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 2;
+}
+.zone-area-fill {
+  fill: var(--info);
+  fill-opacity: 0.9;
+  stroke: #fff;
+  stroke-width: 3;
+  pointer-events: none;
+}
+.nine-m-line {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-dasharray: 6 5;
+  pointer-events: none;
+}
+/* Líneas "imaginarias": las que separan una zona de disparo de otra no
+   existen en la cancha real, solo en nuestro dibujo — más finas que el
+   área y la línea de 9m, que sí son líneas oficiales. Sin relleno hasta
+   que se pulsan: la zona no se sombrea de fondo, solo al seleccionarla. */
 .zone-shape {
-  fill: var(--panel-alt);
-  fill-opacity: 0.55;
-  stroke: var(--border);
+  fill: none;
+  stroke: #fff;
   stroke-width: 1;
   transition: fill 0.1s, stroke 0.1s;
+  /* Sin esto, un fill:none deja de recibir toques en todo su interior —
+     SVG solo considera "pintado" (clicable) el trazo, no el hueco. */
+  pointer-events: all;
 }
 .zone-shape--active {
-  fill: var(--accent-dim);
+  fill: var(--accent);
   stroke: var(--accent);
   stroke-width: 2;
 }
@@ -1367,11 +1427,21 @@
   stroke-dasharray: 3 3;
 }
 .zone-shape--out.zone-shape--active {
-  fill: var(--danger-dim);
+  fill: var(--danger);
   stroke: var(--danger);
 }
-.zone-shape--seven {
+.zone-shape.zone-shape--seven {
+  fill: #fff;
+  stroke: #fff;
   stroke-width: 2;
+}
+.zone-shape.zone-shape--seven.zone-shape--active {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.zone-shape--seven + .zone-shape-label,
+.zone-shape--seven + .zone-shape-stat {
+  fill: #000;
 }
 .zone-shape-label {
   font-size: 11px;
@@ -1453,6 +1523,26 @@
   }
   .stat-count {
     font-size: 17px;
+  }
+
+  .stat-stepper--compact {
+    height: 46px;
+    border-radius: 10px;
+  }
+  .stat-stepper--compact .stat-btn {
+    width: 24px;
+    height: 40px;
+    font-size: 16px;
+    border-radius: 7px;
+  }
+  .stat-stepper--compact .stat-display {
+    min-width: 32px;
+  }
+  .stat-stepper--compact .stat-icon {
+    font-size: 9px;
+  }
+  .stat-stepper--compact .stat-count {
+    font-size: 15px;
   }
 
   .excl-btn {
@@ -1544,6 +1634,24 @@
   }
   .stat-count {
     font-size: 24px;
+  }
+  .stat-stepper--compact {
+    flex: 0 0 auto;
+    height: 60px;
+    padding: 4px;
+  }
+  .stat-stepper--compact .stat-btn {
+    flex: none;
+    width: 34px;
+    height: 52px;
+    font-size: 22px;
+  }
+  .stat-stepper--compact .stat-display {
+    flex: none;
+    min-width: 40px;
+  }
+  .stat-stepper--compact .stat-count {
+    font-size: 18px;
   }
   .excl-btn {
     flex-shrink: 0;

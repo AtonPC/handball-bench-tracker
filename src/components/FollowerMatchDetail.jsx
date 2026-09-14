@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowLeft, BarChart3, History, Target } from 'lucide-react';
 import { useMatchStore } from '../hooks/useMatchStore';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalExclusions } from '../hooks/useRivalExclusions';
@@ -12,6 +12,7 @@ import { usePlayers } from '../hooks/usePlayers';
 import { buildChronology } from '../utils/followerHelpers';
 import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
+import ActionStatsView from './ActionStatsView';
 
 // Detalle de UN partido concreto (en directo o ya finalizado — la consola
 // solo se usa para partidos en directo desde el marcador, pero un Seguidor
@@ -42,6 +43,15 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
     [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalExclusions, rivalSevenMeters]
   );
 
+  // Jugadores del PARTIDO, no de la plantilla — igual que en el partido en
+  // directo, es lo que espera ActionStatsView para filtrar por playerId.
+  const actionPlayers = useMemo(
+    () => Object.values(store.state?.players || {}).sort((a, b) => a.number - b.number),
+    [store.state]
+  );
+
+  const [detailView, setDetailView] = useState('stats'); // 'stats' | 'chronology' | 'actionStats'
+
   return (
     <div>
       <button type="button" className="btn btn-timeout" onClick={onBack} style={{ marginBottom: 'var(--space-3)' }}>
@@ -65,24 +75,62 @@ export default function FollowerMatchDetail({ clubId, teamId, matchId, onBack })
             </div>
           </div>
 
-          <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-            <h4>Estadísticas del partido</h4>
-            <MatchStatsTable
-              statePlayers={store.state.players}
-              playersById={playersById}
-              authorizedById={authorizedById}
-              rivalGoalsConceded={store.state.score.rival}
-              matchElapsedMs={store.state.clock.elapsedMs}
-            />
+          <div className="follower-actions-row" style={{ marginTop: 'var(--space-3)' }}>
+            <button
+              className={`follower-icon-btn${detailView === 'stats' ? ' follower-icon-btn--active' : ''}`}
+              onClick={() => setDetailView('stats')}
+              title="Estadísticas del partido"
+              aria-label="Estadísticas del partido"
+            >
+              <BarChart3 size={18} />
+            </button>
+            <button
+              className={`follower-icon-btn${detailView === 'chronology' ? ' follower-icon-btn--active' : ''}`}
+              onClick={() => setDetailView('chronology')}
+              title="Cronología completa"
+              aria-label="Cronología completa"
+            >
+              <History size={18} />
+            </button>
+            <button
+              className={`follower-icon-btn${detailView === 'actionStats' ? ' follower-icon-btn--active' : ''}`}
+              onClick={() => setDetailView('actionStats')}
+              title="Estadísticas de Acciones"
+              aria-label="Estadísticas de Acciones"
+            >
+              <Target size={18} />
+            </button>
           </div>
 
-          <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-            <h4>Cronología completa</h4>
-            {chronology.length === 0 && <p>Todavía no ha pasado nada.</p>}
-            {chronology.map((entry) => (
-              <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
-            ))}
-          </div>
+          {detailView === 'stats' && (
+            <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+              <h4>Estadísticas del partido</h4>
+              <MatchStatsTable
+                statePlayers={store.state.players}
+                playersById={playersById}
+                authorizedById={authorizedById}
+                rivalGoalsConceded={store.state.score.rival}
+                matchElapsedMs={store.state.clock.elapsedMs}
+              />
+            </div>
+          )}
+
+          {detailView === 'chronology' && (
+            <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+              <h4>Cronología completa</h4>
+              {chronology.length === 0 && <p>Todavía no ha pasado nada.</p>}
+              {chronology.map((entry) => (
+                <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
+              ))}
+            </div>
+          )}
+
+          {detailView === 'actionStats' && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <h3 className="stats-section-title">Estadísticas de Acciones</h3>
+              <ActionStatsView shotEvents={shotEvents} saveEvents={saveEvents} rivalGoals={rivalGoals} players={actionPlayers} />
+            </div>
+          )}
         </>
       )}
     </div>
