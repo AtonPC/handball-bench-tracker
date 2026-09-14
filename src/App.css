@@ -1679,6 +1679,17 @@
      SVG solo considera "pintado" (clicable) el trazo, no el hueco. */
   pointer-events: all;
 }
+.zone-shape--goal {
+  /* Dentro y alrededor de la portería el fondo ahora es claro (tema
+     claro) — las divisiones blancas de siempre dejan de verse ahí, así
+     que estas usan --text (oscuro) en vez de blanco. Las zonas de
+     origen, sobre el suelo de parquet, se quedan en blanco. Va ANTES de
+     --active en la hoja de estilos a propósito: con la misma
+     especificidad, si se seleccionara una zona dentro de la portería,
+     el color de selección (--active, más abajo) tiene que ganar sobre
+     este oscuro, no al revés. */
+  stroke: var(--text);
+}
 .zone-shape--active {
   fill: var(--accent);
   stroke: var(--accent);

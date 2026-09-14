@@ -100,7 +100,7 @@ function innerWedgePath(a1, a2, r1) {
   return `M ${pA1.x} ${pA1.y} L ${pOut1.x} ${pOut1.y} A ${r1} ${r1} 0 0 0 ${pOut2.x} ${pOut2.y} L ${pA2.x} ${pA2.y} A ${AREA_RX} ${AREA_RY} 0 0 1 ${pA1.x} ${pA1.y} Z`;
 }
 
-function ZoneCell({ shape, x, y, w, h, active, dashed, onClick, label, statLines, fillColor }) {
+function ZoneCell({ shape, x, y, w, h, active, dashed, goalArea, onClick, label, statLines, fillColor }) {
   const centerX = shape ? undefined : x + w / 2;
   const centerY = shape ? undefined : y + h / 2;
   // fillColor es el mapa de calor de las estadísticas (solo lectura): un
@@ -108,12 +108,16 @@ function ZoneCell({ shape, x, y, w, h, active, dashed, onClick, label, statLines
   // aplicando tal cual en el diagrama interactivo (fillColor nunca llega
   // ahí, solo lo pasan las vistas de estadísticas).
   const style = fillColor ? { fill: fillColor } : undefined;
+  // Las divisiones "imaginarias" son blancas sobre el suelo de parquet
+  // (zonas de origen) pero necesitan ser oscuras dentro/alrededor de la
+  // portería, ahora que ese fondo es claro (tema claro) y unas líneas
+  // blancas ahí dejan de verse — goalArea marca ese segundo caso.
   return (
     <g onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       {shape ? (
-        <path d={shape.d} style={style} className={`zone-shape${active ? ' zone-shape--active' : ''}`} />
+        <path d={shape.d} style={style} className={`zone-shape${active ? ' zone-shape--active' : ''}${goalArea ? ' zone-shape--goal' : ''}`} />
       ) : (
-        <rect x={x} y={y} width={w} height={h} style={style} className={`zone-shape${active ? ' zone-shape--active' : ''}${dashed ? ' zone-shape--out' : ''}`} />
+        <rect x={x} y={y} width={w} height={h} style={style} className={`zone-shape${active ? ' zone-shape--active' : ''}${dashed ? ' zone-shape--out' : ''}${goalArea ? ' zone-shape--goal' : ''}`} />
       )}
       {statLines ? (
         <text x={shape ? shape.labelX : centerX} y={shape ? shape.labelY : centerY} textAnchor="middle" className="zone-shape-stat">
@@ -198,6 +202,7 @@ export default function ShotZoneDiagram({
               <ZoneCell
                 key={z}
                 {...r}
+                goalArea
                 active={goalZone === z}
                 onClick={onGoalZone ? () => onGoalZone(goalZone === z ? null : z) : undefined}
                 statLines={goalStats?.[z]}
@@ -220,6 +225,7 @@ export default function ShotZoneDiagram({
                 w={outRects[z].w}
                 h={outRects[z].h}
                 dashed
+                goalArea
                 active={goalZone === z}
                 onClick={onGoalZone ? () => onGoalZone(goalZone === z ? null : z) : undefined}
                 statLines={goalStats?.[z]}
