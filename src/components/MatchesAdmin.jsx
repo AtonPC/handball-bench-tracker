@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { BarChart3, Settings, Trash2 } from 'lucide-react';
 import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 
@@ -371,18 +372,28 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
 
       {canManageRoster && selectableMatches.length > 0 && (
         <div className="matches-header">
-          <p className="modal-hint" style={{ margin: 0 }}>
-            {selectedMatchIds.length} seleccionado{selectedMatchIds.length === 1 ? '' : 's'}
-          </p>
-          <div className="player-form-actions">
-            <button type="button" className="btn btn-timeout" onClick={selectAllMatches}>Seleccionar todos</button>
-            <button type="button" className="btn btn-timeout" onClick={deselectAllMatches}>Desmarcar todos</button>
-            {selectedMatchIds.length > 0 && (
-              <button type="button" className="btn btn-timeout btn-danger-text" onClick={handleBulkDelete}>
-                Borrar seleccionados ({selectedMatchIds.length})
-              </button>
-            )}
-          </div>
+          <label className="select-all-checkbox">
+            <input
+              type="checkbox"
+              checked={selectedMatchIds.length > 0 && selectedMatchIds.length === selectableMatches.length}
+              ref={(el) => {
+                if (el) el.indeterminate = selectedMatchIds.length > 0 && selectedMatchIds.length < selectableMatches.length;
+              }}
+              onChange={() => (selectedMatchIds.length === selectableMatches.length ? deselectAllMatches() : selectAllMatches())}
+            />
+            {selectedMatchIds.length > 0 ? `${selectedMatchIds.length} seleccionado${selectedMatchIds.length === 1 ? '' : 's'}` : 'Seleccionar todos'}
+          </label>
+          {selectedMatchIds.length > 0 && (
+            <button
+              type="button"
+              className="btn-icon btn-icon--danger"
+              onClick={handleBulkDelete}
+              title="Borrar seleccionados"
+              aria-label={`Borrar ${selectedMatchIds.length} partido(s) seleccionados`}
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
         </div>
       )}
 
@@ -408,8 +419,12 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
             <span className={`match-badge match-badge--${m.lifecycle}`}>{LIFECYCLE_LABELS[m.lifecycle] || m.lifecycle}</span>
             {m.lifecycle === 'scheduled' && canManageRoster && (
               <>
-                <button className="btn btn-timeout" onClick={() => startEdit(m)}>Editar</button>
-                <button className="btn btn-timeout btn-danger-text" onClick={() => handleDelete(m)}>Borrar</button>
+                <button className="btn-icon" onClick={() => startEdit(m)} title="Editar" aria-label="Editar partido">
+                  <Settings size={18} />
+                </button>
+                <button className="btn-icon btn-icon--danger" onClick={() => handleDelete(m)} title="Borrar" aria-label="Borrar partido">
+                  <Trash2 size={18} />
+                </button>
               </>
             )}
             {m.lifecycle === 'scheduled' && canUseBench && (
@@ -421,12 +436,18 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
               <button className="btn btn-clock btn-start" onClick={() => onOpenMatch(m.id)}>Continuar</button>
             )}
             {m.lifecycle === 'finished' && (
-              <button className="btn btn-timeout" onClick={() => onOpenStats(m.id)}>Estadísticas</button>
+              <button className="btn-icon btn-icon--accent" onClick={() => onOpenStats(m.id)} title="Estadísticas" aria-label="Ver estadísticas del partido">
+                <BarChart3 size={18} />
+              </button>
             )}
             {m.lifecycle === 'finished' && canManageRoster && (
               <>
-                <button className="btn btn-timeout" onClick={() => onEditFinishedStats(m.id)}>Editar</button>
-                <button className="btn btn-timeout btn-danger-text" onClick={() => handleDelete(m)}>Borrar</button>
+                <button className="btn-icon" onClick={() => onEditFinishedStats(m.id)} title="Editar" aria-label="Editar partido finalizado">
+                  <Settings size={18} />
+                </button>
+                <button className="btn-icon btn-icon--danger" onClick={() => handleDelete(m)} title="Borrar" aria-label="Borrar partido">
+                  <Trash2 size={18} />
+                </button>
               </>
             )}
           </div>

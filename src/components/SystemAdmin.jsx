@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Settings, Trash2 } from 'lucide-react';
 import { useLeagues } from '../hooks/useLeagues';
 import { useClubs } from '../hooks/useClubs';
 import { useUsersDirectory } from '../hooks/useUsersDirectory';
@@ -131,8 +132,12 @@ export default function SystemAdmin() {
               <span className="admin-user-name">{l.name}</span>
               <span className="admin-user-email">{[l.category, l.season].filter(Boolean).join(' · ')}</span>
             </div>
-            <button className="btn btn-timeout" onClick={() => startEditLeague(l)}>Editar</button>
-            <button className="btn btn-timeout btn-danger-text" onClick={() => removeLeague(l.id)}>Borrar</button>
+            <button className="btn-icon" onClick={() => startEditLeague(l)} title="Editar" aria-label="Editar liga">
+              <Settings size={18} />
+            </button>
+            <button className="btn-icon btn-icon--danger" onClick={() => removeLeague(l.id)} title="Borrar" aria-label="Borrar liga">
+              <Trash2 size={18} />
+            </button>
           </div>
         ))}
         {leagues.length === 0 && <p className="modal-hint">Todavía no hay ligas.</p>}
@@ -173,7 +178,9 @@ export default function SystemAdmin() {
                       : c.managerUids.map((uid) => usersById(uid)?.displayName || uid).join(', ')}
                   </span>
                 </div>
-                <button className="btn btn-timeout" onClick={() => startEditClub(c)}>Editar</button>
+                <button className="btn-icon" onClick={() => startEditClub(c)} title="Editar" aria-label="Editar club">
+                  <Settings size={18} />
+                </button>
               </>
             )}
             <select
@@ -201,7 +208,9 @@ export default function SystemAdmin() {
                 Quitar {usersById(uid)?.displayName || uid}
               </button>
             ))}
-            <button className="btn btn-timeout btn-danger-text" onClick={() => removeClub(c.id)}>Borrar club</button>
+            <button className="btn-icon btn-icon--danger" onClick={() => removeClub(c.id)} title="Borrar club" aria-label="Borrar club">
+              <Trash2 size={18} />
+            </button>
           </div>
         ))}
         {clubs.length === 0 && <p className="modal-hint">Todavía no hay clubes.</p>}

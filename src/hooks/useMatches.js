@@ -64,16 +64,11 @@ export function useMatches(clubId, teamId) {
 
   // Borra el partido y, si ya se jugó, también sus subcolecciones (Firestore
   // no las borra solas al borrar el documento padre) — si no, quedarían
-  // estadísticas huérfanas sin ningún partido que las referencie.
-  const removeMatch = useCallback(async (matchId) => {
-    const batch = writeBatch(db);
-    for (const sub of MATCH_SUBCOLLECTIONS) {
-      const snap = await getDocs(collection(db, 'matches', matchId, sub));
-      snap.forEach((d) => batch.delete(d.ref));
-    }
-    batch.delete(doc(db, 'matches', matchId));
-    await batch.commit();
-  }, []);
+  // estadísticas huérfanas sin ningún partido que las referencie. La lógica
+  // vive en `deleteMatchById` (fuera del hook) para poder borrar desde un
+  // sitio que no quiere suscribirse a la lista completa de partidos —p. ej.
+  // el botón de borrar dentro de la propia pantalla de Estadísticas.
+  const removeMatch = useCallback((matchId) => deleteMatchById(matchId), []);
 
   // Convierte un partido programado en el partido en juego: siembra las
   // estadísticas en vivo de cada convocado a partir de la plantilla del equipo.
@@ -114,6 +109,20 @@ export function useMatches(clubId, teamId) {
   }, []);
 
   return { matches, createMatch, updateMatch, removeMatch, startMatch };
+}
+
+// Borra un partido y, si ya se jugó, también sus subcolecciones — misma
+// lógica que usaba `removeMatch` del hook, extraída para poder llamarla sin
+// necesitar la suscripción completa a la lista de partidos (p. ej. el botón
+// de borrar dentro de la propia pantalla de Estadísticas, en App.jsx).
+export async function deleteMatchById(matchId) {
+  const batch = writeBatch(db);
+  for (const sub of MATCH_SUBCOLLECTIONS) {
+    const snap = await getDocs(collection(db, 'matches', matchId, sub));
+    snap.forEach((d) => batch.delete(d.ref));
+  }
+  batch.delete(doc(db, 'matches', matchId));
+  await batch.commit();
 }
 
 // Busca el último lugar registrado para un rival concreto en el histórico de

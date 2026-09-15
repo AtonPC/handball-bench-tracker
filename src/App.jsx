@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, ClipboardCheck, Eye, Settings, Shield, UserCog } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardCheck, Eye, Settings, Shield, Trash2, UserCog } from 'lucide-react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
+import { deleteMatchById } from './hooks/useMatches';
 import { accessibleClubs, accessibleTeams, canWriteBench, hasCapability, isClubManagerOf, isSystemAdmin } from './permissions';
 import LoginScreen from './components/LoginScreen';
 import BenchConsole from './components/BenchConsole';
@@ -104,6 +105,15 @@ export default function App() {
   function backToMatches() {
     setOpenMatchId(null);
   }
+  // Solo se llega aquí desde un partido finalizado (onOpenStats en
+  // MatchesAdmin/TeamStats no se ofrece para otro lifecycle), así que el
+  // aviso siempre es el de "se pierden las estadísticas" — igual que
+  // handleDelete en MatchesAdmin.jsx.
+  async function handleDeleteOpenMatch() {
+    if (!confirm('¿Borrar este partido finalizado? Se perderán sus estadísticas (goles, tiempos, goles rivales...) y no se puede deshacer.')) return;
+    await deleteMatchById(openMatchId);
+    backToMatches();
+  }
 
   if (openMatchId) {
     if (!store.ready) {
@@ -115,6 +125,16 @@ export default function App() {
           <nav className="admin-nav">
             <button className="btn btn-logout" onClick={backToMatches}>← PARTIDOS</button>
             <span className="admin-nav-role">Estadísticas</span>
+            {canManageRoster && (
+              <div className="player-form-actions" style={{ marginLeft: 'auto' }}>
+                <button className="btn-icon" onClick={() => openEditFinishedStats(openMatchId)} title="Editar" aria-label="Editar partido finalizado">
+                  <Settings size={18} />
+                </button>
+                <button className="btn-icon btn-icon--danger" onClick={handleDeleteOpenMatch} title="Borrar" aria-label="Borrar partido">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            )}
           </nav>
           <StatsView store={store} identity={identity} teamId={activeTeamId} team={activeTeam} />
         </div>

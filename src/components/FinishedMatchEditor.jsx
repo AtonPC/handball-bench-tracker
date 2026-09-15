@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { useMatchEditor } from '../hooks/useMatchEditor';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { SHOT_ZONES, GOAL_ZONES } from '../shotZones';
@@ -241,7 +242,9 @@ export default function FinishedMatchEditor({ store, onBack }) {
                 <span className="admin-user-name">#{g.number} — minuto {g.minute}'</span>
                 <span className="admin-user-email">{g.shotZone || '—'} · {g.goalZone || '—'}</span>
               </div>
-              <button className="btn btn-timeout btn-danger-text" onClick={() => removeRivalGoalRecord(g.id)}>Borrar</button>
+              <button className="btn-icon btn-icon--danger" onClick={() => removeRivalGoalRecord(g.id)} title="Borrar" aria-label="Borrar gol rival">
+                <Trash2 size={18} />
+              </button>
             </div>
           ))}
           {rivalGoals.length === 0 && <p className="modal-hint">No hay goles rivales con detalle registrados.</p>}

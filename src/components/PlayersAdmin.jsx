@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Settings, Trash2 } from 'lucide-react';
 import { usePlayers } from '../hooks/usePlayers';
 import { useClubs } from '../hooks/useClubs';
 import { useTeams } from '../hooks/useTeams';
@@ -443,8 +444,12 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
               <span className="admin-user-name">#{p.number} {p.displayName}{p.imageAuthorized === false ? ' (sin imagen)' : ''}</span>
               <span className="admin-user-email">{p.firstName} {p.lastName} · {POSITION_ABBR[p.position] || p.position || 'Sin posición'}</span>
             </div>
-            <button className="btn btn-timeout" onClick={() => startEdit(p)}>Editar</button>
-            <button className="btn btn-timeout btn-danger-text" onClick={() => removePlayer(p.id)}>Borrar</button>
+            <button className="btn-icon" onClick={() => startEdit(p)} title="Editar" aria-label="Editar jugador/a">
+              <Settings size={18} />
+            </button>
+            <button className="btn-icon btn-icon--danger" onClick={() => removePlayer(p.id)} title="Borrar" aria-label="Borrar jugador/a">
+              <Trash2 size={18} />
+            </button>
           </div>
         ))}
         {players.length === 0 && <p className="modal-hint">No hay jugadores en este equipo todavía.</p>}

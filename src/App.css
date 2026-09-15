@@ -287,6 +287,54 @@
   white-space: nowrap;
 }
 
+/* ---------- Botones de icono (editar=rueda, borrar=cubo, estadísticas=gráfica) ----------
+   Mismo lenguaje visual en todas las listas de administración (Partidos,
+   Plantilla, Club, Sistema, y dentro del editor de un partido finalizado) —
+   sustituyen a los antiguos botones de texto "Editar"/"Borrar"/"Estadísticas"
+   pedido explícitamente por el usuario, 2026-09-15. */
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text-dim);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.btn-icon:active {
+  transform: scale(0.97);
+}
+.btn-icon--danger {
+  color: var(--danger);
+}
+.btn-icon--danger:hover {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+}
+.btn-icon--accent {
+  color: var(--accent);
+}
+.btn-icon--accent:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+/* Checkbox maestro de "seleccionar todos" en listas con borrado en bloque
+   (p. ej. Partidos) — sustituye al antiguo botón de texto "Seleccionar
+   todos"/"Desmarcar todos" por un único tic, como pidió el usuario. */
+.select-all-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
 /* ---------- Buscador de listas ---------- */
 .list-search {
   display: flex;

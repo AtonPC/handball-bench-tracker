@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Settings, Trash2 } from 'lucide-react';
 import { useTeams } from '../hooks/useTeams';
 import { useLeagues } from '../hooks/useLeagues';
 import { CATEGORIES } from '../categories';
@@ -125,8 +126,12 @@ export default function ClubAdmin({ clubId }) {
               <span className="admin-user-name">{t.name}</span>
               <span className="admin-user-email">{t.category || 'Sin categoría'}</span>
             </div>
-            <button className="btn btn-timeout" onClick={() => startEdit(t)}>Editar</button>
-            <button className="btn btn-timeout btn-danger-text" onClick={() => removeTeam(t.id)}>Borrar</button>
+            <button className="btn-icon" onClick={() => startEdit(t)} title="Editar" aria-label="Editar equipo">
+              <Settings size={18} />
+            </button>
+            <button className="btn-icon btn-icon--danger" onClick={() => removeTeam(t.id)} title="Borrar" aria-label="Borrar equipo">
+              <Trash2 size={18} />
+            </button>
           </div>
         ))}
         {teams.length === 0 && <p className="modal-hint">Todavía no hay equipos en este club.</p>}
