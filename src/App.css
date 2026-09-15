@@ -396,31 +396,327 @@
   gap: 10px;
   margin-bottom: 8px;
 }
-.match-row {
-  flex-wrap: wrap;
+/* ---------- Tarjetas de partido ("Partidos Luminosos", 2026-09-15) ----------
+   Mockup aprobado por el usuario antes de implementar (ver Artifact
+   "Partidos Luminosos"). Escudo+nombre+marcador arriba ocupando todo el
+   ancho, hora/lugar/estado abajo en pequeño, sin iconos por fila —
+   Editar/Borrar viven en la barra de selección (el tic) y Estadísticas se
+   abre pulsando la propia tarjeta de un partido finalizado. */
+.bulk-actions {
+  display: flex;
+  gap: 6px;
 }
-.match-badge {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 4px 8px;
-  border-radius: 6px;
+.btn-icon-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
   background: var(--panel-alt);
   color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
 }
-.match-badge--scheduled {
-  background: var(--warning-dim);
-  color: var(--warning);
+.btn-icon-sm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
-.match-badge--live {
+.btn-icon-sm--danger:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-dim);
+}
+.btn-icon-sm--accent:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* Partido en directo: tarjeta destacada aparte, arriba de la lista */
+.live-card {
+  background: linear-gradient(160deg, var(--accent) 0%, #16213e 78%);
+  border-radius: 18px;
+  padding: 16px 18px 18px;
+  color: #fff;
+  margin-bottom: 16px;
+  box-shadow: 0 10px 28px rgba(22, 33, 62, 0.22);
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+.live-card--clickable {
+  cursor: pointer;
+}
+.live-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 4px 10px 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--live-bright);
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live-bright);
+  animation: livepulse 1.4s ease-in-out infinite;
+}
+@keyframes livepulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.live-jornada {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 600;
+}
+.live-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.live-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  min-width: 0;
+}
+.live-crest {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.live-crest img { width: 100%; height: 100%; object-fit: cover; }
+.live-team-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.live-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.live-score-sep { font-size: 20px; opacity: 0.5; }
+.live-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+.live-clock {
+  font-size: 11.5px;
+  opacity: 0.85;
+  font-weight: 600;
+  margin: 0;
+}
+.live-play-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--live);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(31, 174, 107, 0.45);
+}
+
+/* Lista de partidos (programados y finalizados) */
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.match-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 12px 10px;
+  display: flex;
+  flex-direction: column;
+}
+.match-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.match-card--clickable .match-card-body {
+  cursor: pointer;
+}
+.match-card--clickable:hover {
+  border-color: var(--accent);
+  box-shadow: 0 3px 10px rgba(22, 33, 62, 0.08);
+}
+/* Solo borde rojo + el mismo fondo neutro de siempre para un finalizado —
+   un tinte de fondo de color se probó primero y no convenció al usuario. */
+.match-card--finished {
+  border-color: var(--danger);
+}
+.match-card--finished.match-card--clickable:hover {
+  box-shadow: 0 3px 10px rgba(192, 57, 43, 0.14);
+}
+.match-check {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.match-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Arriba: escudos + nombres + marcador, ocupando todo el ancho de la
+   tarjeta — antes había una columna de iconos que dejaba menos sitio y
+   cortaba los nombres largos. */
+.match-teams-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.match-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.match-team--rival {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.crest-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.crest-sm img { width: 100%; height: 100%; object-fit: cover; }
+.crest-sm--own {
   background: var(--accent-dim);
   color: var(--accent);
+  border-color: transparent;
 }
-.match-badge--finished {
-  background: var(--info-dim);
-  color: var(--info);
+.match-team-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+.match-mid {
+  text-align: center;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+.match-score {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.match-vs {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* Abajo: hora, lugar y estado — todo pequeño y secundario, separado por
+   una línea fina del bloque de arriba. */
+.match-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-alt);
+  flex-wrap: wrap;
+}
+.match-meta-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+}
+.match-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.match-status-dot--scheduled { background: var(--warning); }
+.match-status-dot--finished { background: var(--danger); }
+.match-status-text--scheduled { color: var(--warning); font-weight: 700; }
+.match-status-text--finished { color: var(--danger); font-weight: 700; }
+.match-meta-sep { opacity: 0.5; }
+.match-chevron {
+  margin-left: auto;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  display: flex;
+}
+
+.match-start-btn {
+  margin-top: 10px;
+  width: 100%;
+  border: none;
+  background: var(--start);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  padding: 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(255, 106, 31, 0.35);
+}
+.match-start-btn:active {
+  transform: scale(0.98);
 }
 
 /* ---------- Formularios de administración (jugadores / partidos) ---------- */

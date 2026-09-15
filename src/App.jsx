@@ -215,6 +215,7 @@ export default function App() {
             clubId={activeTeam.clubId}
             teamId={activeTeam.id}
             ownTeamName={activeTeam.name}
+            ownCrestUrl={activeTeam.crestUrl}
             canManageRoster={canManageRoster}
             canUseBench={canUseBench}
             onOpenMatch={openMatch}

@@ -1,12 +1,29 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Settings, Trash2 } from 'lucide-react';
+import { ChevronRight, Settings, Trash2 } from 'lucide-react';
 import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 
-const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En juego', finished: 'Finalizado' };
+const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
 const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodDurationMinutes: 20, jornada: '', rivalCrestUrl: '' };
 
-export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRoster, canUseBench, onOpenMatch, onOpenStats, onEditFinishedStats }) {
+// Iniciales para el escudo cuando el equipo (propio o rival) no tiene
+// crestUrl todavía — 2 letras, de las primeras dos palabras del nombre.
+function teamInitials(name) {
+  if (!name) return '?';
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+function formatMatchDateTime(ms) {
+  if (!ms) return 'Sin fecha';
+  const d = new Date(ms);
+  const date = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return `${date} · ${time}`;
+}
+
+export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl, canManageRoster, canUseBench, onOpenMatch, onOpenStats, onEditFinishedStats }) {
   const { matches, createMatch, updateMatch, removeMatch, startMatch } = useMatches(clubId, teamId);
   const { players } = usePlayers(clubId, teamId);
   const [showForm, setShowForm] = useState(false);
@@ -49,8 +66,10 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
     });
   }, [matches, filters]);
 
-  // Un partido "en juego" no se puede borrar — no entra en la selección masiva.
+  // Un partido "en juego" no se puede borrar — no entra en la selección
+  // masiva ni en la lista normal, se muestra aparte en su propia tarjeta.
   const [selectedMatchIds, setSelectedMatchIds] = useState([]);
+  const liveMatches = useMemo(() => filteredMatches.filter((m) => m.lifecycle === 'live'), [filteredMatches]);
   const selectableMatches = useMemo(() => filteredMatches.filter((m) => m.lifecycle !== 'live'), [filteredMatches]);
 
   function toggleMatchSelect(id) {
@@ -75,6 +94,21 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       await removeMatch(id);
     }
     setSelectedMatchIds([]);
+  }
+
+  // Editar solo tiene sentido con un partido marcado a la vez (cada uno
+  // tiene su propio rival/convocatoria) — decidido explícitamente con el
+  // usuario. Borrar (arriba) sí admite varios a la vez.
+  function editSelectedMatch() {
+    if (selectedMatchIds.length !== 1) return;
+    const m = matches.find((x) => x.id === selectedMatchIds[0]);
+    if (!m) return;
+    setSelectedMatchIds([]);
+    if (m.lifecycle === 'finished') {
+      onEditFinishedStats(m.id);
+    } else {
+      startEdit(m);
+    }
   }
 
   function toggleCallUp(id) {
@@ -163,14 +197,6 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
       await createMatch(data);
     }
     cancelForm();
-  }
-
-  async function handleDelete(m) {
-    const message = m.lifecycle === 'finished'
-      ? '¿Borrar este partido finalizado? Se perderán sus estadísticas (goles, tiempos, goles rivales...) y no se puede deshacer.'
-      : '¿Borrar este partido programado?';
-    if (!confirm(message)) return;
-    await removeMatch(m.id);
   }
 
   async function handleStart(m) {
@@ -370,6 +396,54 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
         />
       </div>
 
+      {liveMatches.map((m) => {
+        const leftIsOwn = m.isHome;
+        const leftName = leftIsOwn ? (ownTeamName || 'Mi equipo') : (m.rivalName || 'Rival');
+        const rightName = leftIsOwn ? (m.rivalName || 'Rival') : (ownTeamName || 'Mi equipo');
+        const leftCrest = leftIsOwn ? ownCrestUrl : m.rivalCrestUrl;
+        const rightCrest = leftIsOwn ? m.rivalCrestUrl : ownCrestUrl;
+        const leftScore = leftIsOwn ? m.score?.own : m.score?.rival;
+        const rightScore = leftIsOwn ? m.score?.rival : m.score?.own;
+        const clickable = canUseBench;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            className={`live-card${clickable ? ' live-card--clickable' : ''}`}
+            onClick={clickable ? () => onOpenMatch(m.id) : undefined}
+            disabled={!clickable}
+          >
+            <div className="live-card-top">
+              <span className="live-pill"><span className="live-dot" />EN VIVO</span>
+              {m.jornada != null && <span className="live-jornada">Jornada {m.jornada}</span>}
+            </div>
+            <div className="live-teams">
+              <div className="live-team">
+                <div className="live-crest">{leftCrest ? <img src={leftCrest} alt="" /> : teamInitials(leftName)}</div>
+                <span className="live-team-name">{leftName}</span>
+              </div>
+              <div className="live-score">
+                <span>{leftScore ?? 0}</span><span className="live-score-sep">–</span><span>{rightScore ?? 0}</span>
+              </div>
+              <div className="live-team">
+                <div className="live-crest">{rightCrest ? <img src={rightCrest} alt="" /> : teamInitials(rightName)}</div>
+                <span className="live-team-name">{rightName}</span>
+              </div>
+            </div>
+            <div className="live-bottom-row">
+              <p className="live-clock">
+                {m.venue || 'Sin lugar'}{m.period ? ` · ${m.period}ª parte` : ''}
+              </p>
+              {clickable && (
+                <span className="live-play-btn" title="Continuar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3" /></svg>
+                </span>
+              )}
+            </div>
+          </button>
+        );
+      })}
+
       {canManageRoster && selectableMatches.length > 0 && (
         <div className="matches-header">
           <label className="select-all-checkbox">
@@ -384,74 +458,102 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, canManageRos
             {selectedMatchIds.length > 0 ? `${selectedMatchIds.length} seleccionado${selectedMatchIds.length === 1 ? '' : 's'}` : 'Seleccionar todos'}
           </label>
           {selectedMatchIds.length > 0 && (
-            <button
-              type="button"
-              className="btn-icon btn-icon--danger"
-              onClick={handleBulkDelete}
-              title="Borrar seleccionados"
-              aria-label={`Borrar ${selectedMatchIds.length} partido(s) seleccionados`}
-            >
-              <Trash2 size={18} />
-            </button>
+            <div className="bulk-actions">
+              <button
+                type="button"
+                className="btn-icon-sm btn-icon-sm--accent"
+                disabled={selectedMatchIds.length !== 1}
+                onClick={editSelectedMatch}
+                title={selectedMatchIds.length === 1 ? 'Editar' : 'Editar (elige solo un partido)'}
+                aria-label="Editar el partido seleccionado"
+              >
+                <Settings size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn-icon-sm btn-icon-sm--danger"
+                onClick={handleBulkDelete}
+                title="Borrar seleccionados"
+                aria-label={`Borrar ${selectedMatchIds.length} partido(s) seleccionados`}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      <div className="admin-list">
-        {filteredMatches.map((m) => (
-          <div key={m.id} className="admin-row match-row">
-            {canManageRoster && m.lifecycle !== 'live' && (
-              <input
-                type="checkbox"
-                checked={selectedMatchIds.includes(m.id)}
-                onChange={() => toggleMatchSelect(m.id)}
-              />
-            )}
-            <div className="admin-user-info">
-              <span className="admin-user-name">
-                {m.jornada ? `J${m.jornada} · ` : ''}
-                {m.isHome ? `${m.ownTeamName || 'Mi equipo'} vs ${m.rivalName}` : `${m.rivalName} vs ${m.ownTeamName || 'Mi equipo'}`}
-              </span>
-              <span className="admin-user-email">
-                {m.venue || 'Sin lugar'} · {m.scheduledAt ? new Date(m.scheduledAt).toLocaleString() : ''}
-              </span>
+      <div className="match-list">
+        {selectableMatches.map((m) => {
+          const isFinished = m.lifecycle === 'finished';
+          const isScheduled = m.lifecycle === 'scheduled';
+          const leftIsOwn = m.isHome;
+          const leftName = leftIsOwn ? (ownTeamName || 'Mi equipo') : (m.rivalName || 'Rival');
+          const rightName = leftIsOwn ? (m.rivalName || 'Rival') : (ownTeamName || 'Mi equipo');
+          const leftCrest = leftIsOwn ? ownCrestUrl : m.rivalCrestUrl;
+          const rightCrest = leftIsOwn ? m.rivalCrestUrl : ownCrestUrl;
+          const leftScore = leftIsOwn ? m.score?.own : m.score?.rival;
+          const rightScore = leftIsOwn ? m.score?.rival : m.score?.own;
+          return (
+            <div key={m.id} className={`match-card${isFinished ? ' match-card--finished match-card--clickable' : ''}`}>
+              <div className="match-card-row">
+                {canManageRoster && (
+                  <input
+                    type="checkbox"
+                    className="match-check"
+                    checked={selectedMatchIds.includes(m.id)}
+                    onChange={() => toggleMatchSelect(m.id)}
+                  />
+                )}
+                <div className="match-card-body" onClick={isFinished ? () => onOpenStats(m.id) : undefined}>
+                  <div className="match-teams-row">
+                    <div className="match-team">
+                      <div className={`crest-sm${leftIsOwn ? ' crest-sm--own' : ''}`}>
+                        {leftCrest ? <img src={leftCrest} alt="" /> : teamInitials(leftName)}
+                      </div>
+                      <span className="match-team-name">{leftName}</span>
+                    </div>
+                    <div className="match-mid">
+                      {isFinished ? (
+                        <span className="match-score">{leftScore ?? '—'}–{rightScore ?? '—'}</span>
+                      ) : (
+                        <span className="match-vs">vs</span>
+                      )}
+                    </div>
+                    <div className="match-team match-team--rival">
+                      <div className={`crest-sm${!leftIsOwn ? ' crest-sm--own' : ''}`}>
+                        {rightCrest ? <img src={rightCrest} alt="" /> : teamInitials(rightName)}
+                      </div>
+                      <span className="match-team-name">{rightName}</span>
+                    </div>
+                  </div>
+                  <div className="match-meta">
+                    {m.jornada != null && (
+                      <>
+                        <span>J{m.jornada}</span>
+                        <span className="match-meta-sep">·</span>
+                      </>
+                    )}
+                    <span className="match-meta-time">{formatMatchDateTime(m.scheduledAt)}</span>
+                    <span className="match-meta-sep">·</span>
+                    <span>{m.venue || 'Sin lugar'}</span>
+                    <span className="match-meta-sep">·</span>
+                    <span className={`match-status-dot match-status-dot--${m.lifecycle}`} />
+                    <span className={`match-status-text--${m.lifecycle}`}>{LIFECYCLE_LABELS[m.lifecycle] || m.lifecycle}</span>
+                    {isFinished && (
+                      <span className="match-chevron">
+                        <ChevronRight size={14} />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {isScheduled && canUseBench && (
+                <button type="button" className="match-start-btn" onClick={() => handleStart(m)}>INICIAR</button>
+              )}
             </div>
-            <span className={`match-badge match-badge--${m.lifecycle}`}>{LIFECYCLE_LABELS[m.lifecycle] || m.lifecycle}</span>
-            {m.lifecycle === 'scheduled' && canManageRoster && (
-              <>
-                <button className="btn-icon" onClick={() => startEdit(m)} title="Editar" aria-label="Editar partido">
-                  <Settings size={18} />
-                </button>
-                <button className="btn-icon btn-icon--danger" onClick={() => handleDelete(m)} title="Borrar" aria-label="Borrar partido">
-                  <Trash2 size={18} />
-                </button>
-              </>
-            )}
-            {m.lifecycle === 'scheduled' && canUseBench && (
-              <button className="btn btn-clock btn-start" onClick={() => handleStart(m)}>
-                Iniciar
-              </button>
-            )}
-            {m.lifecycle === 'live' && canUseBench && (
-              <button className="btn btn-clock btn-start" onClick={() => onOpenMatch(m.id)}>Continuar</button>
-            )}
-            {m.lifecycle === 'finished' && (
-              <button className="btn-icon btn-icon--accent" onClick={() => onOpenStats(m.id)} title="Estadísticas" aria-label="Ver estadísticas del partido">
-                <BarChart3 size={18} />
-              </button>
-            )}
-            {m.lifecycle === 'finished' && canManageRoster && (
-              <>
-                <button className="btn-icon" onClick={() => onEditFinishedStats(m.id)} title="Editar" aria-label="Editar partido finalizado">
-                  <Settings size={18} />
-                </button>
-                <button className="btn-icon btn-icon--danger" onClick={() => handleDelete(m)} title="Borrar" aria-label="Borrar partido">
-                  <Trash2 size={18} />
-                </button>
-              </>
-            )}
-          </div>
-        ))}
+          );
+        })}
         {matches.length === 0 && <p className="modal-hint">Todavía no hay partidos creados.</p>}
         {matches.length > 0 && filteredMatches.length === 0 && <p className="modal-hint">Ningún partido coincide con el filtro.</p>}
       </div>

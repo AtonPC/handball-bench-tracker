@@ -21,6 +21,14 @@
   --info-dim: rgba(47, 124, 201, 0.12);
   --own: #1d5fae;
   --rival: #c0392b;
+  /* Colores de estado de partido (Partidos Luminosos, 2026-09-15) — no son
+     --own/--rival (eso es "de quién", esto es "en qué momento está el
+     partido"): programado sigue en --warning, finalizado pasa a --danger
+     (decisión explícita del usuario, antes era --info), en directo usa
+     este verde vivo aparte, y --start es el naranja del botón "INICIAR". */
+  --live: #1fae6b;
+  --live-bright: #35e08c;
+  --start: #ff6a1f;
 
   --space-1: 4px;
   --space-2: 8px;
