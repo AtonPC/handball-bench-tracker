@@ -1,3 +1,4 @@
+import { RectangleVertical, Timer } from 'lucide-react';
 import StatStepper from './StatStepper';
 import { summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { summarizeRivalSevenMeters } from '../hooks/useRivalSevenMeters';
@@ -48,11 +49,14 @@ export default function RivalPanel({
       </div>
       <div className="stepper-group">
         <span className="stepper-caption">Fallos</span>
-        <button className="btn btn-timeout" onClick={onOpenMissDetail} disabled={!matchRunning}>
-          FALLO RIVAL{rivalMissesCount ? ` (${rivalMissesCount})` : ''}
+        <StatStepper icon="FALLO" label="Fallo rival" count={rivalMissesCount} onInc={onOpenMissDetail} disabled={!matchRunning} />
+      </div>
+      <div className="stepper-group">
+        <span className="stepper-caption">Exclusión</span>
+        <button className="excl-btn" onClick={onOpenExclusion} disabled={!matchRunning} aria-label="Exclusión rival">
+          <Timer size={14} /> 2'
         </button>
       </div>
-      <button className="btn btn-timeout" onClick={onOpenExclusion} disabled={!matchRunning}>EXCLUSIÓN RIVAL</button>
       {exclusionSummary.length > 0 && (
         <div className="rival-excl-badges">
           {exclusionSummary.map((entry) => (
@@ -72,7 +76,10 @@ export default function RivalPanel({
           ))}
         </div>
       )}
-      <button className="btn btn-timeout" onClick={onOpenSevenMeter} disabled={!matchRunning}>7 METROS RIVAL</button>
+      <div className="stepper-group">
+        <span className="stepper-caption">7 metros</span>
+        <StatStepper compact icon="7M" label="7 metros rival" count={rivalSevenMeters.length} onInc={onOpenSevenMeter} disabled={!matchRunning} />
+      </div>
       {sevenMeterSummary.length > 0 && (
         <div className="rival-excl-badges">
           {sevenMeterSummary.map((entry) => (
@@ -88,7 +95,12 @@ export default function RivalPanel({
           ))}
         </div>
       )}
-      <button className="btn btn-timeout" onClick={onOpenYellowCard} disabled={!matchRunning}>TARJETA AMARILLA RIVAL</button>
+      <div className="stepper-group">
+        <span className="stepper-caption">Amarilla</span>
+        <button className="excl-btn" onClick={onOpenYellowCard} disabled={!matchRunning} aria-label="Tarjeta amarilla rival">
+          <RectangleVertical size={18} fill="var(--card-yellow)" stroke="var(--card-yellow)" />
+        </button>
+      </div>
       {yellowCardSummary.length > 0 && (
         <div className="rival-excl-badges">
           {yellowCardSummary.map((entry) => (
