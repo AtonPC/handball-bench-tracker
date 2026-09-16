@@ -23,7 +23,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
         <span className="player-number">{player.number}</span>
 
         <div className="player-name-block">
-          <span className="player-name">
+          <span className={`player-name${player.isGK ? ' player-name--gk' : ''}`}>
             {player.name}
             {player.isGK && <span className="gk-badge">P</span>}
             {dots && <span className="excl-dots"> {dots}</span>}

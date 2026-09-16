@@ -21,7 +21,18 @@ function ratio(part, total) {
 function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
   const columns = [
     { key: 'number', label: '#', value: (p) => p.number ?? 0, render: (p) => p.number },
-    { key: 'name', label: 'Jugador/a', value: (p) => p.name || '', render: (p) => `${p.name}${p.isGK ? ' (P)' : ''}` },
+    {
+      key: 'name',
+      label: 'Jugador/a',
+      value: (p) => p.name || '',
+      // Mismo color que en el banquillo en directo (--info) para el
+      // nombre del portero — igual de reconocible en las dos pantallas.
+      render: (p) => (
+        <span className={p.isGK ? 'player-stats-name--gk' : undefined}>
+          {p.name}{p.isGK ? ' (P)' : ''}
+        </span>
+      ),
+    },
   ];
   if (showMatches) {
     columns.push(

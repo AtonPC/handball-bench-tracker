@@ -1467,8 +1467,11 @@
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--team-secondary);
-  color: #10131a;
+  /* --info (no el color del equipo, que puede confundirse con el resto de
+     la interfaz) para que el portero se distinga siempre igual, pase lo
+     que pase con los colores de cada equipo. */
+  background: var(--info);
+  color: #fff;
   font-size: 10px;
   font-weight: 700;
   vertical-align: middle;
@@ -1487,6 +1490,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Nombre del portero coloreado aparte (no el fondo de toda la fila, que ya
+   se usa para exclusión/roja — un portero excluido necesita ver las dos
+   cosas a la vez, sin que una tape a la otra). */
+.player-name--gk {
+  color: var(--info);
+}
+.player-stats-name--gk {
+  color: var(--info);
+  font-weight: 700;
 }
 .player-clock {
   font-size: 12px;
