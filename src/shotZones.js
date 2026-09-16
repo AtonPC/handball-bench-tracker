@@ -32,3 +32,17 @@ export const GOAL_ZONES = [
 // hace falta saber por dónde se fue fuera, no con cuánto margen: por
 // encima del larguero, o a un lado u otro de los postes.
 export const OUT_ZONES = ['Fuera arriba', 'Fuera izquierda', 'Fuera derecha'];
+
+// Aviso opcional antes de registrar (2026-09-16): las dos zonas siguen
+// siendo opcionales — si no se marca NINGUNA de las dos es un "no ha dado
+// tiempo" legítimo, sin aviso. Pero si se marcó una y no la otra, un
+// diagnóstico con datos reales confirmó que en los Fallos casi siempre se
+// marca por dónde entró/salió y se olvida de dónde vino el lanzamiento —
+// este aviso (no bloqueante, se puede seguir e ignorar) es el recordatorio
+// para no perder ese dato. Se usa igual en Gol/Fallo propio, Parada y
+// Gol/Fallo rival — los tres capturan el mismo par de zonas.
+export function missingZoneWarning(shotZone, goalZone) {
+  if (shotZone && !goalZone) return 'Has marcado de dónde vino el lanzamiento, pero no por dónde entró o salió. ¿Registrar así de todas formas?';
+  if (!shotZone && goalZone) return 'Has marcado por dónde entró o salió, pero no de dónde vino el lanzamiento. ¿Registrar así de todas formas?';
+  return null;
+}

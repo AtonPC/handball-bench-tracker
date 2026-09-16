@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ShotZoneDiagram from './ShotZoneDiagram';
+import { missingZoneWarning } from '../shotZones';
 
 const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
@@ -25,6 +26,8 @@ export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
 
   function handleConfirm() {
     if (!number) return;
+    const warning = missingZoneWarning(shotZone, goalZone);
+    if (warning && !confirm(warning)) return;
     onConfirm({ number: Number(number), shotZone, goalZone });
   }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ShotZoneDiagram from './ShotZoneDiagram';
+import { missingZoneWarning } from '../shotZones';
 
 // Se abre al marcar Gol o Fallo de un jugador propio: zonas opcionales, igual
 // que en el gol rival — si no hay tiempo, se pulsa Registrar sin elegir nada.
@@ -8,6 +9,12 @@ import ShotZoneDiagram from './ShotZoneDiagram';
 export default function ShotDetailModal({ playerName, kind, onConfirm, onCancel }) {
   const [shotZone, setShotZone] = useState(null);
   const [goalZone, setGoalZone] = useState(null);
+
+  function handleConfirm() {
+    const warning = missingZoneWarning(shotZone, goalZone);
+    if (warning && !confirm(warning)) return;
+    onConfirm({ shotZone, goalZone });
+  }
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
@@ -28,10 +35,7 @@ export default function ShotDetailModal({ playerName, kind, onConfirm, onCancel 
         />
 
         <div className="player-form-actions">
-          <button
-            className="btn btn-clock btn-start"
-            onClick={() => onConfirm({ shotZone, goalZone })}
-          >
+          <button className="btn btn-clock btn-start" onClick={handleConfirm}>
             REGISTRAR
           </button>
           <button className="modal-cancel" onClick={onCancel}>Cancelar</button>

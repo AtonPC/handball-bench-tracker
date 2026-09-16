@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ShotZoneDiagram from './ShotZoneDiagram';
+import { missingZoneWarning } from '../shotZones';
 
 const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
@@ -27,6 +28,8 @@ export default function SaveDetailModal({ playerName, onConfirm, onCancel }) {
   }
 
   function handleConfirm() {
+    const warning = missingZoneWarning(shotZone, goalZone);
+    if (warning && !confirm(warning)) return;
     onConfirm({ shotZone, goalZone, rivalNumber: rivalNumber ? Number(rivalNumber) : null });
   }
 
