@@ -1,7 +1,6 @@
 import { RectangleVertical, Timer } from 'lucide-react';
 import StatStepper from './StatStepper';
 import { summarizeRivalExclusions } from '../hooks/useRivalExclusions';
-import { summarizeRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { summarizeRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { formatClock } from '../utils/time';
 
@@ -10,26 +9,21 @@ import { formatClock } from '../utils/time';
 // regla que el propio equipo) — importante para que el delegado no deje
 // que un rival expulsado siga en pista por despiste. Mientras una
 // exclusión está en marcha se ve la cuenta atrás, igual que en el propio
-// equipo. Tocar un badge permite anularla si se marcó por error. Los
-// badges de 7 metros son iguales pero más simples (sin cuenta atrás ni
-// expulsión, un 7m no es una sanción temporal).
+// equipo. Tocar un badge permite anularla si se marcó por error.
+// El 7 metros rival NO tiene entrada aquí: solo se registra cuando
+// NOSOTROS marcamos un gol de 7m (ver BenchConsole), como estadística del
+// rival derivada del gol propio.
 export default function RivalPanel({
-  rivalName, rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalSevenMeters, rivalYellowCards,
+  rivalName, rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalYellowCards,
   onGoal, onOpenGoalDetail, onOpenMissDetail, onOpenExclusion, onCancelExclusion,
-  onOpenSevenMeter, onCancelSevenMeter, onOpenYellowCard, onCancelYellowCard, matchRunning,
+  onOpenYellowCard, onCancelYellowCard, matchRunning,
 }) {
   const exclusionSummary = summarizeRivalExclusions(rivalExclusionsLive);
-  const sevenMeterSummary = summarizeRivalSevenMeters(rivalSevenMeters);
   const yellowCardSummary = summarizeRivalYellowCards(rivalYellowCards);
 
   function handleExclusionBadgeClick(entry) {
     const ok = confirm(`¿Anular la última exclusión del dorsal #${entry.number}? (marcada por error)`);
     if (ok) onCancelExclusion(entry.lastEventId);
-  }
-
-  function handleSevenMeterBadgeClick(entry) {
-    const ok = confirm(`¿Anular el último 7 metros del dorsal #${entry.number}? (marcado por error)`);
-    if (ok) onCancelSevenMeter(entry.lastEventId);
   }
 
   function handleYellowCardBadgeClick(entry) {
@@ -41,8 +35,10 @@ export default function RivalPanel({
     <div className="player-row player-row--rival">
       {/* Mismo esquema exacto que un jugador (.player-row-top +
           .player-row-stats), pedido explícito del usuario: dorsal, nombre,
-          2 minutos, amarilla, 7 metros arriba — gol y fallo abajo. Sin
-          "cambio" (no aplica al rival) ni reloj de tiempo en pista. */}
+          2 minutos y amarilla arriba — gol y fallo abajo. Sin "cambio" (no
+          aplica al rival) ni reloj de tiempo en pista. El 7 metros no
+          tiene botón propio aquí: se pide (opcional) justo después de
+          marcar nosotros un gol de 7m. */}
       <div className="player-row-top">
         <span className="player-number player-number--rival">R</span>
         <div className="player-name-block">
@@ -56,7 +52,6 @@ export default function RivalPanel({
         <button className="excl-btn" onClick={onOpenYellowCard} disabled={!matchRunning} aria-label="Tarjeta amarilla rival">
           <RectangleVertical size={18} fill="var(--card-yellow)" stroke="var(--card-yellow)" />
         </button>
-        <StatStepper compact icon="7M" label="7 metros rival" count={rivalSevenMeters.length} onInc={onOpenSevenMeter} disabled={!matchRunning} />
       </div>
 
       <div className="player-row-stats">
@@ -79,21 +74,6 @@ export default function RivalPanel({
                 : entry.activeRemainingMs > 0
                   ? formatClock(entry.activeRemainingMs)
                   : `${entry.count}/3`}
-            </button>
-          ))}
-        </div>
-      )}
-      {sevenMeterSummary.length > 0 && (
-        <div className="rival-excl-badges">
-          {sevenMeterSummary.map((entry) => (
-            <button
-              key={entry.number}
-              type="button"
-              className="rival-excl-badge"
-              onClick={() => handleSevenMeterBadgeClick(entry)}
-              title="Tocar para anular el último 7 metros de este dorsal"
-            >
-              #{entry.number} · {entry.count}
             </button>
           ))}
         </div>

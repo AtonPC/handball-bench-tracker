@@ -12,7 +12,6 @@ import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
 import ActionStatsView from './ActionStatsView';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
-import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -42,12 +41,14 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
-  const [showRivalSevenMeterModal, setShowRivalSevenMeterModal] = useState(false);
   const [showRivalYellowCardModal, setShowRivalYellowCardModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
+  // Solo se pide el dorsal rival que ha cometido la falta cuando metemos
+  // NOSOTROS un gol de 7 metros — no hay entrada suelta para el rival, ya
+  // que la falta de 7m siempre la sufre el equipo que lanza.
+  const [showSevenMeterFoulModal, setShowSevenMeterFoulModal] = useState(false);
   const rivalExclusionsLive = useRivalExclusionsLive(matchId);
-  const rivalSevenMeters = useRivalSevenMeters(matchId);
   const rivalMisses = useRivalMisses(matchId);
   const rivalYellowCards = useRivalYellowCards(matchId);
   // Solo hacían falta para "Datos" antes de tener las pestañas de
@@ -141,15 +142,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             rivalGoals={state.score.rival}
             rivalMissesCount={rivalMisses.length}
             rivalExclusionsLive={rivalExclusionsLive}
-            rivalSevenMeters={rivalSevenMeters}
             rivalYellowCards={rivalYellowCards}
             onGoal={store.rivalGoal}
             onOpenGoalDetail={() => setShowRivalGoalModal(true)}
             onOpenMissDetail={() => setShowRivalMissModal(true)}
             onOpenExclusion={() => setShowRivalExclusionModal(true)}
             onCancelExclusion={store.cancelRivalExclusion}
-            onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
-            onCancelSevenMeter={store.cancelRivalSevenMeter}
             onOpenYellowCard={() => setShowRivalYellowCardModal(true)}
             onCancelYellowCard={store.cancelRivalYellowCard}
             matchRunning={isRunning}
@@ -238,18 +236,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         />
       )}
 
-      {showRivalSevenMeterModal && (
-        <DorsalNumberModal
-          title="7 metros rival — ¿qué dorsal ha cometido la falta?"
-          confirmLabel="REGISTRAR 7 METROS"
-          onConfirm={(detail) => {
-            store.rivalSevenMeter(detail.number);
-            setShowRivalSevenMeterModal(false);
-          }}
-          onCancel={() => setShowRivalSevenMeterModal(false)}
-        />
-      )}
-
       {showRivalYellowCardModal && (
         <DorsalNumberModal
           title="Tarjeta amarilla rival — ¿qué dorsal?"
@@ -273,12 +259,31 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           onConfirm={(detail) => {
             if (shotDetailFor.kind === 'goal') {
               store.playerGoalWithDetail(shotDetailFor.playerId, detail);
+              // El 7m rival solo se registra cuando NOSOTROS marcamos de 7
+              // metros: ese gol confirma que hubo falta, y aquí se pregunta
+              // qué dorsal rival la cometió (queda como estadística del
+              // rival, igual que antes).
+              if (detail.shotZone === '7 metros') {
+                setShowSevenMeterFoulModal(true);
+              }
             } else {
               store.playerShotWithDetail(shotDetailFor.playerId, detail);
             }
             setShotDetailFor(null);
           }}
           onCancel={() => setShotDetailFor(null)}
+        />
+      )}
+
+      {showSevenMeterFoulModal && (
+        <DorsalNumberModal
+          title="Gol de 7 metros — ¿qué dorsal rival ha cometido la falta?"
+          confirmLabel="REGISTRAR 7 METROS"
+          onConfirm={(detail) => {
+            store.rivalSevenMeter(detail.number);
+            setShowSevenMeterFoulModal(false);
+          }}
+          onCancel={() => setShowSevenMeterFoulModal(false)}
         />
       )}
 
