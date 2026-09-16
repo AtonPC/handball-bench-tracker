@@ -38,25 +38,32 @@ export default function RivalPanel({
   }
 
   return (
-    <div className="player-row player-row--rival rival-panel">
-      <div className="rival-panel-header">
+    <div className="player-row player-row--rival">
+      {/* Mismo esquema exacto que un jugador (.player-row-top +
+          .player-row-stats), pedido explícito del usuario: dorsal, nombre,
+          2 minutos, amarilla, 7 metros arriba — gol y fallo abajo. Sin
+          "cambio" (no aplica al rival) ni reloj de tiempo en pista. */}
+      <div className="player-row-top">
         <span className="player-number player-number--rival">R</span>
-        <span className="rival-panel-label">{rivalName || 'Equipo rival'}</span>
-      </div>
-      <div className="stepper-group">
-        <span className="stepper-caption">Goles</span>
-        <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />
-      </div>
-      <div className="stepper-group">
-        <span className="stepper-caption">Fallos</span>
-        <StatStepper icon="FALLO" label="Fallo rival" count={rivalMissesCount} onInc={onOpenMissDetail} disabled={!matchRunning} />
-      </div>
-      <div className="stepper-group">
-        <span className="stepper-caption">Exclusión</span>
+        <div className="player-name-block">
+          <span className="player-name">
+            <span className="player-name-text">{rivalName || 'Equipo rival'}</span>
+          </span>
+        </div>
         <button className="excl-btn" onClick={onOpenExclusion} disabled={!matchRunning} aria-label="Exclusión rival">
           <Timer size={14} /> 2'
         </button>
+        <button className="excl-btn" onClick={onOpenYellowCard} disabled={!matchRunning} aria-label="Tarjeta amarilla rival">
+          <RectangleVertical size={18} fill="var(--card-yellow)" stroke="var(--card-yellow)" />
+        </button>
+        <StatStepper compact icon="7M" label="7 metros rival" count={rivalSevenMeters.length} onInc={onOpenSevenMeter} disabled={!matchRunning} />
       </div>
+
+      <div className="player-row-stats">
+        <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />
+        <StatStepper icon="FALLO" label="Fallo rival" count={rivalMissesCount} onInc={onOpenMissDetail} disabled={!matchRunning} />
+      </div>
+
       {exclusionSummary.length > 0 && (
         <div className="rival-excl-badges">
           {exclusionSummary.map((entry) => (
@@ -76,10 +83,6 @@ export default function RivalPanel({
           ))}
         </div>
       )}
-      <div className="stepper-group">
-        <span className="stepper-caption">7 metros</span>
-        <StatStepper compact icon="7M" label="7 metros rival" count={rivalSevenMeters.length} onInc={onOpenSevenMeter} disabled={!matchRunning} />
-      </div>
       {sevenMeterSummary.length > 0 && (
         <div className="rival-excl-badges">
           {sevenMeterSummary.map((entry) => (
@@ -95,12 +98,6 @@ export default function RivalPanel({
           ))}
         </div>
       )}
-      <div className="stepper-group">
-        <span className="stepper-caption">Amarilla</span>
-        <button className="excl-btn" onClick={onOpenYellowCard} disabled={!matchRunning} aria-label="Tarjeta amarilla rival">
-          <RectangleVertical size={18} fill="var(--card-yellow)" stroke="var(--card-yellow)" />
-        </button>
-      </div>
       {yellowCardSummary.length > 0 && (
         <div className="rival-excl-badges">
           {yellowCardSummary.map((entry) => (

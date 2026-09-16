@@ -1833,9 +1833,11 @@
   cursor: default;
 }
 
-/* ---------- Panel rival: una tarjeta más, con el mismo formato que un
-   jugador (.player-row), pero separada con claridad (borde/fondo rojo) —
-   pedido explícito del usuario, 2026-09-16, mockup "Consola Luminosa". */
+/* ---------- Panel rival: una tarjeta más, con el mismo formato exacto que
+   un jugador (.player-row-top + .player-row-stats), pero separada con
+   claridad (borde/fondo rojo) — pedido explícito del usuario, 2026-09-16,
+   mockup "Consola Luminosa". Sin envoltorio propio: RivalPanel.jsx usa
+   las mismas clases que PlayerRow.jsx, aquí solo hace falta el color. */
 .player-row--rival {
   border-left-color: var(--danger);
   border-color: var(--danger);
@@ -1844,30 +1846,7 @@
 .player-number--rival {
   background: var(--danger);
 }
-.rival-panel {
-  /* .player-row (heredada por .player-row--rival) es flex-direction:column
-     — aquí hace falta volver a fila con wrap: la cabecera ocupa toda la
-     primera línea (flex-basis:100%) y los botones/steppers se envuelven
-     libremente debajo, como ya hacía antes de convertir esto en tarjeta. */
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.rival-panel-header {
-  flex-basis: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.rival-panel-label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--danger);
-}
 .rival-excl-badges {
-  flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
