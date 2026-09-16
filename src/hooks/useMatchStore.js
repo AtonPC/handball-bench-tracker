@@ -148,12 +148,14 @@ export function useMatchStore(matchId, enabled) {
     for (const id of Object.keys(playerUpdates || {})) {
       batch.update(playerRef(id), playerUpdates[id]);
     }
-    let createdRefPath = null;
-    if (extra?.create) {
-      batch.set(extra.create.ref, extra.create.data);
-      createdRefPath = extra.create.ref.path;
-    }
-    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, snapshot, createdRefPath });
+    // extra.creates (array) es lo normal ahora — un evento puede crear más
+    // de un documento de detalle a la vez (p. ej. una Parada crea también
+    // su Fallo rival emparejado, ver playerSaveWithDetail). extra.create
+    // (singular) se sigue aceptando por compatibilidad con quien ya lo usa.
+    const creates = extra?.creates || (extra?.create ? [extra.create] : []);
+    for (const c of creates) batch.set(c.ref, c.data);
+    const createdRefPaths = creates.map((c) => c.ref.path);
+    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, snapshot, createdRefPaths });
     await batch.commit();
   }, [match, players, matchRef, playerRef, eventsCol]);
 
@@ -502,25 +504,42 @@ export function useMatchStore(matchId, enabled) {
 
   // Parada con zona: se guarda como documento propio en
   // matches/{id}/saveEvents, igual que el gol/fallo propio. Una parada
-  // nuestra es, a la vez, un tiro fallado del rival — rivalNumber (opcional)
-  // es el dorsal de quien tiró, para poder sacar "tiros por dorsal" del
-  // rival igual que ya existe para sus goles.
+  // nuestra es, a la vez y por definición, un tiro fallado del rival — así
+  // que también se crea a la vez su documento gemelo en rivalMisses (2026-
+  // 09-16, antes había que anotarlo aparte a mano con "FALLO RIVAL" y casi
+  // nunca se hacía, dejando las estadísticas del rival cortas). rivalNumber
+  // (opcional) es el dorsal de quien tiró, se usa en los dos documentos.
+  // Por eso rivalShotZoneStats() en zoneStats.js ya NO suma saveEvents
+  // aparte — contarlo dos veces (aquí y en rivalMisses) doblaría el total.
   const playerSaveWithDetail = useCallback(
     (playerId, { shotZone, goalZone, rivalNumber }) => {
       if (!match || match.status !== 'running') return;
       const next = Math.max(0, players[playerId].saves + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
-      const ref = doc(collection(db, 'matches', matchId, 'saveEvents'));
+      const period = match.period;
+      const createdAt = Date.now();
+      const saveRef = doc(collection(db, 'matches', matchId, 'saveEvents'));
+      const missRef = doc(collection(db, 'matches', matchId, 'rivalMisses'));
       recordEvent('Parada', {}, { [playerId]: { saves: next } }, {
-        create: {
-          ref,
-          data: {
-            playerId, minute, period: match.period,
-            shotZone: shotZone || null, goalZone: goalZone || null,
-            rivalNumber: rivalNumber || null,
-            createdAt: Date.now(),
+        creates: [
+          {
+            ref: saveRef,
+            data: {
+              playerId, minute, period,
+              shotZone: shotZone || null, goalZone: goalZone || null,
+              rivalNumber: rivalNumber || null,
+              createdAt,
+            },
           },
-        },
+          {
+            ref: missRef,
+            data: {
+              number: rivalNumber || null, minute, period,
+              shotZone: shotZone || null, goalZone: goalZone || null,
+              createdAt,
+            },
+          },
+        ],
       });
     },
     [match, players, matchId, liveElapsedMs, recordEvent]
@@ -678,9 +697,12 @@ export function useMatchStore(matchId, enabled) {
     for (const id of Object.keys(playersSnap)) {
       batch.update(playerRef(id), playersSnap[id]);
     }
-    if (eventData.createdRefPath) {
-      batch.delete(doc(db, eventData.createdRefPath));
-    }
+    // createdRefPaths (array) es el formato actual; createdRefPath
+    // (singular) es el de eventos ya guardados antes de que un evento
+    // pudiera crear más de un documento — se sigue soportando por si el
+    // más reciente todavía es uno de esos.
+    const paths = eventData.createdRefPaths || (eventData.createdRefPath ? [eventData.createdRefPath] : []);
+    for (const p of paths) batch.delete(doc(db, p));
     batch.delete(eventDoc.ref);
     await batch.commit();
   }, [eventsCol, matchRef, playerRef]);

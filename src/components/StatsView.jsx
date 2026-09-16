@@ -95,7 +95,6 @@ export default function StatsView({ store, identity, teamId, team }) {
         <MatchSummaryView
           statePlayers={state.players}
           shotEvents={shotEvents}
-          saveEvents={saveEvents}
           rivalGoals={rivalGoals}
           rivalMisses={rivalMisses}
           rivalExclusions={rivalExclusions}

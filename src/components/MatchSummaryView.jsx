@@ -52,7 +52,7 @@ function CompareBar({ label, ownMade, ownTotal, rivalMade, rivalTotal, approxRiv
 // piden en los tres sitios que la usan (partido en directo, finalizado,
 // staff) — así no hay tres copias del mismo cálculo.
 export default function MatchSummaryView({
-  statePlayers = {}, shotEvents = [], saveEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
+  statePlayers = {}, shotEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
   ownTeamName = 'Nuestro equipo', rivalName = 'Rival',
 }) {
   const players = Object.values(statePlayers);
@@ -64,7 +64,10 @@ export default function MatchSummaryView({
   const ownExclusions = players.reduce((s, p) => s + (p.exclusionsCount || 0), 0);
   const ownRojas = players.filter((p) => p.disqualified).length;
 
-  const rivalShotsTotal = rivalGoals.length + saveEvents.length + rivalMisses.length;
+  // saveEvents NO se suma aparte: desde que una Parada crea a la vez su
+  // documento gemelo en rivalMisses (useMatchStore.js), sumarlos también
+  // aquí contaría el mismo tiro dos veces.
+  const rivalShotsTotal = rivalGoals.length + rivalMisses.length;
   const rivalSavesEstimate = estimateRivalSaves(shotEvents);
 
   const rivalExclusionCounts = {};
@@ -72,7 +75,7 @@ export default function MatchSummaryView({
   const rivalRojas = Object.values(rivalExclusionCounts).filter((c) => c >= 3).length;
 
   const own7m = madeTotal(fieldPlayerZoneStats(shotEvents).origin['7 metros']);
-  const rival7m = madeTotal(rivalShotZoneStats(rivalGoals, saveEvents, rivalMisses).origin['7 metros']);
+  const rival7m = madeTotal(rivalShotZoneStats(rivalGoals, rivalMisses).origin['7 metros']);
 
   return (
     <div className="card">

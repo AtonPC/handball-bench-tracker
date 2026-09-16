@@ -144,6 +144,13 @@ export default function ShotZoneDiagram({
   goalStats,
   originColors, // { [zone]: color } — mapa de calor opcional, solo en modo lectura
   goalColors,
+  // Las 9 zonas de portería no se pueden tocar, solo las de "Fuera" (si
+  // showOut) — para un Fallo rival, que ya NO puede marcarse como "entró
+  // en la portería" (eso es, por definición, una Parada nuestra, que se
+  // registra en el jugador y crea su propio Fallo rival emparejado solo,
+  // ver playerSaveWithDetail en useMatchStore.js). Deja las 9 zonas
+  // visibles (para que la portería siga dibujada de fondo) pero sin onClick.
+  disableInteriorGoalZones = false,
 }) {
   function goalCellRect(i) {
     const row = Math.floor(i / 3);
@@ -206,7 +213,7 @@ export default function ShotZoneDiagram({
                 {...r}
                 goalArea
                 active={goalZone === z}
-                onClick={onGoalZone ? () => onGoalZone(goalZone === z ? null : z) : undefined}
+                onClick={onGoalZone && !disableInteriorGoalZones ? () => onGoalZone(goalZone === z ? null : z) : undefined}
                 statLines={goalStats?.[z]}
                 fillColor={goalColors?.[z]}
               />

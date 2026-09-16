@@ -1600,6 +1600,7 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   border: 1px solid var(--border);
   background: var(--panel-alt);
@@ -1647,6 +1648,9 @@
 }
 .ref-card--amber {
   background: var(--warning);
+}
+.ref-card--yellow {
+  background: var(--card-yellow);
 }
 .excl-btn--disqualified .ref-card--red {
   background: #fff;

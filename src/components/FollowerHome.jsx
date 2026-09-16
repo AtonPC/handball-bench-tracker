@@ -328,7 +328,6 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
           <MatchSummaryView
             statePlayers={state.players}
             shotEvents={shotEvents}
-            saveEvents={saveEvents}
             rivalGoals={rivalGoals}
             rivalMisses={rivalMisses}
             rivalExclusions={rivalExclusions}

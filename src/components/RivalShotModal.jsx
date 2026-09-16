@@ -9,6 +9,10 @@ const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '�
 // gol, por definición, entró). Antes esto era RivalGoalModal, solo para
 // goles; ahora también registra un fallo rival (tiró fuera, sin que
 // parásemos nada) — necesario para que "Tiros del rival" sea un dato real.
+// Un Fallo rival ya NO puede marcarse como "entró en la portería" (2026-
+// 09-16): las 9 zonas de portería están deshabilitadas para un Fallo — si
+// el portero la paró, eso se registra como Parada en el jugador (que crea
+// a la vez su propio Fallo rival emparejado), no aquí dos veces.
 export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
   const [number, setNumber] = useState('');
   const [shotZone, setShotZone] = useState(null);
@@ -52,12 +56,15 @@ export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
         </div>
 
         <p className="modal-hint">
-          {kind === 'goal' ? 'De dónde vino y por dónde entró (opcional)' : 'De dónde vino y por dónde falló: parada o fuera (opcional)'}
+          {kind === 'goal'
+            ? 'De dónde vino y por dónde entró (opcional)'
+            : 'De dónde vino y por dónde se fue fuera (opcional) — si el portero la paró, no es un Fallo: usa Parada en el jugador correspondiente'}
         </p>
         <ShotZoneDiagram
           showGoal
           showOut={kind === 'miss'}
           showOrigin
+          disableInteriorGoalZones={kind === 'miss'}
           shotZone={shotZone}
           onShotZone={setShotZone}
           goalZone={goalZone}

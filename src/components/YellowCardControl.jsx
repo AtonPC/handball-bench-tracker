@@ -8,15 +8,15 @@ import { RectangleVertical } from 'lucide-react';
 export default function YellowCardControl({ player, onGive, onCancel, disabled }) {
   if (player.yellowCard) {
     return (
-      <button type="button" className="excl-btn excl-btn--yellow" onClick={onCancel} aria-label="Cancelar tarjeta amarilla">
-        <RectangleVertical size={14} fill="var(--card-yellow)" stroke="var(--card-yellow)" /> AM
+      <button type="button" className="excl-btn excl-btn--yellow" onClick={onCancel} aria-label="Cancelar tarjeta amarilla" title="Tarjeta amarilla — tocar para anular">
+        <RectangleVertical size={18} fill="var(--card-yellow)" stroke="var(--card-yellow)" />
       </button>
     );
   }
 
   return (
-    <button type="button" className="excl-btn" onClick={onGive} disabled={disabled} aria-label="Tarjeta amarilla">
-      <RectangleVertical size={14} /> AM
+    <button type="button" className="excl-btn" onClick={onGive} disabled={disabled} aria-label="Tarjeta amarilla" title="Tarjeta amarilla">
+      <RectangleVertical size={18} />
     </button>
   );
 }

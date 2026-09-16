@@ -126,7 +126,6 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
               <MatchSummaryView
                 statePlayers={store.state.players}
                 shotEvents={shotEvents}
-                saveEvents={saveEvents}
                 rivalGoals={rivalGoals}
                 rivalMisses={rivalMisses}
                 rivalExclusions={rivalExclusions}

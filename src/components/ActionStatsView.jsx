@@ -86,8 +86,8 @@ export default function ActionStatsView({
   let originStats, entryStats, originColors, goalColors, title;
   if (team === 'rival') {
     const opts = { mirror: effectiveTipo === 'fallos' };
-    const full = rivalShotZoneStats(rivalGoals, saveEvents, rivalMisses, opts);
-    const filtered = rivalShotZoneStats(byZone(rivalGoals), byZone(saveEvents), byZone(rivalMisses), opts);
+    const full = rivalShotZoneStats(rivalGoals, rivalMisses, opts);
+    const filtered = rivalShotZoneStats(byZone(rivalGoals), byZone(rivalMisses), opts);
     originStats = filterZone?.dim === 'entry' ? filtered.origin : full.origin;
     entryStats = filterZone?.dim === 'origin' ? filtered.entry : full.entry;
     originColors = zoneHeatColors(filterZone?.dim === 'entry' ? filtered.originRatios : full.originRatios);

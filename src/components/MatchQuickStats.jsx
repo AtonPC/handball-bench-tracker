@@ -20,7 +20,11 @@ function StatsGroupTable({ title, players }) {
             {players.map((p) => (
               <tr key={p.id}>
                 <td>{p.number}</td>
-                <td>{p.name}{p.disqualified && <span className="ref-card ref-card--red" />}</td>
+                <td>
+                  {p.name}
+                  {p.yellowCard && <span className="ref-card ref-card--yellow" style={{ marginLeft: 4 }} />}
+                  {p.disqualified && <span className="ref-card ref-card--red" style={{ marginLeft: 4 }} />}
+                </td>
                 <td>{formatClock(p.accumulatedMs)}</td>
                 <td>{p.goals}</td>
                 <td>{p.shots}</td>

@@ -94,13 +94,15 @@ export function goalkeeperZoneStats(saveEvents, rivalGoals) {
   };
 }
 
-// Tiros del rival por zona: sus goles cuentan como acierto, y tanto
-// nuestras paradas (rivalMisses no, esas ya son un fallo aparte — una
-// parada nuestra es un tiro fallado del suyo) como sus fallos por fuera
-// cuentan como intento sin acierto. Con los tres orígenes junto al gol
-// rival, "Tiros del rival" y su % de acierto por zona son un dato real,
-// no una aproximación — antes solo había goles, sin denominador.
-export function rivalShotZoneStats(rivalGoals, saveEvents, rivalMisses, { mirror = false } = {}) {
+// Tiros del rival por zona: sus goles cuentan como acierto, sus fallos
+// (rivalMisses) como intento sin acierto. Con los dos orígenes, "Tiros del
+// rival" y su % de acierto por zona son un dato real, no una aproximación.
+// `saveEvents` NO se suma aquí aparte (antes sí) — desde que una Parada
+// crea a la vez su propio documento gemelo en rivalMisses (ver
+// playerSaveWithDetail en useMatchStore.js), sumar los dos sería contar el
+// mismo tiro dos veces. rivalMisses es ahora la única fuente de "el rival
+// no marcó" — incluye tanto lo que paramos como lo que se fue fuera.
+export function rivalShotZoneStats(rivalGoals, rivalMisses, { mirror = false } = {}) {
   function countsByZone(zoneField) {
     const map = {};
     for (const g of rivalGoals) {
@@ -108,13 +110,6 @@ export function rivalShotZoneStats(rivalGoals, saveEvents, rivalMisses, { mirror
       if (!zone) continue;
       const cur = map[zone] || { made: 0, total: 0 };
       cur.made += 1;
-      cur.total += 1;
-      map[zone] = cur;
-    }
-    for (const s of saveEvents) {
-      const zone = s[zoneField];
-      if (!zone) continue;
-      const cur = map[zone] || { made: 0, total: 0 };
       cur.total += 1;
       map[zone] = cur;
     }
