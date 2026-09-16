@@ -63,7 +63,7 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
 // `rows` ya trae `attempts` y `shotsFaced` calculados (quién concede qué gol
 // rival no se sabe por portero, así que `shotsFaced` es del equipo, no 1:1
 // del portero si hubo más de uno en el partido/temporada).
-export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, showMinutes, emptyMessage, rowClassName }) {
+export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, showMinutes, emptyMessage }) {
   const columns = buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes });
   const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(rows, columns, 'number');
 
@@ -79,7 +79,7 @@ export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, sh
         </thead>
         <tbody>
           {sorted.map((p) => (
-            <tr key={p.id} className={rowClassName?.(p) || undefined}>
+            <tr key={p.id}>
               {columns.map((c) => <td key={c.key}>{c.render(p)}</td>)}
             </tr>
           ))}

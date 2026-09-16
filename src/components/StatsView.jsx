@@ -18,12 +18,6 @@ function pct(part, total) {
   return `${Math.round((part / total) * 100)}%`;
 }
 
-function exclusionRowClass(p) {
-  if (p.disqualified) return 'stats-row--danger';
-  if ((p.exclusionsCount || 0) >= 1) return 'stats-row--warning';
-  return undefined;
-}
-
 // Top N por un criterio, solo entre quienes tienen algo que mostrar (evita
 // listas llenas de ceros cuando casi nadie ha marcado o recuperado todavía).
 function topN(players, value, n, { allowZero } = {}) {
@@ -215,7 +209,6 @@ export default function StatsView({ store, identity, teamId, team }) {
           rows={visiblePlayers}
           minutesTotalMs={state.clock.elapsedMs}
           showMinutes
-          rowClassName={exclusionRowClass}
           emptyMessage="Ningún jugador coincide con el filtro."
         />
       </div>
