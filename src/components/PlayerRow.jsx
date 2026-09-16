@@ -1,4 +1,4 @@
-import { Repeat } from 'lucide-react';
+import { Hand, Repeat } from 'lucide-react';
 import { formatClock } from '../utils/time';
 import StatStepper from './StatStepper';
 import ExclusionControl from './ExclusionControl';
@@ -21,13 +21,13 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
   return (
     <div className={`player-row${player.excluded ? ' player-row--excluded' : ''}${exclusionRowClass(player)}`}>
       <div className="player-row-top">
-        <span className="player-number">{player.number}</span>
+        <span className={`player-number${player.isGK ? ' player-number--gk' : ''}`}>{player.number}</span>
 
         <div className="player-name-block">
           <span className={`player-name${player.isGK ? ' player-name--gk' : ''}`}>
-            {player.name}
-            {player.isGK && <span className="gk-badge">P</span>}
-            {dots && <span className="excl-dots"> {dots}</span>}
+            <span className="player-name-text">{player.name}</span>
+            {player.isGK && <Hand size={14} className="gk-hand-icon" aria-label="Portera/o" />}
+            {dots && <span className="excl-dots">{dots}</span>}
           </span>
           <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
         </div>

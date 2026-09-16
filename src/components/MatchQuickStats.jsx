@@ -41,10 +41,12 @@ function StatsGroupTable({ title, players }) {
   );
 }
 
-// Consulta rápida durante el partido, sin salir de la consola: separa
-// titulares (los elegidos al armar el partido) de suplentes, con lo básico
-// que suele preguntar la entrenadora — goles, fallos, exclusiones, minutos.
-export default function MatchQuickStats({ state, onClose }) {
+// Consulta rápida durante el partido, ahora una pestaña más de la consola
+// (antes era un modal aparte, con su propio botón "ESTADÍSTICAS" en la
+// cabecera — 2026-09-16, mockup "Consola Luminosa"): separa titulares (los
+// elegidos al armar el partido) de suplentes, con lo básico que suele
+// preguntar la entrenadora — goles, fallos, exclusiones, minutos.
+export default function MatchQuickStats({ state }) {
   const allPlayers = Object.values(state.players).sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
   const startingIds = state.startingLineupIds.length ? state.startingLineupIds : state.courtSlots;
   const startingSet = new Set(startingIds);
@@ -52,13 +54,9 @@ export default function MatchQuickStats({ state, onClose }) {
   const subs = allPlayers.filter((p) => !startingSet.has(p.id));
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal quick-stats-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Estadísticas rápidas</h2>
-        <StatsGroupTable title="Titulares" players={starters} />
-        <StatsGroupTable title="Suplentes" players={subs} />
-        <button className="modal-cancel" onClick={onClose}>Cerrar</button>
-      </div>
-    </div>
+    <>
+      <StatsGroupTable title="Titulares" players={starters} />
+      <StatsGroupTable title="Suplentes" players={subs} />
+    </>
   );
 }

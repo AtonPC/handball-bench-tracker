@@ -34,6 +34,12 @@
      más ámbar/oscuro) para que no se confundan al verlas juntas. */
   --card-yellow: #eab308;
   --card-yellow-dim: rgba(234, 179, 8, 0.14);
+  /* Color del portero (2026-09-16, mockup "Consola Luminosa") — un celeste
+     vivo, deliberadamente distinto de --accent (azul del equipo propio) y
+     --info (otro azul ya usado en la app) para que no se confundan al
+     verlos juntos en la consola, que era justo el problema con --info. */
+  --gk: #06b6d4;
+  --gk-dim: rgba(6, 182, 212, 0.14);
 
   --space-1: 4px;
   --space-2: 8px;

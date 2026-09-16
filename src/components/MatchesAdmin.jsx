@@ -2,18 +2,10 @@ import { useMemo, useState } from 'react';
 import { ChevronRight, Settings, Trash2 } from 'lucide-react';
 import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
+import { teamInitials } from '../utils/teamColors';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
 const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodDurationMinutes: 20, jornada: '', rivalCrestUrl: '' };
-
-// Iniciales para el escudo cuando el equipo (propio o rival) no tiene
-// crestUrl todavía — 2 letras, de las primeras dos palabras del nombre.
-function teamInitials(name) {
-  if (!name) return '?';
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[1][0]).toUpperCase();
-}
 
 function formatMatchDateTime(ms) {
   if (!ms) return 'Sin fecha';

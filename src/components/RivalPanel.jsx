@@ -13,7 +13,7 @@ import { formatClock } from '../utils/time';
 // badges de 7 metros son iguales pero más simples (sin cuenta atrás ni
 // expulsión, un 7m no es una sanción temporal).
 export default function RivalPanel({
-  rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalSevenMeters, rivalYellowCards,
+  rivalName, rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalSevenMeters, rivalYellowCards,
   onGoal, onOpenGoalDetail, onOpenMissDetail, onOpenExclusion, onCancelExclusion,
   onOpenSevenMeter, onCancelSevenMeter, onOpenYellowCard, onCancelYellowCard, matchRunning,
 }) {
@@ -37,8 +37,11 @@ export default function RivalPanel({
   }
 
   return (
-    <div className="rival-panel">
-      <span className="rival-panel-label">Equipo rival</span>
+    <div className="player-row player-row--rival rival-panel">
+      <div className="rival-panel-header">
+        <span className="player-number player-number--rival">R</span>
+        <span className="rival-panel-label">{rivalName || 'Equipo rival'}</span>
+      </div>
       <div className="stepper-group">
         <span className="stepper-caption">Goles</span>
         <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ClipboardList, GitCompare, Target, Users } from 'lucide-react';
 import MatchHeader from './MatchHeader';
 import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
@@ -8,15 +9,35 @@ import DorsalNumberModal from './DorsalNumberModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaveDetailModal from './SaveDetailModal';
 import MatchQuickStats from './MatchQuickStats';
+import MatchSummaryView from './MatchSummaryView';
+import ActionStatsView from './ActionStatsView';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
 import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
+import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useShotEvents } from '../hooks/useShotEvents';
+import { useSaveEvents } from '../hooks/useSaveEvents';
 import { teamColorStyle } from '../utils/teamColors';
+
+// Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
+// "Datos" es la pantalla de anotar de siempre; las otras tres reutilizan
+// tal cual pantallas que ya existían en otro sitio (antes "Estadísticas
+// rápidas" era un modal aparte con su propio botón, y "Resumen"/"Acciones"
+// solo se veían en la pestaña Estadísticas del staff o en la vista de
+// Seguidor) — ahora también se pueden consultar sin salir de la consola
+// en directo, sin duplicar ninguna lógica.
+const TABS = [
+  { key: 'datos', label: 'Datos', icon: ClipboardList },
+  { key: 'jugadores', label: 'Jugadores', icon: Users },
+  { key: 'partido', label: 'Partido', icon: GitCompare },
+  { key: 'acciones', label: 'Acciones', icon: Target },
+];
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
   const { state, matchId } = store;
   const isRunning = state.clock.status === 'running';
+  const [view, setView] = useState('datos');
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
@@ -25,15 +46,24 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [showRivalYellowCardModal, setShowRivalYellowCardModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
-  const [showQuickStats, setShowQuickStats] = useState(false);
   const rivalExclusionsLive = useRivalExclusionsLive(matchId);
   const rivalSevenMeters = useRivalSevenMeters(matchId);
   const rivalMisses = useRivalMisses(matchId);
   const rivalYellowCards = useRivalYellowCards(matchId);
+  // Solo hacían falta para "Datos" antes de tener las pestañas de
+  // Partido/Acciones — esas dos reutilizan MatchSummaryView/ActionStatsView
+  // tal cual se usan en Estadísticas/Seguidor, que sí necesitan el
+  // detalle de cada gol/fallo/parada, no solo el contador agregado.
+  const rivalGoals = useRivalGoals(matchId);
+  const shotEvents = useShotEvents(matchId);
+  const saveEvents = useSaveEvents(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
   const disqualifiedPlayers = Object.values(state.players).filter((p) => p.disqualified);
+  // Igual que en FollowerHome/FollowerMatchDetail: jugadores del PARTIDO,
+  // no de la plantilla, es lo que espera ActionStatsView.
+  const actionPlayers = Object.values(state.players).sort((a, b) => a.number - b.number);
 
   // Al llegar a la 3ª exclusión, se abre el cambio en el acto — nadie sale
   // de pista sin que se pregunte quién entra.
@@ -55,7 +85,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
 
   return (
     <div className="bench-console" style={teamColorStyle(team)}>
-      <MatchHeader store={store} onBack={onBack} onFinish={onFinish} onOpenQuickStats={() => setShowQuickStats(true)} />
+      <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} />
 
       {!isRunning && (
         <div className="match-not-running-banner">
@@ -65,50 +95,103 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
-      <div className="player-panel">
-        {courtPlayers.map((player) => (
-          <PlayerRow
-            key={player.id}
-            player={player}
-            matchRunning={isRunning}
-            onOpenSubstitution={() => setSubstitution({ outPlayerId: player.id, forced: false })}
-            actions={{
-              goalInc: () => setShotDetailFor({ playerId: player.id, kind: 'goal' }),
-              goalDec: () => store.playerGoal(player.id, -1),
-              shotInc: () => setShotDetailFor({ playerId: player.id, kind: 'miss' }),
-              shotDec: () => store.playerShot(player.id, -1),
-              recoveryInc: () => store.playerRecovery(player.id, 1),
-              recoveryDec: () => store.playerRecovery(player.id, -1),
-              saveInc: () => setSaveDetailForId(player.id),
-              saveDec: () => store.playerSave(player.id, -1),
-              exclusionStart: () => handleExclusionStart(player.id),
-              exclusionCancel: () => store.cancelExclusion(player.id),
-              yellowCardGive: () => store.playerYellowCard(player.id),
-              yellowCardCancel: () => store.cancelYellowCard(player.id),
-              sevenMeterInc: () => store.playerSevenMeterCommitted(player.id, 1),
-              sevenMeterDec: () => store.playerSevenMeterCommitted(player.id, -1),
-            }}
-          />
+      <div className="console-tab-bar">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`console-tab-btn${view === t.key ? ' console-tab-btn--active' : ''}`}
+            onClick={() => setView(t.key)}
+          >
+            <t.icon size={18} />
+            {t.label}
+          </button>
         ))}
       </div>
 
-      <RivalPanel
-        rivalGoals={state.score.rival}
-        rivalMissesCount={rivalMisses.length}
-        rivalExclusionsLive={rivalExclusionsLive}
-        rivalSevenMeters={rivalSevenMeters}
-        rivalYellowCards={rivalYellowCards}
-        onGoal={store.rivalGoal}
-        onOpenGoalDetail={() => setShowRivalGoalModal(true)}
-        onOpenMissDetail={() => setShowRivalMissModal(true)}
-        onOpenExclusion={() => setShowRivalExclusionModal(true)}
-        onCancelExclusion={store.cancelRivalExclusion}
-        onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
-        onCancelSevenMeter={store.cancelRivalSevenMeter}
-        onOpenYellowCard={() => setShowRivalYellowCardModal(true)}
-        onCancelYellowCard={store.cancelRivalYellowCard}
-        matchRunning={isRunning}
-      />
+      {view === 'datos' && (
+        <div className="player-panel">
+          {courtPlayers.map((player) => (
+            <PlayerRow
+              key={player.id}
+              player={player}
+              matchRunning={isRunning}
+              onOpenSubstitution={() => setSubstitution({ outPlayerId: player.id, forced: false })}
+              actions={{
+                goalInc: () => setShotDetailFor({ playerId: player.id, kind: 'goal' }),
+                goalDec: () => store.playerGoal(player.id, -1),
+                shotInc: () => setShotDetailFor({ playerId: player.id, kind: 'miss' }),
+                shotDec: () => store.playerShot(player.id, -1),
+                recoveryInc: () => store.playerRecovery(player.id, 1),
+                recoveryDec: () => store.playerRecovery(player.id, -1),
+                saveInc: () => setSaveDetailForId(player.id),
+                saveDec: () => store.playerSave(player.id, -1),
+                exclusionStart: () => handleExclusionStart(player.id),
+                exclusionCancel: () => store.cancelExclusion(player.id),
+                yellowCardGive: () => store.playerYellowCard(player.id),
+                yellowCardCancel: () => store.cancelYellowCard(player.id),
+                sevenMeterInc: () => store.playerSevenMeterCommitted(player.id, 1),
+                sevenMeterDec: () => store.playerSevenMeterCommitted(player.id, -1),
+              }}
+            />
+          ))}
+
+          <RivalPanel
+            rivalName={state.rivalName}
+            rivalGoals={state.score.rival}
+            rivalMissesCount={rivalMisses.length}
+            rivalExclusionsLive={rivalExclusionsLive}
+            rivalSevenMeters={rivalSevenMeters}
+            rivalYellowCards={rivalYellowCards}
+            onGoal={store.rivalGoal}
+            onOpenGoalDetail={() => setShowRivalGoalModal(true)}
+            onOpenMissDetail={() => setShowRivalMissModal(true)}
+            onOpenExclusion={() => setShowRivalExclusionModal(true)}
+            onCancelExclusion={store.cancelRivalExclusion}
+            onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
+            onCancelSevenMeter={store.cancelRivalSevenMeter}
+            onOpenYellowCard={() => setShowRivalYellowCardModal(true)}
+            onCancelYellowCard={store.cancelRivalYellowCard}
+            matchRunning={isRunning}
+          />
+        </div>
+      )}
+
+      {view === 'jugadores' && (
+        <div className="console-tab-content">
+          <MatchQuickStats state={state} />
+        </div>
+      )}
+
+      {view === 'partido' && (
+        <div className="console-tab-content">
+          <MatchSummaryView
+            statePlayers={state.players}
+            shotEvents={shotEvents}
+            rivalGoals={rivalGoals}
+            rivalMisses={rivalMisses}
+            rivalExclusions={rivalExclusionsLive}
+            ownTeamName={state.ownTeamName}
+            rivalName={state.rivalName}
+          />
+        </div>
+      )}
+
+      {view === 'acciones' && (
+        <div className="console-tab-content">
+          <ActionStatsView
+            shotEvents={shotEvents}
+            saveEvents={saveEvents}
+            rivalGoals={rivalGoals}
+            rivalMisses={rivalMisses}
+            players={actionPlayers}
+            ownTeamName={state.ownTeamName}
+            rivalName={state.rivalName}
+            ownPrimaryColor={team?.primaryColor}
+            ownSecondaryColor={team?.secondaryColor}
+          />
+        </div>
+      )}
 
       {substitution && (
         <SubstitutionModal
@@ -209,8 +292,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           onCancel={() => setSaveDetailForId(null)}
         />
       )}
-
-      {showQuickStats && <MatchQuickStats state={state} onClose={() => setShowQuickStats(false)} />}
     </div>
   );
 }
