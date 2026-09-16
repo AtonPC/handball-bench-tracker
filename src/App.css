@@ -1975,11 +1975,23 @@
   stroke: var(--border);
   stroke-width: 1;
 }
+/* Fondo de la "pared" (todo lo que rodea la portería, fuera de la red) —
+   gris, para separarla visualmente del suelo de parquet y de la propia
+   red. La red se pinta encima con su propio fondo blanco (.goal-net-backing)
+   para no volverse gris también. */
+.goal-wall-bg {
+  fill: #ccd1d8;
+}
+.goal-net-backing {
+  fill: var(--panel);
+}
 .goal-post-red {
   fill: var(--danger);
 }
+/* Poste blanco de verdad, no --text (que en el tema claro es un azul
+   oscuro casi negro) — la portería tiene que leerse roja y blanca. */
 .goal-post-white {
-  fill: var(--text);
+  fill: #fff;
 }
 .wood-plank-a {
   fill: #caa06a;

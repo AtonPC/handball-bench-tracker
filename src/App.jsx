@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, ClipboardCheck, Eye, Settings, Shield, Trash2, UserCog } from 'lucide-react';
+import { BarChart3, Bug, CalendarDays, ClipboardCheck, Eye, Settings, Shield, Trash2, UserCog } from 'lucide-react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
@@ -21,6 +21,7 @@ import AppSidebar from './components/AppSidebar';
 import FollowRequestScreen from './components/FollowRequestScreen';
 import FollowerHome from './components/FollowerHome';
 import { useMyAccessGrants } from './hooks/useFollowRequests';
+import ZoneDataDiagnostic from './components/ZoneDataDiagnostic'; // TEMPORAL, ver comentario en el propio archivo
 
 export default function App() {
   const auth = useAuth();
@@ -183,6 +184,7 @@ export default function App() {
     clubOptions.length > 0 && { key: 'staff', label: 'Staff y Permisos', icon: UserCog },
     canManageClub && { key: 'requests', label: 'Solicitudes', icon: ClipboardCheck },
     isAdmin && { key: 'system', label: 'Sistema', icon: Settings },
+    isAdmin && teamsInActiveClub.length > 0 && { key: 'zoneDiag', label: 'Diagnóstico zonas (temporal)', icon: Bug },
   ].filter(Boolean);
 
   function handleViewChange(key) {
@@ -233,6 +235,9 @@ export default function App() {
         {view === 'staff' && canManageClub && <StaffAdmin clubId={activeClubId} />}
         {view === 'requests' && canManageClub && <FollowApprovals clubId={activeClubId} identity={identity} />}
         {view === 'system' && isAdmin && <SystemAdmin />}
+        {view === 'zoneDiag' && isAdmin && activeTeam && (
+          <ZoneDataDiagnostic clubId={activeTeam.clubId} teamId={activeTeam.id} />
+        )}
       </main>
     </div>
   );

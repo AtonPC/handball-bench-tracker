@@ -183,6 +183,8 @@ export default function ShotZoneDiagram({
 
       {showGoal && (
         <>
+          <rect x={0} y={0} width={VIEW_W} height={showOrigin ? FAN_CY : GOAL_Y + GOAL_H + 40} className="goal-wall-bg" />
+          <rect x={GOAL_X} y={GOAL_Y} width={GOAL_W} height={GOAL_H} className="goal-net-backing" />
           <rect x={GOAL_X} y={GOAL_Y} width={GOAL_W} height={GOAL_H} fill="url(#goal-net)" />
           {/* Postes y larguero a rayas, por encima de la red */}
           <g className="goal-frame-stripes">
