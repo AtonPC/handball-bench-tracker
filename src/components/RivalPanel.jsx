@@ -1,6 +1,7 @@
 import StatStepper from './StatStepper';
 import { summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { summarizeRivalSevenMeters } from '../hooks/useRivalSevenMeters';
+import { summarizeRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { formatClock } from '../utils/time';
 
 // Los badges de exclusión rival dejan ver, sin salir de la consola, qué
@@ -12,12 +13,13 @@ import { formatClock } from '../utils/time';
 // badges de 7 metros son iguales pero más simples (sin cuenta atrás ni
 // expulsión, un 7m no es una sanción temporal).
 export default function RivalPanel({
-  rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalSevenMeters,
+  rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalSevenMeters, rivalYellowCards,
   onGoal, onOpenGoalDetail, onOpenMissDetail, onOpenExclusion, onCancelExclusion,
-  onOpenSevenMeter, onCancelSevenMeter, matchRunning,
+  onOpenSevenMeter, onCancelSevenMeter, onOpenYellowCard, onCancelYellowCard, matchRunning,
 }) {
   const exclusionSummary = summarizeRivalExclusions(rivalExclusionsLive);
   const sevenMeterSummary = summarizeRivalSevenMeters(rivalSevenMeters);
+  const yellowCardSummary = summarizeRivalYellowCards(rivalYellowCards);
 
   function handleExclusionBadgeClick(entry) {
     const ok = confirm(`¿Anular la última exclusión del dorsal #${entry.number}? (marcada por error)`);
@@ -27,6 +29,11 @@ export default function RivalPanel({
   function handleSevenMeterBadgeClick(entry) {
     const ok = confirm(`¿Anular el último 7 metros del dorsal #${entry.number}? (marcado por error)`);
     if (ok) onCancelSevenMeter(entry.lastEventId);
+  }
+
+  function handleYellowCardBadgeClick(entry) {
+    const ok = confirm(`¿Anular la tarjeta amarilla del dorsal #${entry.number}? (marcada por error)`);
+    if (ok) onCancelYellowCard(entry.lastEventId);
   }
 
   return (
@@ -74,6 +81,22 @@ export default function RivalPanel({
               title="Tocar para anular el último 7 metros de este dorsal"
             >
               #{entry.number} · {entry.count}
+            </button>
+          ))}
+        </div>
+      )}
+      <button className="btn btn-timeout" onClick={onOpenYellowCard} disabled={!matchRunning}>TARJETA AMARILLA RIVAL</button>
+      {yellowCardSummary.length > 0 && (
+        <div className="rival-excl-badges">
+          {yellowCardSummary.map((entry) => (
+            <button
+              key={entry.number}
+              type="button"
+              className="rival-excl-badge rival-excl-badge--yellow"
+              onClick={() => handleYellowCardBadgeClick(entry)}
+              title="Tocar para anular la tarjeta amarilla de este dorsal"
+            >
+              #{entry.number} · AM
             </button>
           ))}
         </div>

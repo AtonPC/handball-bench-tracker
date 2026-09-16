@@ -316,6 +316,35 @@ service cloud.firestore {
           'benchConsole'
         );
       }
+
+      // Tarjeta amarilla propia (2026-09-16): solo dorsal/jugador y minuto,
+      // sin cuenta atrás — es una amonestación, no una sanción temporal.
+      // Como mucho un documento por jugador y partido (se aplica en el
+      // cliente, no aquí).
+      match /yellowCardEvents/{yellowCardEventId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
+
+      // Tarjeta amarilla rival — mismo criterio que rivalSevenMeters.
+      match /rivalYellowCards/{rivalYellowCardId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
     }
   }
 }

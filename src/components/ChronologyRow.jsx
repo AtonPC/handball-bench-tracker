@@ -6,7 +6,8 @@ import EventIcon from './EventIcon';
 // contenedor alrededor.
 function eventIconType(entry) {
   if (entry.type === 'miss') return entry.missKind === 'saved' ? 'miss-saved' : 'miss-out';
-  if (entry.type === 'exclusion') return entry.disqualified ? 'card-red' : 'card-amber';
+  if (entry.type === 'exclusion') return entry.disqualified ? 'card-red' : 'twoFingers';
+  if (entry.type === 'yellowCard') return 'card-yellow';
   if (entry.type === 'save') return 'save';
   if (entry.type === 'goal') return 'goal';
   if (entry.type === 'recovery') return 'recovery';
@@ -25,6 +26,7 @@ function eventLabel(entry) {
     save: 'Parada',
     recovery: 'Recuperación',
     exclusion: entry.disqualified ? 'Roja' : 'Exclusión',
+    yellowCard: 'Tarjeta amarilla',
     sevenMeter: '7 metros provocados',
   }[entry.type];
 }

@@ -2,6 +2,7 @@ import { Repeat } from 'lucide-react';
 import { formatClock } from '../utils/time';
 import StatStepper from './StatStepper';
 import ExclusionControl from './ExclusionControl';
+import YellowCardControl from './YellowCardControl';
 
 function exclusionRowClass(player) {
   if (player.disqualified) return ' player-row--disqualified';
@@ -32,6 +33,8 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
         </div>
 
         <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} disabled={!matchRunning} />
+
+        <YellowCardControl player={player} onGive={actions.yellowCardGive} onCancel={actions.yellowCardCancel} disabled={disabled} />
 
         {/* Compacto y aparte de los stats de disparo: un 7m cometido es raro,
             no hace falta el mismo peso visual que Gol/Fallo/Recup — mismo

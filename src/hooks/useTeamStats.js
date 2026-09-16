@@ -39,7 +39,7 @@ export function useTeamStats(finishedMatchIds) {
           const p = d.data();
           const cur = acc[d.id] || {
             number: p.number, name: p.name, isGK: p.isGK,
-            goals: 0, shots: 0, saves: 0, recoveries: 0, exclusionsCount: 0, disqualifications: 0, accumulatedMs: 0,
+            goals: 0, shots: 0, saves: 0, recoveries: 0, exclusionsCount: 0, yellowCards: 0, disqualifications: 0, accumulatedMs: 0,
             matchesCalledUp: 0, matchesPlayed: 0,
           };
           cur.number = p.number;
@@ -50,6 +50,7 @@ export function useTeamStats(finishedMatchIds) {
           cur.saves += p.saves || 0;
           cur.recoveries += p.recoveries || 0;
           cur.exclusionsCount += p.exclusionsCount || 0;
+          cur.yellowCards += p.yellowCard ? 1 : 0;
           cur.disqualifications += p.disqualified ? 1 : 0;
           cur.accumulatedMs += p.accumulatedMs || 0;
           // Convocado: tiene documento en este partido. Jugado: además pisó

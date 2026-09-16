@@ -10,6 +10,8 @@ import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
+import { useYellowCardEvents } from '../hooks/useYellowCardEvents';
+import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { useFollowerSession } from '../hooks/useFollowerSession';
@@ -35,10 +37,12 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const rivalMisses = useRivalMisses(liveMatch?.id || null);
   const rivalExclusions = useRivalExclusionsLive(liveMatch?.id || null);
   const rivalSevenMeters = useRivalSevenMeters(liveMatch?.id || null);
+  const rivalYellowCards = useRivalYellowCards(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
   const saveEvents = useSaveEvents(liveMatch?.id || null);
   const recoveryEvents = useRecoveryEvents(liveMatch?.id || null);
   const exclusionEvents = useExclusionEvents(liveMatch?.id || null);
+  const yellowCardEvents = useYellowCardEvents(liveMatch?.id || null);
   const { players } = usePlayers(clubId, teamId);
 
   const authorizedById = useMemo(
@@ -50,8 +54,11 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters }),
-    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters]
+    () => buildChronology({
+      ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, ownYellowCards: yellowCardEvents,
+      rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards,
+    }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, yellowCardEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards]
   );
 
   // Jugadores del PARTIDO (con id/nombre/dorsal ya resueltos por

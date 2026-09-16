@@ -1624,6 +1624,11 @@
   color: #fff;
   cursor: default;
 }
+.excl-btn--yellow {
+  background: var(--card-yellow-dim);
+  border-color: var(--card-yellow);
+  color: var(--card-yellow);
+}
 .excl-count {
   font-size: 10px;
   font-weight: 600;
@@ -1715,6 +1720,11 @@
   border-color: var(--danger);
   background: var(--danger);
   color: #fff;
+}
+.rival-excl-badge--yellow {
+  border-color: var(--card-yellow);
+  background: var(--card-yellow-dim);
+  color: var(--card-yellow);
 }
 
 /* ---------- Modal de sustitución ---------- */

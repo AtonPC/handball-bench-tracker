@@ -29,6 +29,11 @@
   --live: #1fae6b;
   --live-bright: #35e08c;
   --start: #ff6a1f;
+  /* Tarjeta amarilla (amonestación) de verdad, 2026-09-16 — distinta de
+     --warning (que ya significa "programado"/"1-2 exclusiones", un tono
+     más ámbar/oscuro) para que no se confundan al verlas juntas. */
+  --card-yellow: #eab308;
+  --card-yellow-dim: rgba(234, 179, 8, 0.14);
 
   --space-1: 4px;
   --space-2: 8px;

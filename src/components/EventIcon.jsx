@@ -50,10 +50,22 @@ export default function EventIcon({ type, size = 18 }) {
           <rect x="6.5" y="3.5" width="11" height="17" rx="2" fill="var(--danger)" />
         </svg>
       );
-    case 'card-amber':
+    case 'card-yellow':
       return (
         <svg {...props}>
-          <rect x="6.5" y="3.5" width="11" height="17" rx="2" fill="var(--warning)" />
+          <rect x="6.5" y="3.5" width="11" height="17" rx="2" fill="var(--card-yellow)" />
+        </svg>
+      );
+    // Señal del árbitro de 2 minutos (dos dedos levantados) — antes era una
+    // tarjeta ámbar, pero una exclusión de 2' no es ninguna tarjeta de
+    // verdad, y ahora sí existe una tarjeta amarilla real (case de arriba)
+    // con la que no se puede confundir.
+    case 'twoFingers':
+      return (
+        <svg {...props}>
+          <rect x="8" y="8" width="8.5" height="13" rx="4" fill="var(--warning)" />
+          <rect x="8.7" y="2" width="2.6" height="12" rx="1.3" fill="var(--warning)" />
+          <rect x="12.7" y="2" width="2.6" height="12" rx="1.3" fill="var(--warning)" />
         </svg>
       );
     case 'sevenMeter':

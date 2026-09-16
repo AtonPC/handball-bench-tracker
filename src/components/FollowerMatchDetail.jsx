@@ -9,6 +9,8 @@ import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
+import { useYellowCardEvents } from '../hooks/useYellowCardEvents';
+import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { usePlayers } from '../hooks/usePlayers';
 import { buildChronology } from '../utils/followerHelpers';
 import ChronologyRow from './ChronologyRow';
@@ -31,6 +33,8 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
   const saveEvents = useSaveEvents(matchId);
   const recoveryEvents = useRecoveryEvents(matchId);
   const exclusionEvents = useExclusionEvents(matchId);
+  const yellowCardEvents = useYellowCardEvents(matchId);
+  const rivalYellowCards = useRivalYellowCards(matchId);
   const { players } = usePlayers(clubId, teamId);
 
   const authorizedById = useMemo(
@@ -42,8 +46,11 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
   const ownMisses = useMemo(() => shotEvents.filter((e) => e.type === 'miss'), [shotEvents]);
 
   const chronology = useMemo(
-    () => buildChronology({ ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters }),
-    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters]
+    () => buildChronology({
+      ownGoals, ownMisses, ownSaves: saveEvents, ownRecoveries: recoveryEvents, ownExclusions: exclusionEvents, ownYellowCards: yellowCardEvents,
+      rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards,
+    }),
+    [ownGoals, ownMisses, saveEvents, recoveryEvents, exclusionEvents, yellowCardEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards]
   );
 
   // Jugadores del PARTIDO, no de la plantilla — igual que en el partido en

@@ -19,6 +19,7 @@ function buildSnapshot(match, players) {
       recoveries: p.recoveries,
       exclusionsCount: p.exclusionsCount,
       disqualified: p.disqualified,
+      yellowCard: p.yellowCard,
       isGK: p.isGK,
     };
   }
@@ -362,6 +363,32 @@ export function useMatchStore(matchId, enabled) {
     [matchId]
   );
 
+  // Tarjeta amarilla rival: solo dorsal y minuto, igual que un 7m rival —
+  // no es una sanción temporal, no cambia el marcador. Como mucho una por
+  // dorsal en el partido: la comprobación de si ese dorsal ya la tiene se
+  // hace en quien llama (BenchConsole.jsx), con la lista ya cargada.
+  const rivalYellowCard = useCallback(
+    (number) => {
+      if (!match || match.status !== 'running') return;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'rivalYellowCards'));
+      recordEvent(`Tarjeta amarilla rival #${number}`, {}, {}, {
+        create: { ref, data: { number, minute, period: match.period, createdAt: Date.now() } },
+      });
+    },
+    [match, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Anula una tarjeta amarilla rival marcada por error — borrado duro,
+  // igual que anular un 7m rival.
+  const cancelRivalYellowCard = useCallback(
+    (rivalYellowCardId) => {
+      if (!matchId) return;
+      return deleteDoc(doc(db, 'matches', matchId, 'rivalYellowCards', rivalYellowCardId));
+    },
+    [matchId]
+  );
+
   // --- Tiempos muertos ---
   const timeout = useCallback(
     (team, delta = 1) => {
@@ -564,6 +591,35 @@ export function useMatchStore(matchId, enabled) {
     [match, players, recordEvent]
   );
 
+  // Tarjeta amarilla propia: una amonestación, no una sanción temporal —
+  // no cambia el marcador ni saca a nadie de pista. Como mucho una por
+  // jugador y partido (el propio botón deja de estar disponible en cuanto
+  // `yellowCard` es true, y aquí se comprueba otra vez por si acaso).
+  const playerYellowCard = useCallback(
+    (playerId) => {
+      if (!match || match.status !== 'running') return;
+      if (players[playerId]?.yellowCard) return;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'yellowCardEvents'));
+      recordEvent('Tarjeta amarilla', {}, { [playerId]: { yellowCard: true } }, {
+        create: { ref, data: { playerId, minute, period: match.period, createdAt: Date.now() } },
+      });
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Anula una tarjeta amarilla marcada por error — mismo criterio que
+  // cancelExclusion (solo se corrige el campo del jugador, sin borrar el
+  // documento de detalle; el "Deshacer" general sí lo borra si es la
+  // última acción).
+  const cancelYellowCard = useCallback(
+    (playerId) => {
+      if (!players[playerId]?.yellowCard) return;
+      recordEvent('Cancelar tarjeta amarilla', {}, { [playerId]: { yellowCard: false } });
+    },
+    [players, recordEvent]
+  );
+
   // --- Sustitución ---
   // Si el que sale es el portero de este partido, el que entra hereda ese
   // rol — el portero es un papel del partido, no de la ficha del jugador.
@@ -678,6 +734,8 @@ export function useMatchStore(matchId, enabled) {
     cancelRivalExclusion,
     rivalSevenMeter,
     cancelRivalSevenMeter,
+    rivalYellowCard,
+    cancelRivalYellowCard,
     timeout,
     playerGoal,
     playerGoalWithDetail,
@@ -689,6 +747,8 @@ export function useMatchStore(matchId, enabled) {
     playerSaveWithDetail,
     playerExclusion,
     cancelExclusion,
+    playerYellowCard,
+    cancelYellowCard,
     substitute,
     substituteDisqualified,
     undo,

@@ -53,6 +53,10 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
     { key: 'savePct', label: '% Paradas', value: (p) => (p.isGK ? ratio(p.saves || 0, p.shotsFaced) : -1), render: (p) => (p.isGK ? pct(p.saves || 0, p.shotsFaced) : '—') },
     { key: 'recoveries', label: 'Recup.', value: (p) => p.recoveries, render: (p) => p.recoveries },
     { key: 'exclusions', label: 'Excl.', value: (p) => p.exclusionsCount || 0, render: (p) => p.exclusionsCount || 0 },
+    // Igual que `disqualified` debajo: en un partido es un booleano (Sí/—,
+    // como mucho una por jugador); en el acumulado de temporada es cuántas
+    // veces ha pasado (0 se muestra igual como "—").
+    { key: 'yellowCard', label: 'Amarilla', value: (p) => Number(p.yellowCard) || 0, render: (p) => (typeof p.yellowCard === 'number' ? p.yellowCard || '—' : (p.yellowCard ? 'Sí' : '—')) },
     // En un partido, `disqualified` es un booleano (Sí/—); en el acumulado de
     // temporada es cuántas veces ha pasado (0 se muestra igual como "—").
     { key: 'disqualified', label: 'Roja', value: (p) => Number(p.disqualified) || 0, render: (p) => (typeof p.disqualified === 'number' ? p.disqualified || '—' : (p.disqualified ? 'Sí' : '—')) }

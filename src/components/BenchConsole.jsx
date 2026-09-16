@@ -11,6 +11,7 @@ import MatchQuickStats from './MatchQuickStats';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
 import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { useRivalMisses } from '../hooks/useRivalMisses';
+import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { teamColorStyle } from '../utils/teamColors';
 
 export default function BenchConsole({ store, onBack, onFinish, team }) {
@@ -21,12 +22,14 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
   const [showRivalSevenMeterModal, setShowRivalSevenMeterModal] = useState(false);
+  const [showRivalYellowCardModal, setShowRivalYellowCardModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
   const [showQuickStats, setShowQuickStats] = useState(false);
   const rivalExclusionsLive = useRivalExclusionsLive(matchId);
   const rivalSevenMeters = useRivalSevenMeters(matchId);
   const rivalMisses = useRivalMisses(matchId);
+  const rivalYellowCards = useRivalYellowCards(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -80,6 +83,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
               saveDec: () => store.playerSave(player.id, -1),
               exclusionStart: () => handleExclusionStart(player.id),
               exclusionCancel: () => store.cancelExclusion(player.id),
+              yellowCardGive: () => store.playerYellowCard(player.id),
+              yellowCardCancel: () => store.cancelYellowCard(player.id),
               sevenMeterInc: () => store.playerSevenMeterCommitted(player.id, 1),
               sevenMeterDec: () => store.playerSevenMeterCommitted(player.id, -1),
             }}
@@ -92,6 +97,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         rivalMissesCount={rivalMisses.length}
         rivalExclusionsLive={rivalExclusionsLive}
         rivalSevenMeters={rivalSevenMeters}
+        rivalYellowCards={rivalYellowCards}
         onGoal={store.rivalGoal}
         onOpenGoalDetail={() => setShowRivalGoalModal(true)}
         onOpenMissDetail={() => setShowRivalMissModal(true)}
@@ -99,6 +105,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         onCancelExclusion={store.cancelRivalExclusion}
         onOpenSevenMeter={() => setShowRivalSevenMeterModal(true)}
         onCancelSevenMeter={store.cancelRivalSevenMeter}
+        onOpenYellowCard={() => setShowRivalYellowCardModal(true)}
+        onCancelYellowCard={store.cancelRivalYellowCard}
         matchRunning={isRunning}
       />
 
@@ -156,6 +164,22 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             setShowRivalSevenMeterModal(false);
           }}
           onCancel={() => setShowRivalSevenMeterModal(false)}
+        />
+      )}
+
+      {showRivalYellowCardModal && (
+        <DorsalNumberModal
+          title="Tarjeta amarilla rival — ¿qué dorsal?"
+          confirmLabel="REGISTRAR AMARILLA"
+          onConfirm={(detail) => {
+            if (rivalYellowCards.some((e) => e.number === detail.number)) {
+              alert(`El dorsal #${detail.number} ya tiene tarjeta amarilla en este partido.`);
+              return;
+            }
+            store.rivalYellowCard(detail.number);
+            setShowRivalYellowCardModal(false);
+          }}
+          onCancel={() => setShowRivalYellowCardModal(false)}
         />
       )}
 

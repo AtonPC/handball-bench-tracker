@@ -66,6 +66,7 @@ export default function TeamStats({ clubId, teamId, teamName, leagueId, onOpenMa
       ...p,
       attempts: p.goals + p.shots,
       shotsFaced: (p.saves || 0) + teamRivalGoalsConceded,
+      yellowCard: p.yellowCards || 0,
       disqualified: p.disqualifications || 0,
     }));
   }, [totals, teamRivalGoalsConceded]);

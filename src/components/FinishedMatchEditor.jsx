@@ -46,6 +46,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
           saves: p.saves || 0,
           recoveries: p.recoveries,
           exclusionsCount: p.exclusionsCount || 0,
+          yellowCard: !!p.yellowCard,
           disqualified: !!p.disqualified,
           minutes: Math.round((p.accumulatedMs || 0) / 60000),
         };
@@ -87,6 +88,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
       saves: Number(d.saves) || 0,
       recoveries: Number(d.recoveries) || 0,
       exclusionsCount: Number(d.exclusionsCount) || 0,
+      yellowCard: d.yellowCard,
       disqualified: d.disqualified,
       accumulatedMs: (Number(d.minutes) || 0) * 60000,
     });
@@ -201,6 +203,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
                 <th>Paradas</th>
                 <th>Recup.</th>
                 <th>Excl.</th>
+                <th>Amarilla</th>
                 <th>Roja</th>
                 <th></th>
               </tr>
@@ -219,6 +222,9 @@ export default function FinishedMatchEditor({ store, onBack }) {
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.saves} onChange={(e) => updateDraft(p.id, 'saves', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.recoveries} onChange={(e) => updateDraft(p.id, 'recoveries', e.target.value)} /></td>
                     <td><input className="player-form-input player-form-input--number" type="number" value={d.exclusionsCount} onChange={(e) => updateDraft(p.id, 'exclusionsCount', e.target.value)} /></td>
+                    <td>
+                      <input type="checkbox" checked={d.yellowCard} onChange={(e) => updateDraft(p.id, 'yellowCard', e.target.checked)} />
+                    </td>
                     <td>
                       <input type="checkbox" checked={d.disqualified} onChange={(e) => updateDraft(p.id, 'disqualified', e.target.checked)} />
                     </td>

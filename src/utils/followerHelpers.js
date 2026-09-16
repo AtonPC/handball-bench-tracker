@@ -19,9 +19,9 @@ export function ownPlayerLabel(playersById, authorizedById, playerId) {
   return rosterDisplayName(p) || `#${p.number ?? '?'}`;
 }
 
-// Cronología unificada: goles, fallos, paradas y recuperaciones propias, y
-// goles, fallos, exclusiones y 7 metros del rival, ordenados de más
-// reciente a más antiguo. Las exclusiones rivales no traen guardado si
+// Cronología unificada: goles, fallos, paradas, recuperaciones, exclusiones
+// y tarjetas amarillas propias, y goles, fallos, exclusiones, 7 metros y
+// tarjetas amarillas del rival, ordenados de más reciente a más antiguo. Las exclusiones rivales no traen guardado si
 // fueron la 3ª de ese dorsal (a diferencia de las propias) — se calcula
 // aquí, en orden cronológico. Se usa tanto para el partido en directo
 // como para el detalle de un partido finalizado — la lógica es la misma
@@ -30,7 +30,7 @@ export function ownPlayerLabel(playersById, authorizedById, playerId) {
 // con el desempate de Firestore sin relación con el orden real) — sin él
 // no salían en el orden en que pasaron de verdad, solo agrupados por tipo
 // de suceso.
-export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, ownExclusions, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters }) {
+export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, ownExclusions, ownYellowCards, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards }) {
   const entries = [];
   for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'own', playerId: g.playerId });
   // missKind distingue de un vistazo por qué no fue gol: 'out' si la
@@ -45,12 +45,14 @@ export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, 
   for (const s of ownSaves || []) entries.push({ id: `os-${s.id}`, minute: s.minute, createdAt: s.createdAt, type: 'save', side: 'own', playerId: s.playerId });
   for (const r of ownRecoveries) entries.push({ id: `or-${r.id}`, minute: r.minute, createdAt: r.createdAt, type: 'recovery', side: 'own', playerId: r.playerId });
   for (const e of ownExclusions) entries.push({ id: `oe-${e.id}`, minute: e.minute, createdAt: e.createdAt, type: 'exclusion', side: 'own', playerId: e.playerId, disqualified: e.disqualified });
+  for (const y of ownYellowCards || []) entries.push({ id: `oy-${y.id}`, minute: y.minute, createdAt: y.createdAt, type: 'yellowCard', side: 'own', playerId: y.playerId });
   for (const g of rivalGoals) entries.push({ id: `rg-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'rival', number: g.number });
   // Un fallo rival (tiró fuera, sin que paráramos nada) siempre es 'out'
   // por definición — si lo hubiéramos parado, sería una Parada propia, no
   // esto (ver rivalMiss() en useMatchStore.js).
   for (const m of rivalMisses || []) entries.push({ id: `rm-${m.id}`, minute: m.minute, createdAt: m.createdAt, type: 'miss', side: 'rival', number: m.number, missKind: 'out' });
   for (const s of rivalSevenMeters || []) entries.push({ id: `rs-${s.id}`, minute: s.minute, createdAt: s.createdAt, type: 'sevenMeter', side: 'rival', number: s.number });
+  for (const y of rivalYellowCards || []) entries.push({ id: `ry-${y.id}`, minute: y.minute, createdAt: y.createdAt, type: 'yellowCard', side: 'rival', number: y.number });
 
   const rivalCounts = {};
   const sortedRivalExclusions = [...rivalExclusions].sort((a, b) => a.minute - b.minute);
