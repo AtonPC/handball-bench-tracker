@@ -1,7 +1,7 @@
 import { ArrowLeft, Undo2 } from 'lucide-react';
 import { formatClock } from '../utils/time';
 import { teamInitials } from '../utils/teamColors';
-import StatStepper from './StatStepper';
+import TimeoutsMenu from './TimeoutsMenu';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
 
 // Cabecera de la consola en directo (2026-09-16, mockup "Consola
@@ -119,14 +119,15 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
 
       <div className="controls-row">
         {renderClockButton()}
-        <div className="tm-group">
-          <span className="tm-group-label">T.M. propio</span>
-          <StatStepper compact icon={`P.${clock.period}`} label="Tiempo muerto propio" count={timeouts.own[clock.period] || 0} onInc={() => store.timeout('own', 1)} onDec={() => store.timeout('own', -1)} />
-        </div>
-        <div className="tm-group">
-          <span className="tm-group-label">T.M. rival</span>
-          <StatStepper compact icon={`P.${clock.period}`} label="Tiempo muerto rival" count={timeouts.rival[clock.period] || 0} onInc={() => store.timeout('rival', 1)} onDec={() => store.timeout('rival', -1)} />
-        </div>
+        <TimeoutsMenu
+          ownName={ownTeamName}
+          rivalName={rivalName}
+          isHome={isHome}
+          timeouts={timeouts}
+          period={clock.period}
+          periodCount={periodCount}
+          onRequest={store.timeout}
+        />
         <button className="ctrl-btn ctrl-btn--finish" onClick={handleFinish}>FINALIZAR</button>
       </div>
     </header>

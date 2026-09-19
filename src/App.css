@@ -1374,16 +1374,19 @@
 .score-rival { color: var(--rival); }
 .score-sep { color: var(--text-dim); font-size: 18px; }
 
-/* Fila de controles: pausar/1T/2T, tiempos muertos y finalizar — siempre
-   visibles (nunca detrás de un menú ni fuera de la pantalla), scroll
-   horizontal solo si no caben en una pantalla muy estrecha. */
+/* Fila de controles: pausar/1T/2T, un botón central de tiempos muertos y
+   finalizar — siempre visibles. Ya NO hay scroll horizontal: los dos
+   contadores de tiempos muertos que lo provocaban se sustituyeron por un
+   solo botón con desplegable (TimeoutsMenu). Si aun así algo no cupiera (p.
+   ej. REANUDAR + INICIAR 2C + los otros dos en un móvil estrecho), FINALIZAR
+   baja a una segunda línea en vez de salirse de la pantalla. */
 .controls-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
   border-top: 1px solid var(--border);
-  overflow-x: auto;
 }
 .clock-btn-group {
   display: flex;
@@ -1415,21 +1418,6 @@
 .ctrl-btn--finish {
   background: var(--danger);
   margin-left: auto;
-}
-.tm-group {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 8px;
-}
-.tm-group-label {
-  font-size: 10.5px;
-  color: var(--text-dim);
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .stepper-group {
@@ -3468,5 +3456,217 @@
     text-overflow: clip;
     word-break: break-word;
     line-height: 1.2;
+  }
+}
+
+/* ---------- Tiempos muertos: botón central + desplegable tipo marcador (2026-09-19) ---------- */
+.ctrl-btn--tm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 auto;
+  padding: 5px 8px;
+  background: var(--panel-alt);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.ctrl-btn--tm-open {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tm-btn-label {
+  max-width: 62px;
+  font-size: 9.5px;
+  line-height: 1.1;
+  text-align: left;
+  white-space: normal;
+}
+.tm-btn-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font: 700 12px/1.2 var(--font-mono);
+}
+.tm-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(16, 19, 26, 0.25);
+}
+.tm-menu {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 91;
+  width: min(92vw, 380px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgba(22, 33, 62, 0.28);
+}
+.tm-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.tm-menu-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.tm-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tm-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-alt);
+}
+.tm-side--own {
+  border-color: var(--own);
+}
+.tm-side--rival {
+  border-color: var(--rival);
+}
+.tm-team {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.tm-total {
+  font: 700 40px/1 var(--font-mono);
+}
+.tm-side--own .tm-total {
+  color: var(--own);
+}
+.tm-side--rival .tm-total {
+  color: var(--rival);
+}
+.tm-periods {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.tm-period--now {
+  color: var(--text);
+  font-weight: 700;
+}
+.tm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tm-action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.tm-request {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font: 800 12px/1.15 var(--font-body);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.tm-request:active {
+  transform: scale(0.97);
+}
+.tm-request span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.tm-request--own {
+  background: var(--own);
+}
+.tm-request--rival {
+  background: var(--rival);
+}
+.tm-remove {
+  min-height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.tm-remove:disabled {
+  opacity: 0.35;
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Móvil vertical: la fila de controles (reloj + tiempos muertos + FINALIZAR)
+   tiene que caber en una sola línea en ~340px. El botón central pierde el
+   icono y los botones ajustan un poco su relleno. */
+@media (max-width: 599px) {
+  .controls-row {
+    padding: 6px 8px;
+    gap: 5px;
+  }
+  .clock-btn-group {
+    gap: 5px;
+  }
+  .controls-row .ctrl-btn {
+    padding: 8px 9px;
+    font-size: 11px;
+  }
+  .controls-row .ctrl-btn--tm {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  .ctrl-btn--tm svg {
+    display: none;
+  }
+  .tm-btn-label {
+    max-width: 56px;
+    font-size: 9px;
+  }
+  .tm-btn-badge {
+    padding: 2px 5px;
+    font-size: 11px;
   }
 }
