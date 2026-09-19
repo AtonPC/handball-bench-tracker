@@ -1251,11 +1251,13 @@
 }
 
 .header-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 8px 10px 0;
 }
+.header-bar-left { justify-self: start; }
+.header-bar-right { justify-self: end; }
 .icon-btn-sm {
   display: inline-flex;
   align-items: center;
@@ -1308,6 +1310,24 @@
 }
 .clock-time--over {
   color: var(--danger);
+}
+.clock-time { position: relative; }
+/* El tiempo añadido va pegado a la derecha sin mover el cronometro, que sigue centrado. */
+.clock-extra {
+  position: absolute;
+  left: 100%;
+  bottom: 3px;
+  margin-left: 6px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+.follower-clock-extra {
+  font-size: 0.75em;
+  color: #ffb4b4;
 }
 .teams-score-row {
   display: grid;

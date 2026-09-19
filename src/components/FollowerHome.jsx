@@ -15,7 +15,7 @@ import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { usePlayers } from '../hooks/usePlayers';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { useFollowerSession } from '../hooks/useFollowerSession';
-import { formatClock } from '../utils/time';
+import { formatClock, periodClockDisplay } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
 import { periodShortLabel } from '../utils/periods';
 import { FOLLOWER_TIERS, isProTier } from '../utils/followerTier';
@@ -147,6 +147,7 @@ function LiveMatchSection({ clubId, teamId, team, logView, tier }) {
   const ownPenalized = Object.values(state.players).filter((p) => (p.exclusionsCount || 0) > 0 || p.disqualified);
   const isOwnLeft = state.isHome;
   const recentEvents = chronology.slice(0, 4);
+  const clockShown = periodClockDisplay(state.clock.periodRemainingMs, state.clock.periodDurationMs);
 
   return (
     <div>
@@ -184,9 +185,8 @@ function LiveMatchSection({ clubId, teamId, team, logView, tier }) {
       <div className="follower-scoreboard">
         {state.jornada != null && <p className="follower-jornada">Jornada {state.jornada}</p>}
         <span className="follower-clock">
-          {periodShortLabel(state.clock.period, state.clock.periodCount)} · {state.clock.periodRemainingMs < 0
-            ? `+${formatClock(-state.clock.periodRemainingMs)}`
-            : formatClock(state.clock.periodRemainingMs)}
+          {periodShortLabel(state.clock.period, state.clock.periodCount)} · {clockShown.main}
+          {clockShown.extra && <small className="follower-clock-extra"> {clockShown.extra}</small>}
         </span>
 
         <div className="follower-teams-row">

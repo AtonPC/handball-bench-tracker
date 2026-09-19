@@ -1,5 +1,5 @@
 import { ArrowLeft, Pause, Play, RotateCcw, Square, Undo2 } from 'lucide-react';
-import { formatClock } from '../utils/time';
+import { periodClockDisplay } from '../utils/time';
 import { teamInitials } from '../utils/teamColors';
 import TimeoutsMenu from './TimeoutsMenu';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
@@ -121,22 +121,25 @@ export default function MatchHeader({ store, team, onBack, onFinish, onNeedLineu
     );
   }
 
+  const display = periodClockDisplay(clock.periodRemainingMs, clock.periodDurationMs);
+
   return (
     <header className="match-header">
       <div className="header-bar">
-        <button className="icon-btn-sm" onClick={onBack}>
+        <button className="icon-btn-sm header-bar-left" onClick={onBack}>
           <ArrowLeft size={14} /> PARTIDOS
         </button>
-        <button className="icon-btn-sm" onClick={handleUndo} disabled={!store.canUndo}>
+        <span className="period-pill">{longLabel(clock.period)}</span>
+        <button className="icon-btn-sm header-bar-right" onClick={handleUndo} disabled={!store.canUndo}>
           <Undo2 size={14} /> DESHACER
         </button>
       </div>
 
       <div className="score-block">
         <div className="clock-row">
-          <span className="period-pill">{longLabel(clock.period)}</span>
-          <span className={`clock-time${clock.periodRemainingMs < 0 ? ' clock-time--over' : ''}`}>
-            {clock.periodRemainingMs < 0 ? `+${formatClock(-clock.periodRemainingMs)}` : formatClock(clock.periodRemainingMs)}
+          <span className={`clock-time${display.extra ? ' clock-time--over' : ''}`}>
+            {display.main}
+            {display.extra && <span className="clock-extra" title="Tiempo añadido">{display.extra}</span>}
           </span>
         </div>
         <div className="teams-score-row">
