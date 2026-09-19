@@ -305,9 +305,10 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
                 onChange={(e) => setForm({ ...form, alevinRules: e.target.checked })}
               />
               <span>
-                <strong>Avisos de Alevín</strong>: avisa si en un cuarto empiezan jugadores que ya empezaron el
-                anterior (solo se puede repetir con menos de 14 convocados). Es solo un aviso: nunca impide iniciar
-                un cuarto ni hacer un cambio — desmárcalo en un entrenamiento o amistoso.
+                <strong>Reglas Alevín</strong>: antes de iniciar cada cuarto hay que elegir el equipo titular (con la
+                vista de quién empezó los anteriores) y se avisa si se repite algún jugador (solo se puede repetir con
+                menos de 14 convocados). Los avisos nunca impiden confirmarlo ni hacer cambios. Desmárcalo si no quieres
+                este paso (p. ej. en un entrenamiento).
               </span>
             </label>
           )}

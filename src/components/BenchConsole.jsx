@@ -166,7 +166,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
 
   return (
     <div className="bench-console" style={teamColorStyle(team)}>
-      <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} />
+      <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} onNeedLineup={() => setShowLineupModal(true)} />
 
       {!isRunning && (
         <div className="match-not-running-banner">
@@ -174,7 +174,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             {state.clock.status === 'idle'
               ? `⏸ PARTIDO NO INICIADO — pulsa ▶ (INICIAR ${periodShortLabel(1, state.clock.periodCount)}) arriba para poder anotar`
               : betweenPeriods
-                ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — puedes hacer cambios; pulsa ▶ (INICIAR ${nextShort}) arriba para seguir`
+                ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — ${state.alevinRules && !state.lineups[state.clock.period + 1] ? `elige el equipo titular del ${nextShort} para poder iniciarlo` : `pulsa ▶ (INICIAR ${nextShort}) arriba para seguir`}`
                 : '⏸ PARTIDO EN PAUSA — pulsa ▶ arriba para poder seguir anotando'}
           </span>
           {betweenPeriods && (

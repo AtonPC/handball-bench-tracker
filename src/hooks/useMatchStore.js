@@ -310,6 +310,10 @@ export function useMatchStore(matchId, enabled) {
   const startNextPeriod = useCallback(async () => {
     if (!match || match.status !== 'paused' || !match.periodEnded) return;
     if (match.period >= (match.periodCount === 4 ? 4 : 2)) return;
+    // Con las reglas de Alevín hay que haber elegido el equipo titular del
+    // periodo (setPeriodLineup) antes de poder iniciarlo. Repetir jugadores o
+    // hacer cambios nunca se bloquea: solo esto.
+    if (match.alevinRules && !lineupsOf(match)[match.period + 1]) return;
     const nowMs = Date.now();
     const batch = writeBatch(db);
     batch.update(matchRef, {

@@ -3,9 +3,11 @@ import { LINEUP_SIZE, lineupAdvice, validateLineup } from '../utils/lineups';
 import { periodShortLabel } from '../utils/periods';
 
 // Equipo titular del siguiente tiempo o cuarto, elegido ANTES de darle al ▶
-// (2026-09-19). Es OPCIONAL y solo AVISA: nada impide iniciar el periodo, ni
-// siquiera repetir a quienes empezaron el anterior — la app se usa también en
-// entrenamientos y amistosos. Una columna por periodo con los dorsales de
+// (2026-09-19). Con las reglas de Alevín puestas es un PASO OBLIGATORIO: sin
+// confirmarlo no se puede iniciar el periodo. Lo que se elija aquí NUNCA se
+// bloquea: repetir a quienes empezaron el anterior solo avisa (la app se usa
+// también en entrenamientos y amistosos; el interruptor del partido lo
+// desactiva entero). Una columna por periodo con los dorsales de
 // quienes lo empezaron; las anteriores solo se consultan, la del periodo que va
 // a empezar se rellena aquí, y la primera fila es SIEMPRE el portero (color
 // aparte). Con las reglas de Alevín puestas (`alevinRules`), se avisa de quien
@@ -43,7 +45,7 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
       <div className="modal modal--wide lineup-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Equipo titular del {short(period)}</h2>
         <p className="modal-hint" style={{ margin: 0 }}>
-          Elige quién empieza. La primera fila es el portero. Es opcional: puedes iniciar sin rellenarlo.
+          Elige quién empieza. La primera fila es el portero. Hay que confirmarlo para poder iniciar el periodo; los avisos de repetidos no impiden confirmarlo.
         </p>
 
         <div className="lineup-grid" style={{ gridTemplateColumns: `22px repeat(${periodCount}, minmax(0, 1fr))` }}>

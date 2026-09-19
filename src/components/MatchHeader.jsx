@@ -3,7 +3,6 @@ import { formatClock } from '../utils/time';
 import { teamInitials } from '../utils/teamColors';
 import TimeoutsMenu from './TimeoutsMenu';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
-import { lineupAdvice, orderLineup, validateLineup } from '../utils/lineups';
 
 // Cabecera de la consola en directo (2026-09-16, mockup "Consola
 // Luminosa" aprobado por el usuario): reloj+parte arriba, escudos+nombres+
@@ -12,7 +11,7 @@ import { lineupAdvice, orderLineup, validateLineup } from '../utils/lineups';
 // scroll propio ni depende de position:sticky, es .bench-console quien
 // tiene la altura acotada (height:100svh + overflow:hidden) para que solo
 // el contenido de cada pestaña scrollee, nunca esta cabecera.
-export default function MatchHeader({ store, team, onBack, onFinish }) {
+export default function MatchHeader({ store, team, onBack, onFinish, onNeedLineup }) {
   const { clock, score, timeouts, ownTeamName, rivalName, rivalCrestUrl, isHome } = store.state;
   const leftIsOwn = isHome;
   const leftName = leftIsOwn ? ownTeamName : rivalName;
@@ -34,26 +33,16 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
     }
   }
 
-  // Iniciar el siguiente periodo. Con los avisos de Alevín puestos, si no se ha
-  // elegido su equipo titular, avisa (y de quien repite del periodo anterior)
-  // antes de empezar. Es SOLO un aviso: aceptar inicia el periodo igualmente y
-  // nunca se impide empezar (la app se usa también en entrenamientos).
+  // Iniciar el siguiente periodo. Con las reglas de Alevín puestas hay que PASAR
+  // por el equipo titular antes: si aún no se ha elegido, ▶ abre el diálogo en
+  // vez de iniciar (y el store tampoco deja iniciar sin él). Lo que NO bloquea
+  // es lo que se elija ahí: repetir jugadores solo avisa, y los cambios no
+  // tienen ninguna restricción.
   function handleStartNext() {
-    const { alevinRules, lineups, courtSlots, players, convocados } = store.state;
-    const next = clock.period + 1;
-    if (alevinRules && !lineups[next]) {
-      const goalkeeper = courtSlots.find((id) => players[id]?.isGK);
-      const check = validateLineup({ ids: orderLineup(courtSlots, goalkeeper), prevIds: lineups[clock.period] || [] });
-      const advice = lineupAdvice({ repeated: check.repeated, convocados });
-      const dorsales = (advice?.repeated || []).map((id) => '#' + (players[id]?.number ?? '?')).join(', ');
-      let message = `Aún no has elegido el equipo titular del ${shortLabel(next)} (botón «ELEGIR EQUIPO TITULAR» de la barra roja).`;
-      if (advice?.level === 'warn') {
-        message += `\n\nAviso: ${dorsales} ya empezó el ${shortLabel(clock.period)}; con ${convocados} convocados no se debería repetir.`;
-      } else if (advice) {
-        message += `\n\nAviso: repites ${advice.repeated.length} del ${shortLabel(clock.period)} (${dorsales}); con ${convocados} convocados hay que repetir como mínimo ${advice.needed}.`;
-      }
-      message += `\n\n¿Iniciar el ${shortLabel(next)} igualmente?`;
-      if (!confirm(message)) return;
+    const { alevinRules, lineups } = store.state;
+    if (alevinRules && !lineups[clock.period + 1]) {
+      onNeedLineup();
+      return;
     }
     store.startNextPeriod();
   }
@@ -102,7 +91,10 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
       playLabel = 'Pausar';
       playTone = 'pause';
     } else if (ended) {
-      playLabel = `Iniciar ${shortLabel(clock.period + 1)}`;
+      const lineupPending = store.state.alevinRules && !store.state.lineups[clock.period + 1];
+      playLabel = lineupPending
+        ? `Primero elige el equipo titular del ${shortLabel(clock.period + 1)}`
+        : `Iniciar ${shortLabel(clock.period + 1)}`;
       onPlay = handleStartNext;
     }
 
