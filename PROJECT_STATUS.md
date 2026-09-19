@@ -1,6 +1,6 @@
 # Handball Bench Tracker — Estado del proyecto
 
-Documento de continuidad: si retomas este proyecto (humano o IA), esto te da el contexto completo sin tener que releer todo el historial de commits o de conversación. Última actualización: 2026-09-16 (7 metros rival: de botón suelto a pregunta opcional tras nuestro propio gol de 7m — sección 7).
+Documento de continuidad: si retomas este proyecto (humano o IA), esto te da el contexto completo sin tener que releer todo el historial de commits o de conversación. Última actualización: 2026-09-19 (sesión de pruebas en directo: cuartos/tiempos, asistencia, editor por acciones, Estándar/Pro, vista reducida móvil, equipo titular por periodo y cronómetro con tiempo extra — sección 7 y estado en la sección 9).
 
 ## 1. Qué es esto
 
@@ -222,9 +222,23 @@ Rutina seguida en toda la sesión, repetirla para cualquier cambio nuevo:
 
 Para verificar visualmente sin login real: montar un HTML estático temporal en `public/_mockN.html` que enlace `/src/index.css` + `/src/App.css`, servido por `preview_start({name:'handball-dev'})`, e inspeccionarlo con las herramientas de navegador — luego borrarlo antes del build final. Sirve tanto para probar CSS puro como para reproducir un bug "antes/después" (quitar el fix, capturar, reponer el fix, capturar, comparar) antes de dar por buena una corrección. Para datos reales de Firestore que no se pueden ver así, usar la técnica de la sección 2 (componente de diagnóstico temporal, desplegado de verdad, leído por el usuario).
 
+**Técnica de arnés con Firestore simulado (usada en la sesión del 2026-09-19 para probar sin login ni tocar producción).** Carpeta temporal `.harness/` en la raíz con: un Firestore falso en memoria (`fake-firestore.js` + `stub-firebase.js`, alias en un `vite.config.js` propio para sustituir `firebase/firestore`), un `main.jsx` que siembra un partido en directo (equipo, jugadores, `periodCount`, `periodDurationMs`, reloj corriendo…) y monta `BenchConsole`/`FollowerHome` reales de `src/`, y un `index.html`. Se arranca con `npx vite --config .harness/vite.config.js --port 5199`, se abre `http://localhost:5199/.harness/index.html` en el navegador integrado, se conduce con `javascript_tool` (clics, lectura de `getBoundingClientRect`, comprobación de contadores/eventos), y a 360×780 con `resize_window` para el móvil (acordarse de volver a `desktop`). **Se borra siempre al terminar** (matar los procesos node con `.harness` en la línea de comandos y `rm -rf .harness`); la copia de referencia no está en el repo. Ha servido para verificar deshacer, editor por acciones, modal parada↔fallo, vista reducida, equipo titular (16 comprobaciones) y la cabecera. Los tests puros de `utils/` se ejecutan con scripts `.mjs` sueltos importando el archivo por `file://`.
+
 No hay entorno de staging ni emuladores de Firestore configurados — todo esto apunta al proyecto real (`handball-bench-tracker`). Desplegar reglas afecta a quien esté usando la app en ese momento — avisar antes si el usuario está en mitad de una prueba.
 
 ## 9. Qué queda pendiente (por prioridad tal como lo dejó el usuario)
+
+**Estado al cierre del 2026-09-19:** todo lo pedido en la sesión de pruebas en directo está hecho, commiteado en `feature/fase-0-refactor` y **desplegado** (frontend + reglas, https://handball-bench-tracker.web.app). Lo que sigue abierto de esa sesión:
+
+- **Prueba en pabellón real de lo último:** equipo titular obligatorio antes de cada periodo (con «Reglas Alevín»), doble check con menos de 7, cronómetro con tiempo extra (cuartos de 10 min: comprobar que «EXTRA TIME / +mm:ss» se lee bien en el S25; el rótulo mide ~7,5 px, se puede subir).
+- **Marcador del Seguidor sin el rótulo «EXTRA TIME»:** allí el tiempo añadido sale como «4C · 11:20 +01:20» en pequeño; el usuario solo pidió el rótulo en la consola. Preguntarle si lo quiere también ahí.
+- **Seguidor Estándar/Pro solo oculta en la interfaz** (decisión aceptada): si algún día se abre a más equipos hay que diseñar una solución segura a nivel de datos (feed denormalizado, ver `project_follower_data_security` en la memoria).
+- **Cambios en los 5 primeros minutos de un cuarto (Alevín): NO se bloquean, a propósito** (el usuario lo aclaró dos veces). Lo único obligatorio es pasar por el equipo titular antes de iniciar cada periodo; repetir jugadores solo avisa.
+- **Rama sin integrar:** `feature/fase-0-refactor` va ~120 commits por delante de `main`. No se ha hecho merge a `main` ni se hará sin que el usuario lo pida.
+- **Archivos basura sin seguimiento** (duplicados de la sincronización de Drive: «… (1).jsx», `AdminPanel.jsx`, `FamilyView.jsx`, `TeamsAdmin.jsx`, `roles.js`, etc.): no son del proyecto, se pueden borrar cuando el usuario quiera.
+- `npm run lint`: 0 errores, 43 líneas de aviso (mismas categorías de siempre; el ~35 de la sección 8 se ha quedado corto por el código nuevo).
+
+Lista histórica de pendientes de fases anteriores:
 
 1. **Auditoría de acciones de staff/gestor** (crear/editar/borrar) — segunda mitad del "log de actividad", explícitamente la siguiente pieza acordada. La primera mitad (sesiones de Seguidor) ya está.
 2. **Simplificar para Seguidor la nueva estructura de Estadísticas** (filtros/KPIs/Máximos, y ahora también "Estadísticas de Acciones") que se construyó primero para staff — pendiente, el usuario lo pidió explícitamente como "primero staff, después simplificamos para Seguidor", y lo repitió una segunda vez cuando se construyó el mapa de zonas. "Estadísticas de Acciones" (sección 7) ya está expuesta en `FollowerHome.jsx`/`FollowerMatchDetail.jsx` tal cual, **sin ninguna simplificación todavía** — mismos tres selectores que ve el staff.
