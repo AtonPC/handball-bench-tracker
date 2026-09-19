@@ -31,7 +31,13 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
             {player.isGK && <Hand size={14} className="gk-hand-icon" aria-label="Portera/o" />}
             {dots && <span className="excl-dots">{dots}</span>}
           </span>
-          <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
+          {/* Segunda línea del nombre: el reloj y, SOLO en móvil vertical, el
+              contador de 7 metros (allí no cabe en la fila de arriba; ver
+              .stat-stepper--inline y .hide-on-phone en App.css). */}
+          <div className="player-sub-line">
+            <span className="player-clock">{formatClock(player.accumulatedMs)}</span>
+            <StatStepper compact className="stat-stepper--inline" icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
+          </div>
         </div>
 
         <ExclusionControl player={player} onStart={actions.exclusionStart} onCancel={actions.exclusionCancel} disabled={!matchRunning} />
@@ -41,7 +47,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
         {/* Compacto y aparte de los stats de disparo: un 7m cometido es raro,
             no hace falta el mismo peso visual que Gol/Fallo/Recup — mismo
             trato que la exclusión, con su propio contador editable. */}
-        <StatStepper compact icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
+        <StatStepper compact className="hide-on-phone" icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
 
         <button className="btn-change-icon" onClick={onOpenSubstitution} disabled={!canSubstitute} aria-label="Cambio">
           <Repeat size={20} />

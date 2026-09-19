@@ -9,7 +9,7 @@ export default function ExclusionControl({ player, onStart, onCancel, disabled }
   if (player.disqualified) {
     return (
       <span className="excl-btn excl-btn--disqualified" aria-label="Roja — no puede seguir jugando">
-        <span className="ref-card ref-card--red" /> Roja
+        <span className="ref-card ref-card--red" /> <span className="excl-time">Roja</span>
       </span>
     );
   }
@@ -17,7 +17,7 @@ export default function ExclusionControl({ player, onStart, onCancel, disabled }
   if (player.excluded) {
     return (
       <button className="excl-btn excl-btn--active" onClick={onCancel} aria-label="Cancelar exclusión">
-        <span className="ref-card ref-card--amber" /> {formatClock(player.exclusionRemainingMs)}
+        <span className="ref-card ref-card--amber" /> <span className="excl-time">{formatClock(player.exclusionRemainingMs)}</span>
         <span className="excl-count">{count}/3</span>
       </button>
     );
@@ -25,7 +25,7 @@ export default function ExclusionControl({ player, onStart, onCancel, disabled }
 
   return (
     <button className="excl-btn" onClick={onStart} disabled={disabled} aria-label="Exclusión 2 minutos">
-      <Timer size={14} /> 2'
+      <Timer size={14} /> <span className="excl-label">2'</span>
       <span className="excl-count">{count}/3</span>
     </button>
   );

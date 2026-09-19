@@ -1,6 +1,6 @@
-export default function StatStepper({ icon, label, count, onInc, onDec, disabled, compact }) {
+export default function StatStepper({ icon, label, count, onInc, onDec, disabled, compact, className }) {
   return (
-    <div className={`stat-stepper${compact ? ' stat-stepper--compact' : ''}`} aria-label={label}>
+    <div className={`stat-stepper${compact ? ' stat-stepper--compact' : ''}${className ? ` ${className}` : ''}`} aria-label={label}>
       {/* Sin onDec (p. ej. un contador agregado del rival sin corrección
           rápida propia) el botón "−" se deshabilita solo, en vez de quedar
           clicable sin hacer nada. */}

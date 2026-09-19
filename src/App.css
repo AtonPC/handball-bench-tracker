@@ -3290,3 +3290,153 @@
 .multisub-row {
   padding: 4px var(--space-2);
 }
+
+/* ---------- Fila de jugador en MÓVIL VERTICAL (< 600px, 2026-09-19) ----------
+   Problema real (medido en 360px): la fila de arriba metía a la vez dorsal,
+   nombre, exclusión ("2'" + "0/3"), amarilla, contador de 7m y cambio — unos
+   390px fijos en una pantalla de 360–412 — y el nombre se quedaba en 0px, la
+   fila se salía por la derecha y Gol/Fallo/Recup. se partían en dos líneas.
+   Ahora, en dos filas:
+     1) dorsal + nombre (hasta 2 líneas) + iconos pequeños: exclusión,
+        amarilla y cambio;
+     2) Gol, Fallo y Recup. (o Parada, Gol, Fallo en el portero) en una línea.
+   El contador de 7 metros deja de ir en la fila de arriba y pasa a la segunda
+   línea del nombre (junto al reloj), pequeño. En tablet/escritorio no cambia
+   nada: esto solo aplica por debajo de 600px. */
+.player-sub-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stat-stepper--inline {
+  display: none;
+}
+@media (max-width: 599px) {
+  .player-panel {
+    padding: 6px;
+    gap: 6px;
+  }
+  .player-row {
+    padding: 8px 8px 8px 10px;
+    gap: 6px;
+  }
+  .player-row-top {
+    gap: 6px;
+  }
+  .player-number {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+  .player-name-block {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .player-name {
+    align-items: flex-start;
+    font-size: 15px;
+  }
+  /* El nombre puede ocupar hasta 2 líneas antes de cortarse — mejor una fila
+     un poco más alta que un nombre tapado. */
+  .player-name-text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  .player-clock {
+    font-size: 12px;
+  }
+
+  /* Iconos pequeños: exclusión, amarilla y cambio, sin textos. */
+  .player-row-top .excl-btn,
+  .player-row-top .btn-change-icon {
+    flex-shrink: 0;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    padding: 0;
+    margin-left: 0;
+    border-radius: var(--radius-sm);
+  }
+  .player-row-top .btn-change-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .player-row-top .excl-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .excl-label,
+  .excl-count {
+    display: none;
+  }
+  /* En curso (cuenta atrás) o roja: sí hace falta el texto, más ancho. */
+  .player-row-top .excl-btn--active,
+  .player-row-top .excl-btn--disqualified {
+    width: auto;
+    min-width: 38px;
+    padding: 0 6px;
+    gap: 3px;
+    font-size: 12px;
+  }
+  .hide-on-phone {
+    display: none;
+  }
+
+  /* Segunda línea del nombre: el reloj y el 7m, pequeño. */
+  .stat-stepper--inline {
+    display: flex;
+    flex-shrink: 0;
+    height: 26px;
+    padding: 1px;
+    margin-left: auto;
+    border-radius: 6px;
+  }
+  .stat-stepper--inline .stat-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+  }
+  .stat-stepper--inline .stat-display {
+    flex-direction: row;
+    gap: 3px;
+    min-width: 0;
+    padding: 0 3px;
+  }
+  .stat-stepper--inline .stat-icon {
+    font-size: 9px;
+  }
+  .stat-stepper--inline .stat-count {
+    font-size: 12px;
+  }
+
+  /* Fila de abajo: tres contadores iguales en una sola línea. */
+  .player-row-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .player-row--rival .player-row-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .player-row-stats .stat-stepper {
+    flex: none;
+    min-width: 0;
+    padding: 2px;
+    gap: 0;
+  }
+  .player-row-stats .stat-btn {
+    width: 28px;
+    flex-shrink: 0;
+    height: 42px;
+  }
+  .player-row-stats .stat-display {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+  }
+}
