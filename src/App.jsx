@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, ClipboardCheck, Eye, Settings, Shield, Trash2, UserCog } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardCheck, ClipboardList, Eye, Settings, Shield, Trash2, UserCog } from 'lucide-react';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
 import { useMatchStore } from './hooks/useMatchStore';
@@ -12,6 +12,7 @@ import FinishedMatchEditor from './components/FinishedMatchEditor';
 import TeamStats from './components/TeamStats';
 import MatchesAdmin from './components/MatchesAdmin';
 import PlayersAdmin from './components/PlayersAdmin';
+import TrainingAttendance from './components/TrainingAttendance';
 import SystemAdmin from './components/SystemAdmin';
 import ClubAdmin from './components/ClubAdmin';
 import StaffAdmin from './components/StaffAdmin';
@@ -65,6 +66,9 @@ export default function App() {
   const activeTeam = teamsInActiveClub.find((t) => t.id === activeTeamId) || null;
   const canManageRoster = activeTeamId ? hasCapability(identity, activeTeamId, 'manageRoster') : false;
   const canUseBench = activeTeamId ? canWriteBench(identity, activeTeamId) : false;
+  // La asistencia a entrenamientos es cosa del cuerpo técnico (misma
+  // capacidad que "Reparto de minutos"): los seguidores no la ven nunca.
+  const canCoachPanel = activeTeamId ? hasCapability(identity, activeTeamId, 'coachPanel') : false;
   const canManageClub = activeClubId ? isClubManagerOf(identity, activeClubId) : false;
 
   const store = useMatchStore(openMatchId, isAuthed);
@@ -177,6 +181,7 @@ export default function App() {
   const tabs = [
     teamsInActiveClub.length > 0 && { key: 'matches', label: 'Partidos', icon: CalendarDays },
     canManageRoster && { key: 'players', label: 'Plantilla', icon: UserCog },
+    canCoachPanel && { key: 'attendance', label: 'Asistencia', icon: ClipboardList },
     teamsInActiveClub.length > 0 && { key: 'teamStats', label: 'Estadísticas', icon: BarChart3 },
     teamsInActiveClub.length > 0 && { key: 'followerPreview', label: 'Vista de Seguidor', icon: Eye },
     clubOptions.length > 0 && { key: 'club', label: 'Club', icon: Shield },
@@ -225,6 +230,9 @@ export default function App() {
         )}
         {view === 'players' && canManageRoster && activeTeam && (
           <PlayersAdmin clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} />
+        )}
+        {view === 'attendance' && canCoachPanel && activeTeam && (
+          <TrainingAttendance clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} />
         )}
         {view === 'teamStats' && activeTeam && (
           <TeamStats clubId={activeTeam.clubId} teamId={activeTeam.id} teamName={activeTeam.name} leagueId={activeTeam.leagueId} onOpenMatchStats={openStats} />

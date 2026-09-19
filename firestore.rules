@@ -179,6 +179,19 @@ service cloud.firestore {
       allow update, delete: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'manageRoster');
     }
 
+    // Asistencia a entrenamientos (2026-09-19): un documento por sesión con
+    // el mapa de asistencia dentro. Solo cuerpo técnico con la capacidad
+    // "coachPanel" (o gestor de club / admin) — ni siquiera el resto del
+    // staff activo, y nunca un Seguidor o tutor: es información de menores
+    // que el propio entrenador decide no compartir.
+    match /trainings/{trainingId} {
+      allow read, delete: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'coachPanel');
+      allow create: if canManageTeamCapability(request.resource.data.clubId, request.resource.data.teamId, 'coachPanel');
+      allow update: if canManageTeamCapability(resource.data.clubId, resource.data.teamId, 'coachPanel') &&
+        request.resource.data.clubId == resource.data.clubId &&
+        request.resource.data.teamId == resource.data.teamId;
+    }
+
     // Partido: la convocatoria la gestiona quien puede gestionar la
     // plantilla del equipo; la consola en vivo, quien tenga esa capacidad.
     match /matches/{matchId} {

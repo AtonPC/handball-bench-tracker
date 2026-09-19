@@ -2916,3 +2916,106 @@
   color: var(--team-primary);
   border-color: #fff;
 }
+
+/* Asistencia a entrenamientos (2026-09-19): pasar lista con botones grandes
+   (tablet/móvil) y colores de estado que ya existen en el tema — --live
+   (verde) para asiste, --danger para falta, --warning para "se va antes". */
+.att-toggle {
+  margin-bottom: var(--space-4);
+}
+.att-big {
+  margin: 4px 0 0;
+  font: 700 32px/1 var(--font-mono);
+  color: var(--text);
+}
+.att-list-row {
+  cursor: pointer;
+}
+.att-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.att-date-input {
+  width: auto;
+}
+.att-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-3) 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.att-summary strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+.att-roll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.att-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.att-row--absent {
+  background: var(--danger-dim);
+}
+.att-num {
+  min-width: 2ch;
+  font: 700 16px/1 var(--font-mono);
+  color: var(--accent);
+}
+.att-name {
+  flex: 1 1 140px;
+  font-weight: 600;
+}
+.att-actions,
+.att-early-block {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.att-early-block {
+  flex-basis: 100%;
+  padding-left: calc(2ch + var(--space-3));
+}
+.att-btn {
+  min-height: 44px;
+  min-width: 88px;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel-alt);
+  color: var(--text-dim);
+  font: 700 13px/1 var(--font-body);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.att-btn--present.att-btn--on {
+  background: var(--live);
+  border-color: var(--live);
+  color: #fff;
+}
+.att-btn--absent.att-btn--on {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.att-btn--early.att-btn--on {
+  background: var(--warning-dim);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.att-time {
+  width: 120px;
+}
