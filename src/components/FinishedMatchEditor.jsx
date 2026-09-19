@@ -1,24 +1,37 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
 import { useMatchEditor } from '../hooks/useMatchEditor';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useRivalMisses } from '../hooks/useRivalMisses';
+import { useRivalExclusions } from '../hooks/useRivalExclusions';
+import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
+import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
+import { useExclusionEvents } from '../hooks/useExclusionEvents';
+import { useYellowCardEvents } from '../hooks/useYellowCardEvents';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { checkMatchCoherence } from '../utils/coherence';
-import { SHOT_ZONES, GOAL_ZONES } from '../shotZones';
+import MatchActionsEditor from './MatchActionsEditor';
 
-const emptyRivalGoal = { number: '', minute: '', shotZone: '', goalZone: '' };
+// Huella de los contadores de un jugador que edita esta pantalla (los
+// minutos no: ninguna corrección de acciones los toca).
+function counterSignature(p) {
+  return [p.goals, p.shots, p.saves || 0, p.recoveries, p.exclusionsCount || 0, !!p.yellowCard, !!p.disqualified].join('|');
+}
 
 export default function FinishedMatchEditor({ store, onBack }) {
   const { state, matchId } = store;
-  const { updateMatchInfo, updatePlayerStats, addRivalGoalRecord, removeRivalGoalRecord } = useMatchEditor(matchId);
+  const { updateMatchInfo, updatePlayerStats, applyPlan } = useMatchEditor(matchId);
   const rivalGoals = useRivalGoals(matchId);
   const rivalMisses = useRivalMisses(matchId);
   const shotEvents = useShotEvents(matchId);
   const saveEvents = useSaveEvents(matchId);
   const recoveryEvents = useRecoveryEvents(matchId);
+  const exclusionEvents = useExclusionEvents(matchId);
+  const yellowCardEvents = useYellowCardEvents(matchId);
+  const rivalExclusions = useRivalExclusions(matchId);
+  const rivalSevenMeters = useRivalSevenMeters(matchId);
+  const rivalYellowCards = useRivalYellowCards(matchId);
   const [showCoherence, setShowCoherence] = useState(false);
 
   const [matchInfo, setMatchInfo] = useState({
@@ -38,19 +51,32 @@ export default function FinishedMatchEditor({ store, onBack }) {
   );
   const [playerDrafts, setPlayerDrafts] = useState({});
 
+  // El marcador de arriba es un borrador: se vuelve a rellenar cuando el
+  // marcador real cambia por otra vía (p. ej. al borrar un gol en "Acciones
+  // del partido"), para que un "Guardar marcador" posterior no lo revierta.
+  useEffect(() => {
+    setScore({ own: state.score.own, rival: state.score.rival });
+  }, [state.score.own, state.score.rival]);
+
   // La subcolección de jugadores del partido llega por su propio listener,
   // que puede resolver un instante después que el documento del partido —
   // por eso los borradores se rellenan aquí (reactivo), no en el useState
-  // inicial, para no quedarse con la tabla vacía si llegan tarde. Solo
-  // añade a quien todavía no tenga borrador, sin pisar ediciones en curso.
+  // inicial, para no quedarse con la tabla vacía si llegan tarde. Se crea
+  // el borrador de quien no lo tenga, y se rehace el de quien tenga los
+  // contadores reales distintos de aquellos con los que se creó (`_sig`):
+  // una corrección en "Acciones del partido" los cambia, y un "Guardar"
+  // sobre un borrador viejo los revertiría. Sin cambios reales, no pisa
+  // ediciones en curso.
   useEffect(() => {
     setPlayerDrafts((prev) => {
       let changed = false;
       const next = { ...prev };
       for (const p of players) {
-        if (next[p.id]) continue;
+        const sig = counterSignature(p);
+        if (next[p.id] && next[p.id]._sig === sig) continue;
         changed = true;
         next[p.id] = {
+          _sig: sig,
           goals: p.goals,
           shots: p.shots,
           saves: p.saves || 0,
@@ -65,7 +91,6 @@ export default function FinishedMatchEditor({ store, onBack }) {
     });
   }, [players]);
   const [savedPlayerId, setSavedPlayerId] = useState(null);
-  const [newRivalGoal, setNewRivalGoal] = useState(emptyRivalGoal);
 
   function updateDraft(id, field, value) {
     setPlayerDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -104,19 +129,6 @@ export default function FinishedMatchEditor({ store, onBack }) {
     });
     setSavedPlayerId(id);
     setTimeout(() => setSavedPlayerId(null), 2000);
-  }
-
-  async function handleAddRivalGoal(e) {
-    e.preventDefault();
-    if (!newRivalGoal.number || !newRivalGoal.minute) return;
-    await addRivalGoalRecord({
-      number: Number(newRivalGoal.number),
-      minute: Number(newRivalGoal.minute),
-      period: 1,
-      shotZone: newRivalGoal.shotZone || null,
-      goalZone: newRivalGoal.goalZone || null,
-    });
-    setNewRivalGoal(emptyRivalGoal);
   }
 
   return (
@@ -231,8 +243,9 @@ export default function FinishedMatchEditor({ store, onBack }) {
           {scoreSaved && <span className="modal-hint">Guardado.</span>}
         </form>
         <p className="modal-hint">
-          Si cambias el marcador rival, recuerda que la lista de "Goles rivales" de abajo no se ajusta sola —
-          añade o borra ahí los goles que correspondan para que cuadren.
+          Cambiar el marcador o los contadores a mano NO toca la cronología ni las zonas. Si lo que falla es una
+          acción concreta (un gol mal asignado, una zona equivocada), corrígela mejor en "Acciones del partido",
+          más abajo: ajusta a la vez el detalle, los contadores y el marcador.
         </p>
 
         <h3 className="stats-section-title">Estadísticas por jugador</h3>
@@ -285,48 +298,12 @@ export default function FinishedMatchEditor({ store, onBack }) {
           </table>
         </div>
 
-        <h3 className="stats-section-title">Goles rivales</h3>
-        <div className="admin-list">
-          {rivalGoals.map((g) => (
-            <div key={g.id} className="admin-row">
-              <div className="admin-user-info">
-                <span className="admin-user-name">#{g.number} — minuto {g.minute}'</span>
-                <span className="admin-user-email">{g.shotZone || '—'} · {g.goalZone || '—'}</span>
-              </div>
-              <button className="btn-icon btn-icon--danger" onClick={() => removeRivalGoalRecord(g.id)} title="Borrar" aria-label="Borrar gol rival">
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
-          {rivalGoals.length === 0 && <p className="modal-hint">No hay goles rivales con detalle registrados.</p>}
-        </div>
-
-        <form className="player-form" onSubmit={handleAddRivalGoal}>
-          <p className="modal-hint" style={{ margin: 0 }}>Añadir gol rival</p>
-          <input
-            className="player-form-input player-form-input--number"
-            type="number"
-            placeholder="Dorsal"
-            value={newRivalGoal.number}
-            onChange={(e) => setNewRivalGoal({ ...newRivalGoal, number: e.target.value })}
-          />
-          <input
-            className="player-form-input player-form-input--number"
-            type="number"
-            placeholder="Minuto"
-            value={newRivalGoal.minute}
-            onChange={(e) => setNewRivalGoal({ ...newRivalGoal, minute: e.target.value })}
-          />
-          <select className="player-form-input" value={newRivalGoal.shotZone} onChange={(e) => setNewRivalGoal({ ...newRivalGoal, shotZone: e.target.value })}>
-            <option value="">Zona de lanzamiento (opcional)</option>
-            {SHOT_ZONES.map((z) => <option key={z} value={z}>{z}</option>)}
-          </select>
-          <select className="player-form-input" value={newRivalGoal.goalZone} onChange={(e) => setNewRivalGoal({ ...newRivalGoal, goalZone: e.target.value })}>
-            <option value="">Zona de entrada (opcional)</option>
-            {GOAL_ZONES.map((z) => <option key={z} value={z}>{z}</option>)}
-          </select>
-          <button className="btn btn-clock btn-start" type="submit">Añadir</button>
-        </form>
+        <MatchActionsEditor
+          state={state}
+          players={players}
+          applyPlan={applyPlan}
+          lists={{ shotEvents, saveEvents, recoveryEvents, exclusionEvents, yellowCardEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards }}
+        />
       </div>
     </div>
   );

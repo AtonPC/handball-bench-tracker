@@ -3019,3 +3019,33 @@
 .att-time {
   width: 120px;
 }
+
+/* Editor de acciones de un partido finalizado (2026-09-19) */
+.act-item {
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.act-item--own {
+  border-left-color: var(--own);
+}
+.act-item--rival {
+  border-left-color: var(--rival);
+}
+.act-row {
+  border-left: none;
+}
+.act-minute {
+  display: inline-block;
+  min-width: 3ch;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+.act-add {
+  margin-bottom: var(--space-4);
+}
+.act-add > .player-form-input {
+  margin-bottom: var(--space-2);
+}
+.act-form {
+  margin-top: var(--space-2);
+}
