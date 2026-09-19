@@ -3068,3 +3068,225 @@
   width: auto;
   min-width: 110px;
 }
+
+/* ---------- Vista REDUCIDA de la consola (2026-09-19) ---------- */
+.console-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-3);
+  font-size: 12px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.console-mode-btn {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-alt);
+  color: var(--text-dim);
+  font: 700 12px/1 var(--font-body);
+  cursor: pointer;
+}
+.console-mode-btn--active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.reduced-entry {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.reduced-entry > * {
+  flex-shrink: 0;
+}
+.reduced-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.reduced-chip {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: 999px;
+  border: 1.5px solid var(--warning);
+  background: var(--warning-dim);
+  color: var(--warning);
+  font: 700 12px/1 var(--font-mono);
+}
+.reduced-chip--rival {
+  border-color: var(--rival);
+  background: var(--danger-dim);
+  color: var(--rival);
+}
+.reduced-chip:disabled {
+  opacity: 0.6;
+}
+.reduced-group {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  background: var(--panel);
+}
+.reduced-group--own {
+  border-color: var(--own);
+}
+.reduced-group--rival {
+  border-color: var(--rival);
+}
+.reduced-group h4 {
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.reduced-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+.reduced-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 62px;
+  padding: var(--space-2) 2px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel-alt);
+  color: var(--text);
+  font: 700 11px/1.1 var(--font-body);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+.reduced-btn:active {
+  transform: scale(0.96);
+}
+.reduced-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.reduced-btn--goal { color: var(--live); border-color: var(--live); }
+.reduced-btn--save { color: var(--gk); border-color: var(--gk); }
+.reduced-btn--miss { color: var(--text-dim); }
+.reduced-btn--recovery { color: var(--info); border-color: var(--info); }
+.reduced-btn--exclusion { color: var(--warning); border-color: var(--warning); }
+.reduced-btn--yellow { color: var(--card-yellow); border-color: var(--card-yellow); }
+.reduced-btn--sub { color: var(--start); border-color: var(--start); }
+.reduced-last {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.reduced-last strong {
+  color: var(--text);
+}
+
+/* Lista de jugadores y cambio múltiple */
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+.picker-option {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel-alt);
+  color: var(--text);
+  font: 600 14px/1.1 var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-option--gk {
+  border-color: var(--gk);
+}
+.picker-option:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.picker-number {
+  min-width: 2ch;
+  font: 700 18px/1 var(--font-mono);
+  color: var(--accent);
+}
+.picker-name {
+  flex: 1 1 60px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picker-reason {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.modal--wide {
+  max-width: 520px;
+}
+.multisub-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.multisub-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.multisub-row--gk {
+  border-color: var(--gk);
+}
+.multisub-out {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.multisub-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.multisub-select {
+  min-width: 0;
+}
+.multisub-note {
+  font-size: 12px;
+  color: var(--warning);
+}
+
+/* Cambio múltiple: la lista de filas es lo que se desplaza; título y botones
+   de confirmar/cancelar se quedan siempre a la vista (en el móvil, con 7
+   filas, confirmar exigía bajar hasta el final del modal). */
+.modal--wide {
+  max-height: 92svh;
+  overflow: hidden;
+}
+.modal--wide > .multisub-rows {
+  flex-shrink: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.multisub-row {
+  padding: 4px var(--space-2);
+}

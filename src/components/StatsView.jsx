@@ -42,7 +42,8 @@ export default function StatsView({ store, identity, teamId, team }) {
   const rivalExclusionCounts = useMemo(() => rivalExclusionCountsByNumber(rivalExclusions), [rivalExclusions]);
   const matchEvents = useMatchEvents(matchId);
   const substitutionsCount = useMemo(
-    () => matchEvents.filter((e) => SUBSTITUTION_LABELS.has(e.label)).length,
+    // Un cambio múltiple es un solo evento con `substitutionCount` = N.
+    () => matchEvents.filter((e) => SUBSTITUTION_LABELS.has(e.label)).reduce((n, e) => n + (e.substitutionCount || 1), 0),
     [matchEvents]
   );
   const canCoachPanel = hasCapability(identity, teamId, 'coachPanel');

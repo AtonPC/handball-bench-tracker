@@ -8,6 +8,7 @@ import RivalShotModal from './RivalShotModal';
 import DorsalNumberModal from './DorsalNumberModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaverChooserModal from './SaverChooserModal';
+import ReducedEntry from './ReducedEntry';
 import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
 import ActionStatsView from './ActionStatsView';
@@ -18,7 +19,7 @@ import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { teamColorStyle } from '../utils/teamColors';
-import { periodShortLabel } from '../utils/periods';
+import { periodLongLabel, periodShortLabel } from '../utils/periods';
 import { OUT_ZONES } from '../shotZones';
 
 // Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
@@ -35,10 +36,34 @@ const TABS = [
   { key: 'acciones', label: 'Acciones', icon: Target },
 ];
 
+// Forma de anotar en "Datos": la clásica (una fila por jugador) o la reducida
+// (un botón por acción, pensada para el móvil). Se recuerda en este
+// dispositivo — la tablet y el móvil pueden usar cada uno la suya.
+const MODE_KEY = 'benchEntryMode';
+function readEntryMode() {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'reduced' ? 'reduced' : 'classic';
+  } catch {
+    return 'classic';
+  }
+}
+function saveEntryMode(mode) {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    // Sin almacenamiento disponible (modo privado...): se olvida al recargar.
+  }
+}
+
 export default function BenchConsole({ store, onBack, onFinish, team }) {
   const { state, matchId } = store;
   const isRunning = state.clock.status === 'running';
   const [view, setView] = useState('datos');
+  const [entryMode, setEntryMode] = useState(readEntryMode);
+  function changeEntryMode(mode) {
+    setEntryMode(mode);
+    saveEntryMode(mode);
+  }
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
@@ -123,7 +148,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         <div className="match-not-running-banner">
           {state.clock.status === 'idle'
             ? `⏸ PARTIDO NO INICIADO — pulsa INICIAR ${periodShortLabel(1, state.clock.periodCount)} arriba para poder anotar`
-            : '⏸ PARTIDO EN PAUSA — pulsa REANUDAR arriba para poder seguir anotando'}
+            : state.clock.periodEnded
+              ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — puedes hacer cambios; pulsa INICIAR ${periodShortLabel(state.clock.period + 1, state.clock.periodCount)} arriba para seguir`
+              : '⏸ PARTIDO EN PAUSA — pulsa REANUDAR arriba para poder seguir anotando'}
         </div>
       )}
 
@@ -142,12 +169,53 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       </div>
 
       {view === 'datos' && (
+        <div className="console-mode-bar" role="group" aria-label="Forma de anotar">
+          <span>Anotar:</span>
+          {[['classic', 'Clásica'], ['reduced', 'Reducida']].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`console-mode-btn${entryMode === key ? ' console-mode-btn--active' : ''}`}
+              onClick={() => changeEntryMode(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view === 'datos' && entryMode === 'reduced' && (
+        <ReducedEntry
+          state={state}
+          isRunning={isRunning}
+          lastEvent={store.lastEvent}
+          rivalExclusionsLive={rivalExclusionsLive}
+          actions={{
+            goal: (id) => setShotDetailFor({ playerId: id, kind: 'goal' }),
+            miss: (id) => setShotDetailFor({ playerId: id, kind: 'miss' }),
+            save: (id) => setSaveDetailForId(id),
+            recovery: (id) => store.playerRecovery(id, 1),
+            exclusion: (id) => handleExclusionStart(id),
+            yellow: (id) => store.playerYellowCard(id),
+            substituteMany: store.substituteMany,
+            rivalGoal: () => setShowRivalGoalModal(true),
+            rivalMiss: () => setShowRivalMissModal(true),
+            rivalExclusion: () => setShowRivalExclusionModal(true),
+            rivalYellow: () => setShowRivalYellowCardModal(true),
+            cancelOwnExclusion: (id) => store.cancelExclusion(id),
+            cancelRivalExclusion: (eventId) => store.cancelRivalExclusion(eventId),
+          }}
+        />
+      )}
+
+      {view === 'datos' && entryMode === 'classic' && (
         <div className="player-panel">
           {courtPlayers.map((player) => (
             <PlayerRow
               key={player.id}
               player={player}
               matchRunning={isRunning}
+              canSubstitute={state.canSubstitute}
               onOpenSubstitution={() => setSubstitution({ outPlayerId: player.id, forced: false })}
               actions={{
                 goalInc: () => setShotDetailFor({ playerId: player.id, kind: 'goal' }),

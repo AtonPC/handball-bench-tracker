@@ -11,7 +11,9 @@ function exclusionRowClass(player) {
   return '';
 }
 
-export default function PlayerRow({ player, onOpenSubstitution, actions, matchRunning }) {
+// `canSubstitute` (por defecto igual que matchRunning): el botón de cambio
+// también se activa con el reloj parado ENTRE periodos.
+export default function PlayerRow({ player, onOpenSubstitution, actions, matchRunning, canSubstitute = matchRunning }) {
   // Con el reloj parado no se puede anotar nada, cambio incluido — el
   // usuario confirmó explícitamente que prefiere bloquearlo todo antes que
   // dejar el cambio como única excepción.
@@ -41,7 +43,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
             trato que la exclusión, con su propio contador editable. */}
         <StatStepper compact icon="7M" label="7 metros cometidos" count={player.sevenMetersCommitted || 0} onInc={actions.sevenMeterInc} onDec={actions.sevenMeterDec} disabled={disabled} />
 
-        <button className="btn-change-icon" onClick={onOpenSubstitution} disabled={!matchRunning} aria-label="Cambio">
+        <button className="btn-change-icon" onClick={onOpenSubstitution} disabled={!canSubstitute} aria-label="Cambio">
           <Repeat size={20} />
         </button>
       </div>

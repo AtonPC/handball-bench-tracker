@@ -9,6 +9,15 @@ const EXCLUSION_MS = 2 * 60 * 1000;
 // desde entonces (ver recordEvent y undo).
 const TIME_FIELDS = new Set(['onCourtSinceMs', 'accumulatedMs']);
 
+// Cambios de jugadores: con el reloj en marcha, o parado ENTRE periodos (tras
+// "FIN" de un tiempo/cuarto) — ahí es cuando se rota de verdad. El resto de
+// anotaciones siguen exigiendo el reloj en marcha, y una pausa normal
+// (parada arbitral) sigue bloqueando también los cambios.
+export function canSubstituteNow(match) {
+  if (!match) return false;
+  return match.status === 'running' || (match.status === 'paused' && !!match.periodEnded);
+}
+
 function getPath(obj, path) {
   return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 }
@@ -32,6 +41,10 @@ export function useMatchStore(matchId, enabled) {
   const [players, setPlayers] = useState({});
   const [now, setNow] = useState(Date.now());
   const [canUndo, setCanUndo] = useState(false);
+  // Último evento del log (etiqueta y jugadores que tocó) — lo enseña la vista
+  // reducida como "Última acción", para saber qué se acaba de anotar sin
+  // mirar la lista de jugadores.
+  const [lastEvent, setLastEvent] = useState(null);
   const closingExclusions = useRef(new Set());
 
   const matchRef = useMemo(() => (matchId ? doc(db, 'matches', matchId) : null), [matchId]);
@@ -55,6 +68,12 @@ export function useMatchStore(matchId, enabled) {
     });
     const unsubEvents = onSnapshot(query(eventsCol, orderBy('createdAt', 'desc'), limit(1)), (snap) => {
       setCanUndo(!snap.empty);
+      if (snap.empty) {
+        setLastEvent(null);
+      } else {
+        const data = snap.docs[0].data();
+        setLastEvent({ label: data.label, playerIds: (data.undo?.players || []).map((p) => p.id) });
+      }
     });
     return () => {
       unsubMatch();
@@ -158,7 +177,7 @@ export function useMatchStore(matchId, enabled) {
       // este momento, para saber en el deshacer si sigue siendo el mismo.
       clock: touchesTime ? { status: match.status, runningSinceMs: match.runningSinceMs ?? null, period: match.period } : null,
     };
-    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, undo, createdRefPaths, deletedDocs });
+    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, undo, createdRefPaths, deletedDocs, ...(extra?.eventFields || {}) });
     await batch.commit();
   }, [match, players, matchRef, playerRef, eventsCol]);
 
@@ -783,7 +802,7 @@ export function useMatchStore(matchId, enabled) {
   // rol — el portero es un papel del partido, no de la ficha del jugador.
   const substitute = useCallback(
     (outPlayerId, inPlayerId) => {
-      if (!match || match.status !== 'running') return;
+      if (!canSubstituteNow(match)) return;
       const nowMs = Date.now();
       const outP = players[outPlayerId];
       const courtSlots = match.courtSlots.map((id) => (id === outPlayerId ? inPlayerId : id));
@@ -804,13 +823,55 @@ export function useMatchStore(matchId, enabled) {
     [match, players, recordEvent]
   );
 
+  // Varios cambios a la vez (vista reducida), como UN solo evento — un único
+  // "Deshacer" los revierte todos. `pairs` es [{ outId, inId }]. Reglas: quien
+  // sale debe estar en la lista de pista y quien entra en el banquillo, sin
+  // repetir a nadie; si algo no cuadra no se hace nada. Quien sale por
+  // expulsión (roja) no vuelve al banquillo, igual que en el cambio suelto.
+  // El evento guarda `substitutionCount` para que las estadísticas cuenten N
+  // cambios, no uno.
+  const substituteMany = useCallback(
+    (pairs) => {
+      if (!canSubstituteNow(match) || !pairs || pairs.length === 0) return;
+      const nowMs = Date.now();
+      const running = match.status === 'running';
+      let courtSlots = [...match.courtSlots];
+      let bench = [...match.bench];
+      const playerUpdates = {};
+      const usedIn = new Set();
+      const usedOut = new Set();
+      for (const { outId, inId } of pairs) {
+        const outP = players[outId];
+        const inP = players[inId];
+        if (!outP || !inP || usedIn.has(inId) || usedOut.has(outId)) return;
+        if (!courtSlots.includes(outId) || !bench.includes(inId) || inP.disqualified) return;
+        usedIn.add(inId);
+        usedOut.add(outId);
+        const disqualified = !!outP.disqualified;
+        courtSlots = courtSlots.map((id) => (id === outId ? inId : id));
+        bench = bench.filter((id) => id !== inId);
+        if (!disqualified) {
+          bench.push(outId);
+          playerUpdates[outId] = {
+            accumulatedMs: outP.onCourtSinceMs ? outP.accumulatedMs + (nowMs - outP.onCourtSinceMs) : outP.accumulatedMs,
+            onCourtSinceMs: null,
+            isGK: false,
+          };
+        }
+        playerUpdates[inId] = { isGK: !!outP.isGK, ...(running ? { onCourtSinceMs: nowMs } : {}) };
+      }
+      recordEvent('Cambio', { courtSlots, bench }, playerUpdates, { eventFields: { substitutionCount: pairs.length } });
+    },
+    [match, players, recordEvent]
+  );
+
   // Cambio por expulsión: el expulsado no vuelve al banquillo (no puede
   // volver a jugar en lo que queda de partido), a diferencia de un cambio
   // normal — solo se actualiza el reloj de quien entra. También transfiere
   // el rol de portero si el expulsado lo tenía.
   const substituteDisqualified = useCallback(
     (outPlayerId, inPlayerId) => {
-      if (!match || match.status !== 'running') return;
+      if (!canSubstituteNow(match)) return;
       const nowMs = Date.now();
       const outP = players[outPlayerId];
       const courtSlots = match.courtSlots.map((id) => (id === outPlayerId ? inPlayerId : id));
@@ -884,6 +945,7 @@ export function useMatchStore(matchId, enabled) {
   const state = useMemo(
     () => ({
       lifecycle: match?.lifecycle || 'scheduled',
+      canSubstitute: canSubstituteNow(match),
       rivalName: match?.rivalName || 'Rival',
       rivalCrestUrl: match?.rivalCrestUrl || '',
       ownTeamName: match?.ownTeamName || 'Mi equipo',
@@ -916,6 +978,7 @@ export function useMatchStore(matchId, enabled) {
     matchId,
     state,
     canUndo,
+    lastEvent,
     startPeriod1,
     togglePause,
     endPeriod,
@@ -945,6 +1008,7 @@ export function useMatchStore(matchId, enabled) {
     playerYellowCard,
     cancelYellowCard,
     substitute,
+    substituteMany,
     substituteDisqualified,
     undo,
   };
