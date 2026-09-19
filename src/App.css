@@ -3664,9 +3664,15 @@
   gap: 5px;
   flex-shrink: 0;
 }
+/* Mismo tamaño exacto que los iconos Play/Stop (42 x 38) para que los tres
+   se lean como una sola botonera. */
 .period-chip {
-  min-width: 34px;
-  padding: 7px 7px;
+  width: 42px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
   border-radius: 8px;
   background: var(--accent-dim);
   color: var(--accent);
