@@ -1,4 +1,4 @@
-import { ArrowLeft, Undo2 } from 'lucide-react';
+import { ArrowLeft, Pause, Play, RotateCcw, Square, Undo2 } from 'lucide-react';
 import { formatClock } from '../utils/time';
 import { teamInitials } from '../utils/teamColors';
 import TimeoutsMenu from './TimeoutsMenu';
@@ -50,32 +50,58 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
     if (confirm(message)) onFinish();
   }
 
-  function renderClockButton() {
-    if (clock.status === 'idle') {
-      return <button className="ctrl-btn ctrl-btn--start" onClick={store.startPeriod1}>INICIAR {shortLabel(1)}</button>;
+  // Controles del reloj en un espacio mínimo (2026-09-19): el periodo
+  // abreviado (1T / 2C…) y dos iconos.
+  //  - ▶ / ⏸: iniciar el primer periodo, pausar, reanudar — y, tras terminar un
+  //    periodo, iniciar el siguiente (entonces la etiqueta enseña "→2C").
+  //  - ■ (Stop): terminar el periodo, exactamente lo que hacía "FIN 1T/1C",
+  //    con el mismo aviso. En el último periodo no hay siguiente: termina el
+  //    partido, con el mismo aviso que FINALIZAR.
+  //  - ↺ (solo tras terminar un periodo, en lugar de Stop): volver a poner en
+  //    marcha el periodo que se acaba de terminar, por si fue un error — lo que
+  //    antes hacía el botón REANUDAR.
+  function renderClockControls() {
+    const idle = clock.status === 'idle';
+    const running = clock.status === 'running';
+    const ended = clock.status === 'paused' && periodEnded && !isLastPeriod;
+
+    let PlayIcon = Play;
+    let playLabel = 'Reanudar';
+    let playTone = 'start';
+    let onPlay = store.togglePause;
+    if (idle) {
+      playLabel = `Iniciar ${shortLabel(1)}`;
+      onPlay = store.startPeriod1;
+    } else if (running) {
+      PlayIcon = Pause;
+      playLabel = 'Pausar';
+      playTone = 'pause';
+    } else if (ended) {
+      playLabel = `Iniciar ${shortLabel(clock.period + 1)}`;
+      onPlay = store.startNextPeriod;
     }
-    if (clock.status === 'running') {
-      if (!isLastPeriod) {
-        return (
-          <div className="clock-btn-group">
-            <button className="ctrl-btn ctrl-btn--pause" onClick={store.togglePause}>PAUSAR</button>
-            <button className="ctrl-btn" onClick={handleEndPeriod}>FIN {shortLabel(clock.period)}</button>
-          </div>
-        );
-      }
-      return <button className="ctrl-btn ctrl-btn--pause" onClick={store.togglePause}>PAUSAR</button>;
-    }
-    // paused: solo tras "FIN del periodo" se ofrece empezar el siguiente;
-    // una pausa normal solo deja reanudar.
-    if (periodEnded && !isLastPeriod) {
-      return (
-        <div className="clock-btn-group">
-          <button className="ctrl-btn" onClick={store.togglePause}>REANUDAR</button>
-          <button className="ctrl-btn ctrl-btn--start" onClick={store.startNextPeriod}>INICIAR {shortLabel(clock.period + 1)}</button>
-        </div>
-      );
-    }
-    return <button className="ctrl-btn" onClick={store.togglePause}>REANUDAR</button>;
+
+    const stopLabel = isLastPeriod ? `Terminar ${shortLabel(clock.period)} y finalizar el partido` : `Terminar ${shortLabel(clock.period)} (FIN)`;
+
+    return (
+      <div className="clock-ctl">
+        <span className={`period-chip${ended ? ' period-chip--next' : ''}`} title={longLabel(ended ? clock.period + 1 : clock.period)}>
+          {ended ? `→${shortLabel(clock.period + 1)}` : shortLabel(clock.period)}
+        </span>
+        <button type="button" className={`clock-icon-btn clock-icon-btn--${playTone}`} onClick={onPlay} aria-label={playLabel} title={playLabel}>
+          <PlayIcon size={18} fill="currentColor" />
+        </button>
+        {ended ? (
+          <button type="button" className="clock-icon-btn clock-icon-btn--resume" onClick={store.togglePause} aria-label={`Reanudar ${shortLabel(clock.period)}`} title={`Reanudar ${shortLabel(clock.period)} (si se terminó por error)`}>
+            <RotateCcw size={17} />
+          </button>
+        ) : (
+          <button type="button" className="clock-icon-btn clock-icon-btn--stop" onClick={isLastPeriod ? handleFinish : handleEndPeriod} disabled={idle} aria-label={stopLabel} title={stopLabel}>
+            <Square size={16} fill="currentColor" />
+          </button>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -118,7 +144,7 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
       </div>
 
       <div className="controls-row">
-        {renderClockButton()}
+        {renderClockControls()}
         <TimeoutsMenu
           ownName={ownTeamName}
           rivalName={rivalName}

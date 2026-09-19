@@ -153,10 +153,10 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       {!isRunning && (
         <div className="match-not-running-banner">
           {state.clock.status === 'idle'
-            ? `⏸ PARTIDO NO INICIADO — pulsa INICIAR ${periodShortLabel(1, state.clock.periodCount)} arriba para poder anotar`
+            ? `⏸ PARTIDO NO INICIADO — pulsa ▶ (INICIAR ${periodShortLabel(1, state.clock.periodCount)}) arriba para poder anotar`
             : state.clock.periodEnded
-              ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — puedes hacer cambios; pulsa INICIAR ${periodShortLabel(state.clock.period + 1, state.clock.periodCount)} arriba para seguir`
-              : '⏸ PARTIDO EN PAUSA — pulsa REANUDAR arriba para poder seguir anotando'}
+              ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — puedes hacer cambios; pulsa ▶ (INICIAR ${periodShortLabel(state.clock.period + 1, state.clock.periodCount)}) arriba para seguir`
+              : '⏸ PARTIDO EN PAUSA — pulsa ▶ arriba para poder seguir anotando'}
         </div>
       )}
 

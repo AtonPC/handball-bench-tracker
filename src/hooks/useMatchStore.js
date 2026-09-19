@@ -277,7 +277,21 @@ export function useMatchStore(matchId, enabled) {
     await batch.commit();
   }, [match, players, matchRef, playerRef, pauseClock]);
 
-  const endPeriod = useCallback(() => pauseClock(true), [pauseClock]);
+  // Terminar el periodo (el botón Stop): con el reloj en marcha lo detiene y lo
+  // marca como terminado; si ya estaba parado por una pausa normal, el reloj ya
+  // está detenido y solo hace falta marcarlo como terminado.
+  const endPeriod = useCallback(async () => {
+    if (!match) return;
+    if (match.status === 'running') {
+      await pauseClock(true);
+      return;
+    }
+    if (match.status === 'paused' && !match.periodEnded) {
+      const batch = writeBatch(db);
+      batch.update(matchRef, { periodEnded: true });
+      await batch.commit();
+    }
+  }, [match, matchRef, pauseClock]);
 
   // periodStartAccumulatedMs guarda cuánto llevaba el partido en total al
   // empezar este periodo, para poder mostrar la cuenta atrás del periodo en

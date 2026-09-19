@@ -1388,11 +1388,6 @@
   padding: 8px 10px;
   border-top: 1px solid var(--border);
 }
-.clock-btn-group {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
 .ctrl-btn {
   flex-shrink: 0;
   border: none;
@@ -1408,12 +1403,6 @@
 }
 .ctrl-btn:active {
   transform: scale(0.97);
-}
-.ctrl-btn--start {
-  background: var(--live);
-}
-.ctrl-btn--pause {
-  background: var(--text-dim);
 }
 .ctrl-btn--finish {
   background: var(--danger);
@@ -3647,9 +3636,6 @@
     padding: 6px 8px;
     gap: 5px;
   }
-  .clock-btn-group {
-    gap: 5px;
-  }
   .controls-row .ctrl-btn {
     padding: 8px 9px;
     font-size: 11px;
@@ -3669,4 +3655,59 @@
     padding: 2px 5px;
     font-size: 11px;
   }
+}
+
+/* ---------- Controles del reloj: periodo abreviado + Play/Pause + Stop (2026-09-19) ---------- */
+.clock-ctl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.period-chip {
+  min-width: 34px;
+  padding: 7px 7px;
+  border-radius: 8px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font: 800 13px/1 var(--font-mono);
+  text-align: center;
+}
+.period-chip--next {
+  background: rgba(31, 174, 107, 0.14);
+  color: var(--live);
+}
+.clock-icon-btn {
+  width: 42px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}
+.clock-icon-btn:active {
+  transform: scale(0.95);
+}
+.clock-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.clock-icon-btn--start {
+  background: var(--live);
+}
+.clock-icon-btn--pause {
+  background: var(--text-dim);
+}
+.clock-icon-btn--stop {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.clock-icon-btn--resume {
+  background: var(--panel-alt);
+  border-color: var(--border);
+  color: var(--text);
 }
