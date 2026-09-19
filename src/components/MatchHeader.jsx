@@ -137,7 +137,7 @@ export default function MatchHeader({ store, team, onBack, onFinish, onNeedLineu
 
       <div className="score-block">
         <div className="clock-row">
-          <span className={`clock-time${display.extra ? ' clock-time--over' : ''}`}>
+          <span className="clock-time">
             {display.main}
             {display.extra && (
               <span className="clock-extra" title="Tiempo añadido">

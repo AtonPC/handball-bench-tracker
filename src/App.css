@@ -1308,9 +1308,6 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
-.clock-time--over {
-  color: var(--danger);
-}
 .clock-time { position: relative; }
 /* El tiempo añadido va pegado a la derecha sin mover el cronometro, que sigue centrado. */
 .clock-extra {
@@ -1321,11 +1318,10 @@
   margin-left: 6px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1px;
   line-height: 1;
   white-space: nowrap;
-  color: var(--danger);
 }
 /* "EXTRA TIME" en dos filas diminutas encima del tiempo añadido. */
 .clock-extra-label {
@@ -1334,13 +1330,16 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
   line-height: 1.05;
+  color: var(--text-dim);
 }
 .clock-extra-value {
   font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  color: var(--danger);
 }
 .follower-clock-extra {
   font-size: 0.75em;
