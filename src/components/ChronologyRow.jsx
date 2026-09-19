@@ -34,7 +34,7 @@ function eventLabel(entry) {
 export default function ChronologyRow({ entry, playersById, authorizedById, compact }) {
   const who = entry.side === 'own'
     ? ownPlayerLabel(playersById, authorizedById, entry.playerId)
-    : `Rival #${entry.number}`;
+    : (entry.number != null ? `Rival #${entry.number}` : 'Rival');
   const label = eventLabel(entry);
   const iconType = eventIconType(entry);
 

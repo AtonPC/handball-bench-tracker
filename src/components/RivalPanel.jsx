@@ -14,7 +14,7 @@ import { formatClock } from '../utils/time';
 // NOSOTROS marcamos un gol de 7m (ver BenchConsole), como estadística del
 // rival derivada del gol propio.
 export default function RivalPanel({
-  rivalName, rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalYellowCards,
+  rivalName, rivalGoals, rivalMissesCount, rivalSavedCount, rivalExclusionsLive, rivalYellowCards,
   onGoal, onOpenGoalDetail, onOpenMissDetail, onMissDec, onOpenExclusion, onCancelExclusion,
   onOpenYellowCard, onCancelYellowCard, matchRunning,
 }) {
@@ -58,6 +58,14 @@ export default function RivalPanel({
         <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />
         <StatStepper icon="FALLO" label="Fallo rival" count={rivalMissesCount} onInc={onOpenMissDetail} onDec={onMissDec} disabled={!matchRunning} />
       </div>
+      {/* Un fallo rival puede haberlo parado nuestro portero (cuenta también
+          como su parada) o haberse ido fuera: se desglosa para que el
+          número de arriba no confunda. */}
+      {rivalMissesCount > 0 && (
+        <p className="rival-miss-breakdown">
+          Fallos: {rivalSavedCount} parado{rivalSavedCount === 1 ? '' : 's'} · {rivalMissesCount - rivalSavedCount} fuera / sin zona
+        </p>
+      )}
 
       {exclusionSummary.length > 0 && (
         <div className="rival-excl-badges">

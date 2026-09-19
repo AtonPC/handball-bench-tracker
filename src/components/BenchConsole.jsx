@@ -7,7 +7,7 @@ import SubstitutionModal from './SubstitutionModal';
 import RivalShotModal from './RivalShotModal';
 import DorsalNumberModal from './DorsalNumberModal';
 import ShotDetailModal from './ShotDetailModal';
-import SaveDetailModal from './SaveDetailModal';
+import SaverChooserModal from './SaverChooserModal';
 import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
 import ActionStatsView from './ActionStatsView';
@@ -19,6 +19,7 @@ import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { teamColorStyle } from '../utils/teamColors';
 import { periodShortLabel } from '../utils/periods';
+import { OUT_ZONES } from '../shotZones';
 
 // Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
 // "Datos" es la pantalla de anotar de siempre; las otras tres reutilizan
@@ -45,6 +46,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [showRivalYellowCardModal, setShowRivalYellowCardModal] = useState(false);
   const [shotDetailFor, setShotDetailFor] = useState(null); // { playerId, kind: 'goal'|'miss' }
   const [saveDetailForId, setSaveDetailForId] = useState(null);
+  // Fallo rival por parada que espera a que se elija qué portero la paró
+  // (solo cuando no hay exactamente un portero en pista).
+  const [pendingRivalSave, setPendingRivalSave] = useState(null);
   // Solo se pide el dorsal rival que ha cometido la falta cuando metemos
   // NOSOTROS un gol de 7 metros — no hay entrada suelta para el rival, ya
   // que la falta de 7m siempre la sufre el equipo que lanza.
@@ -69,6 +73,29 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // Igual que en FollowerHome/FollowerMatchDetail: jugadores del PARTIDO,
   // no de la plantilla, es lo que espera ActionStatsView.
   const actionPlayers = Object.values(state.players).sort((a, b) => a.number - b.number);
+
+  // Portero(s) en pista ahora: es a quien se acredita la parada de un Fallo
+  // rival cuya zona cae dentro de la portería. Un excluido o expulsado no
+  // cuenta: no está jugando.
+  const playingNow = courtPlayers.filter((p) => !p.excluded && !p.disqualified);
+  const goalkeepersOnCourt = playingNow.filter((p) => p.isGK);
+  const soleGoalkeeper = goalkeepersOnCourt.length === 1 ? goalkeepersOnCourt[0] : null;
+
+  // Fallo rival: la zona de portería decide qué se anota. Dentro = lo paró
+  // nuestro portero (parada + fallo rival); "Fuera" o sin zona = solo fallo
+  // rival. Si hay que acreditar una parada y no hay un único portero claro,
+  // se pregunta cuál.
+  function handleRivalMissConfirm(detail) {
+    setShowRivalMissModal(false);
+    const saved = detail.goalZone && !OUT_ZONES.includes(detail.goalZone);
+    if (!saved) {
+      store.registerRivalShot({ ...detail, saverId: null });
+    } else if (soleGoalkeeper) {
+      store.registerRivalShot({ ...detail, saverId: soleGoalkeeper.id });
+    } else {
+      setPendingRivalSave(detail);
+    }
+  }
 
   // Al llegar a la 3ª exclusión, se abre el cambio en el acto — nadie sale
   // de pista sin que se pregunte quién entra.
@@ -145,6 +172,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             rivalName={state.rivalName}
             rivalGoals={state.score.rival}
             rivalMissesCount={rivalMisses.length}
+            rivalSavedCount={Math.min(saveEvents.length, rivalMisses.length)}
             rivalExclusionsLive={rivalExclusionsLive}
             rivalYellowCards={rivalYellowCards}
             onGoal={store.rivalGoal}
@@ -221,11 +249,26 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       {showRivalMissModal && (
         <RivalShotModal
           kind="miss"
-          onConfirm={(detail) => {
-            store.rivalMiss(detail);
-            setShowRivalMissModal(false);
-          }}
+          saverName={soleGoalkeeper ? `#${soleGoalkeeper.number} ${soleGoalkeeper.name}` : null}
+          onConfirm={handleRivalMissConfirm}
           onCancel={() => setShowRivalMissModal(false)}
+        />
+      )}
+
+      {pendingRivalSave && (
+        <SaverChooserModal
+          candidates={goalkeepersOnCourt.length > 1
+            ? goalkeepersOnCourt
+            : [...playingNow].sort((a, b) => Number(!!b.isGK) - Number(!!a.isGK) || a.number - b.number)}
+          onSelect={(saverId) => {
+            store.registerRivalShot({ ...pendingRivalSave, saverId });
+            setPendingRivalSave(null);
+          }}
+          onWithoutSave={() => {
+            store.registerRivalShot({ ...pendingRivalSave, saverId: null });
+            setPendingRivalSave(null);
+          }}
+          onCancel={() => setPendingRivalSave(null)}
         />
       )}
 
@@ -298,10 +341,11 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       )}
 
       {saveDetailForId && (
-        <SaveDetailModal
+        <RivalShotModal
+          kind="save"
           playerName={state.players[saveDetailForId]?.name}
           onConfirm={(detail) => {
-            store.playerSaveWithDetail(saveDetailForId, detail);
+            store.registerRivalShot({ ...detail, saverId: saveDetailForId });
             setSaveDetailForId(null);
           }}
           onCancel={() => setSaveDetailForId(null)}

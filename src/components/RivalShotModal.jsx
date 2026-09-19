@@ -1,19 +1,24 @@
 import { useState } from 'react';
 import ShotZoneDiagram from './ShotZoneDiagram';
-import { missingZoneWarning } from '../shotZones';
+import { OUT_ZONES, missingZoneWarning } from '../shotZones';
 
 const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
-// Gol o fallo del rival — mismo teclado de dorsal + mismo diagrama que
-// ShotDetailModal usa para los propios, con showOut solo en un Fallo (un
-// gol, por definición, entró). Antes esto era RivalGoalModal, solo para
-// goles; ahora también registra un fallo rival (tiró fuera, sin que
-// parásemos nada) — necesario para que "Tiros del rival" sea un dato real.
-// Un Fallo rival ya NO puede marcarse como "entró en la portería" (2026-
-// 09-16): las 9 zonas de portería están deshabilitadas para un Fallo — si
-// el portero la paró, eso se registra como Parada en el jugador (que crea
-// a la vez su propio Fallo rival emparejado), no aquí dos veces.
-export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
+// UN solo interfaz para todo lo que anota un tiro del rival (2026-09-19):
+// dorsal + de dónde vino + por dónde fue. Cambia solo qué se anota al
+// confirmar, según `kind`:
+//  - 'goal' : gol rival (dorsal obligatorio; las zonas, opcionales).
+//  - 'miss' : botón FALLO del rival. Todas las zonas de portería, las 9 de
+//    dentro y las 3 de "Fuera". Zona de dentro = lo paró nuestro portero:
+//    se anota a la vez su Parada y el fallo rival. "Fuera" (o sin zona) =
+//    solo fallo del rival, nada para nuestro equipo.
+//  - 'save' : botón PARADA de nuestro portero (`playerName`). Solo las 9
+//    zonas de dentro: una parada, por definición, se queda dentro del marco.
+//    Anota la Parada y, a la vez, el fallo rival emparejado.
+// El dorsal del que tiró es opcional en 'miss' y 'save' (si no da tiempo a
+// verlo no bloquea); solo un gol lo exige. `saverName` (solo 'miss') es el
+// portero al que se le anotaría la parada, si ya se sabe cuál es.
+export default function RivalShotModal({ kind = 'goal', playerName, saverName, onConfirm, onCancel }) {
   const [number, setNumber] = useState('');
   const [shotZone, setShotZone] = useState(null);
   const [goalZone, setGoalZone] = useState(null);
@@ -28,17 +33,49 @@ export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
     }
   }
 
+  const numberRequired = kind === 'goal';
+
   function handleConfirm() {
-    if (!number) return;
+    if (numberRequired && !number) return;
     const warning = missingZoneWarning(shotZone, goalZone);
     if (warning && !confirm(warning)) return;
-    onConfirm({ number: Number(number), shotZone, goalZone });
+    onConfirm({ number: number ? Number(number) : null, shotZone, goalZone });
+  }
+
+  const title = kind === 'goal'
+    ? 'Gol rival — ¿qué dorsal ha marcado?'
+    : kind === 'miss'
+      ? 'Fallo rival — ¿qué dorsal ha fallado? (opcional)'
+      : `Parada — ${playerName}`;
+
+  const hint = kind === 'goal'
+    ? 'De dónde vino y por dónde entró (opcional)'
+    : kind === 'miss'
+      ? 'De dónde vino y por dónde fue: si lo paró nuestro portero, marca la zona de la portería; si se fue fuera, marca "Fuera" (opcional)'
+      : '¿Qué dorsal rival ha tirado? (opcional) — y de dónde vino y dónde paró el balón';
+
+  // Lo que va a pasar al confirmar, con la zona elegida: para que en un
+  // Fallo nadie se lleve una parada (o se quede sin ella) sin saberlo.
+  let effect = null;
+  if (kind === 'miss') {
+    const saved = goalZone && !OUT_ZONES.includes(goalZone);
+    if (saved) {
+      effect = saverName
+        ? `Lo paró ${saverName}: se le anota una parada y cuenta como fallo del rival.`
+        : 'Lo paró nuestro portero: se anotará una parada y un fallo del rival.';
+    } else if (goalZone) {
+      effect = 'Se fue fuera: solo cuenta como fallo del rival, sin parada para nosotros.';
+    } else {
+      effect = 'Sin zona de portería: solo cuenta como fallo del rival. Marca por dónde fue para anotar también la parada.';
+    }
+  } else if (kind === 'save') {
+    effect = 'Se anota la parada y, a la vez, un fallo del rival.';
   }
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal rival-goal-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{kind === 'goal' ? 'Gol rival' : 'Fallo rival'} — ¿qué dorsal ha {kind === 'goal' ? 'marcado' : 'fallado'}?</h2>
+        <h2>{title}</h2>
 
         <div className="rival-goal-display">{number || '—'}</div>
 
@@ -55,25 +92,21 @@ export default function RivalShotModal({ kind = 'goal', onConfirm, onCancel }) {
           ))}
         </div>
 
-        <p className="modal-hint">
-          {kind === 'goal'
-            ? 'De dónde vino y por dónde entró (opcional)'
-            : 'De dónde vino y por dónde se fue fuera (opcional) — si el portero la paró, no es un Fallo: usa Parada en el jugador correspondiente'}
-        </p>
+        <p className="modal-hint">{hint}</p>
         <ShotZoneDiagram
           showGoal
           showOut={kind === 'miss'}
           showOrigin
-          disableInteriorGoalZones={kind === 'miss'}
           shotZone={shotZone}
           onShotZone={setShotZone}
           goalZone={goalZone}
           onGoalZone={setGoalZone}
         />
+        {effect && <p className="modal-hint rival-shot-effect">{effect}</p>}
 
         <div className="player-form-actions">
-          <button className="btn btn-clock btn-start" disabled={!number} onClick={handleConfirm}>
-            {kind === 'goal' ? 'REGISTRAR GOL' : 'REGISTRAR FALLO'}
+          <button className="btn btn-clock btn-start" disabled={numberRequired && !number} onClick={handleConfirm}>
+            {kind === 'goal' ? 'REGISTRAR GOL' : kind === 'miss' ? 'REGISTRAR FALLO' : 'REGISTRAR PARADA'}
           </button>
           <button className="modal-cancel" onClick={onCancel}>Cancelar</button>
         </div>

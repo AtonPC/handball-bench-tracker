@@ -47,10 +47,15 @@ export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, 
   for (const e of ownExclusions) entries.push({ id: `oe-${e.id}`, minute: e.minute, createdAt: e.createdAt, type: 'exclusion', side: 'own', playerId: e.playerId, disqualified: e.disqualified });
   for (const y of ownYellowCards || []) entries.push({ id: `oy-${y.id}`, minute: y.minute, createdAt: y.createdAt, type: 'yellowCard', side: 'own', playerId: y.playerId });
   for (const g of rivalGoals) entries.push({ id: `rg-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'rival', number: g.number });
-  // Un fallo rival (tiró fuera, sin que paráramos nada) siempre es 'out'
-  // por definición — si lo hubiéramos parado, sería una Parada propia, no
-  // esto (ver rivalMiss() en useMatchStore.js).
-  for (const m of rivalMisses || []) entries.push({ id: `rm-${m.id}`, minute: m.minute, createdAt: m.createdAt, type: 'miss', side: 'rival', number: m.number, missKind: 'out' });
+  // Un fallo rival que LO PARÓ nuestro portero tiene su Parada emparejada
+  // (mismo pairId; en las anteriores a ese campo, mismo createdAt): esa
+  // acción ya sale una vez, como "Parada" propia, así que su fallo rival
+  // NO se lista aparte — antes salía duplicada y, encima, como "fuera".
+  // Lo que queda son fallos que se fueron fuera de verdad, siempre 'out'
+  // (ver registerRivalShot() en useMatchStore.js).
+  const pairKey = (e) => e.pairId || `t${e.createdAt}`;
+  const savedKeys = new Set((ownSaves || []).map(pairKey));
+  for (const m of (rivalMisses || []).filter((x) => !savedKeys.has(pairKey(x)))) entries.push({ id: `rm-${m.id}`, minute: m.minute, createdAt: m.createdAt, type: 'miss', side: 'rival', number: m.number, missKind: 'out' });
   for (const s of rivalSevenMeters || []) entries.push({ id: `rs-${s.id}`, minute: s.minute, createdAt: s.createdAt, type: 'sevenMeter', side: 'rival', number: s.number });
   for (const y of rivalYellowCards || []) entries.push({ id: `ry-${y.id}`, minute: y.minute, createdAt: y.createdAt, type: 'yellowCard', side: 'rival', number: y.number });
 

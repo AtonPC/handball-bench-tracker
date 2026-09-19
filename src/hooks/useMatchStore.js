@@ -125,7 +125,7 @@ export function useMatchStore(matchId, enabled) {
   // Un evento puede, además de cambiar el partido/los jugadores:
   //  - `extra.creates` (array; `extra.create` singular sigue aceptándose):
   //    crear documentos de detalle (p. ej. una Parada crea también su Fallo
-  //    rival emparejado, ver playerSaveWithDetail). Se guarda su ruta en el
+  //    rival emparejado, ver registerRivalShot). Se guarda su ruta en el
   //    evento para que el deshacer los borre.
   //  - `extra.deletes` (array de {ref, data}): borrar documentos de detalle
   //    (un "−1" borra el gol/parada/... que restaba). Se guarda su contenido
@@ -364,24 +364,46 @@ export function useMatchStore(matchId, enabled) {
     [match, recordEvent]
   );
 
-  // Fallo rival: tiró y se fue fuera, sin que el portero parara nada — no
-  // cambia el marcador. Se guarda en matches/{id}/rivalMisses, con dorsal y
-  // zonas (opcional), igual que un gol rival. Sin esto, "Tiros del rival"
-  // solo podía contar sus goles + nuestras paradas, quedándose corto (un
-  // tiro que se va fuera no pasa por ninguno de los dos).
-  const rivalMiss = useCallback(
-    ({ number, shotZone, goalZone }) => {
+  // Tiro del rival que NO fue gol — un único registro para las dos formas de
+  // anotarlo, que comparten interfaz (RivalShotModal):
+  //  - FALLO rival (se fue fuera, o lo paró nuestro portero): `saverId` es
+  //    el portero en pista si la zona de portería fue de las 9 de dentro, o
+  //    null si fue "Fuera" / no se marcó zona.
+  //  - PARADA de nuestro portero: `saverId` es ese portero.
+  // Sin `saverId` solo se crea el Fallo rival (matches/{id}/rivalMisses) y no
+  // se anota nada a nuestro equipo. Con `saverId` se crean a la vez y enlazadas
+  // (pairId = id de la parada) la Parada (saveEvents) y su Fallo rival, y se
+  // suma la parada al portero: una parada nuestra ES un tiro fallado del
+  // rival, y por eso zoneStats.rivalShotZoneStats() no suma saveEvents aparte.
+  // El dorsal (`number`) es opcional: si no da tiempo a verlo no bloquea.
+  const registerRivalShot = useCallback(
+    ({ number, shotZone, goalZone, saverId }) => {
       if (!match || match.status !== 'running') return;
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
-      const ref = doc(collection(db, 'matches', matchId, 'rivalMisses'));
-      recordEvent(`Fallo rival #${number}`, {}, {}, {
-        create: {
-          ref,
-          data: { number, minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
-        },
+      const period = match.period;
+      const createdAt = Date.now();
+      const rivalNumber = number ? Number(number) : null;
+      const zones = { shotZone: shotZone || null, goalZone: goalZone || null };
+      const missRef = doc(collection(db, 'matches', matchId, 'rivalMisses'));
+
+      if (!saverId) {
+        recordEvent(`Fallo rival${rivalNumber ? ` #${rivalNumber}` : ''}`, {}, {}, {
+          create: { ref: missRef, data: { number: rivalNumber, minute, period, ...zones, createdAt } },
+        });
+        return;
+      }
+
+      const saver = players[saverId];
+      if (!saver) return;
+      const saveRef = doc(collection(db, 'matches', matchId, 'saveEvents'));
+      recordEvent('Parada', {}, { [saverId]: { saves: (saver.saves || 0) + 1 } }, {
+        creates: [
+          { ref: saveRef, data: { playerId: saverId, minute, period, ...zones, rivalNumber, pairId: saveRef.id, createdAt } },
+          { ref: missRef, data: { number: rivalNumber, minute, period, ...zones, pairId: saveRef.id, createdAt } },
+        ],
       });
     },
-    [match, matchId, liveElapsedMs, recordEvent]
+    [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
   // "−1" del Fallo rival: borra el último fallo rival. Si era un tiro parado
@@ -653,51 +675,6 @@ export function useMatchStore(matchId, enabled) {
     [match, players, recordEvent, runExclusive, latestDetailDoc, findPairedDoc]
   );
 
-  // Parada con zona: se guarda como documento propio en
-  // matches/{id}/saveEvents, igual que el gol/fallo propio. Una parada
-  // nuestra es, a la vez y por definición, un tiro fallado del rival — así
-  // que también se crea a la vez su documento gemelo en rivalMisses (2026-
-  // 09-16, antes había que anotarlo aparte a mano con "FALLO RIVAL" y casi
-  // nunca se hacía, dejando las estadísticas del rival cortas). rivalNumber
-  // (opcional) es el dorsal de quien tiró, se usa en los dos documentos.
-  // Por eso rivalShotZoneStats() en zoneStats.js ya NO suma saveEvents
-  // aparte — contarlo dos veces (aquí y en rivalMisses) doblaría el total.
-  const playerSaveWithDetail = useCallback(
-    (playerId, { shotZone, goalZone, rivalNumber }) => {
-      if (!match || match.status !== 'running') return;
-      const next = Math.max(0, players[playerId].saves + 1);
-      const minute = Math.floor(liveElapsedMs / 60000) + 1;
-      const period = match.period;
-      const createdAt = Date.now();
-      const saveRef = doc(collection(db, 'matches', matchId, 'saveEvents'));
-      const missRef = doc(collection(db, 'matches', matchId, 'rivalMisses'));
-      recordEvent('Parada', {}, { [playerId]: { saves: next } }, {
-        creates: [
-          {
-            ref: saveRef,
-            data: {
-              playerId, minute, period,
-              shotZone: shotZone || null, goalZone: goalZone || null,
-              rivalNumber: rivalNumber || null,
-              pairId: saveRef.id,
-              createdAt,
-            },
-          },
-          {
-            ref: missRef,
-            data: {
-              number: rivalNumber || null, minute, period,
-              shotZone: shotZone || null, goalZone: goalZone || null,
-              pairId: saveRef.id,
-              createdAt,
-            },
-          },
-        ],
-      });
-    },
-    [match, players, matchId, liveElapsedMs, recordEvent]
-  );
-
   // A la 3ª exclusión, el jugador queda expulsado del partido (tarjeta roja).
   // No se toca courtSlots aquí: el jugador se queda en su sitio (sin poder
   // seguir jugando) hasta que el banquillo elige quién entra por él, con
@@ -947,7 +924,7 @@ export function useMatchStore(matchId, enabled) {
     rivalGoal,
     rivalGoalWithDetail,
     rivalShot,
-    rivalMiss,
+    registerRivalShot,
     rivalMissDec,
     rivalExclusion,
     cancelRivalExclusion,
@@ -963,7 +940,6 @@ export function useMatchStore(matchId, enabled) {
     playerRecovery,
     playerSevenMeterCommitted,
     playerSave,
-    playerSaveWithDetail,
     playerExclusion,
     cancelExclusion,
     playerYellowCard,
