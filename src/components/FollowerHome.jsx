@@ -17,6 +17,7 @@ import { useTeamStats } from '../hooks/useTeamStats';
 import { useFollowerSession } from '../hooks/useFollowerSession';
 import { formatClock } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
+import { periodShortLabel } from '../utils/periods';
 import GoalCelebration from './GoalCelebration';
 import PlayerStatsTable from './PlayerStatsTable';
 import AppSidebar from './AppSidebar';
@@ -177,7 +178,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
       <div className="follower-scoreboard">
         {state.jornada != null && <p className="follower-jornada">Jornada {state.jornada}</p>}
         <span className="follower-clock">
-          {state.clock.period}ª · {state.clock.periodRemainingMs < 0
+          {periodShortLabel(state.clock.period, state.clock.periodCount)} · {state.clock.periodRemainingMs < 0
             ? `+${formatClock(-state.clock.periodRemainingMs)}`
             : formatClock(state.clock.periodRemainingMs)}
         </span>

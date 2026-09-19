@@ -18,6 +18,7 @@ import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { teamColorStyle } from '../utils/teamColors';
+import { periodShortLabel } from '../utils/periods';
 
 // Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
 // "Datos" es la pantalla de anotar de siempre; las otras tres reutilizan
@@ -91,7 +92,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       {!isRunning && (
         <div className="match-not-running-banner">
           {state.clock.status === 'idle'
-            ? '⏸ PARTIDO NO INICIADO — pulsa INICIAR 1T arriba para poder anotar'
+            ? `⏸ PARTIDO NO INICIADO — pulsa INICIAR ${periodShortLabel(1, state.clock.periodCount)} arriba para poder anotar`
             : '⏸ PARTIDO EN PAUSA — pulsa REANUDAR arriba para poder seguir anotando'}
         </div>
       )}

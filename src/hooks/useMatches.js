@@ -27,7 +27,9 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount }) => {
+    const count = periodCount === 4 ? 4 : 2;
+    const zeroTimeouts = Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 0]));
     const ref = await addDoc(matchesCol, {
       clubId,
       teamId,
@@ -41,7 +43,9 @@ export function useMatches(clubId, teamId) {
       callUpPlayerIds,
       startingLineupIds: startingLineupIds || [],
       startingGoalkeeperId: startingGoalkeeperId || null,
-      periodDurationMs: periodDurationMs || 20 * 60000,
+      periodDurationMs: periodDurationMs || (count === 4 ? 10 : 20) * 60000,
+      periodCount: count,
+      periodEnded: false,
       lifecycle: 'scheduled', // 'scheduled' | 'live' | 'finished'
       status: 'idle', // cronómetro: 'idle' | 'running' | 'paused'
       period: 1,
@@ -50,7 +54,7 @@ export function useMatches(clubId, teamId) {
       runningSinceMs: null,
       score: { own: 0, rival: 0 },
       rivalShots: 0,
-      timeouts: { own: { 1: 0, 2: 0 }, rival: { 1: 0, 2: 0 } },
+      timeouts: { own: { ...zeroTimeouts }, rival: { ...zeroTimeouts } },
       courtSlots: [],
       bench: [],
       createdAt: Date.now(),

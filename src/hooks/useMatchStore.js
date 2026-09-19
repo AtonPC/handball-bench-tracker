@@ -171,46 +171,66 @@ export function useMatchStore(matchId, enabled) {
     await batch.commit();
   }, [match, players, matchRef, playerRef]);
 
-  const togglePause = useCallback(async () => {
-    if (!match) return;
+  // Pausar (parada arbitral) y terminar un periodo comparten mecánica: los
+  // dos detienen el reloj. Lo que cambia es `periodEnded`, que es lo único
+  // que deja iniciar el siguiente periodo — así una pausa normal a mitad de
+  // un cuarto nunca ofrece por error el botón de empezar el siguiente.
+  const pauseClock = useCallback(async (endsPeriod) => {
+    if (!match || match.status !== 'running') return;
     const nowMs = Date.now();
     const batch = writeBatch(db);
-    if (match.status === 'running') {
-      batch.update(matchRef, {
-        status: 'paused',
-        accumulatedMs: match.accumulatedMs + (nowMs - match.runningSinceMs),
-        runningSinceMs: null,
-      });
-      for (const id of match.courtSlots) {
-        const p = players[id];
-        if (p?.onCourtSinceMs) {
-          batch.update(playerRef(id), {
-            accumulatedMs: p.accumulatedMs + (nowMs - p.onCourtSinceMs),
-            onCourtSinceMs: null,
-          });
-        }
-      }
-    } else {
-      batch.update(matchRef, { status: 'running', runningSinceMs: nowMs });
-      for (const id of match.courtSlots) {
-        if (!players[id]?.excluded) batch.update(playerRef(id), { onCourtSinceMs: nowMs });
+    batch.update(matchRef, {
+      status: 'paused',
+      accumulatedMs: match.accumulatedMs + (nowMs - match.runningSinceMs),
+      runningSinceMs: null,
+      periodEnded: !!endsPeriod,
+    });
+    for (const id of match.courtSlots) {
+      const p = players[id];
+      if (p?.onCourtSinceMs) {
+        batch.update(playerRef(id), {
+          accumulatedMs: p.accumulatedMs + (nowMs - p.onCourtSinceMs),
+          onCourtSinceMs: null,
+        });
       }
     }
     await batch.commit();
   }, [match, players, matchRef, playerRef]);
 
-  // periodStartAccumulatedMs guarda cuánto llevaba el partido en total al
-  // empezar esta parte, para poder mostrar la cuenta atrás de la parte en
-  // curso (no del partido completo) restando ese punto de partida.
-  const startPeriod2 = useCallback(async () => {
+  const togglePause = useCallback(async () => {
     if (!match) return;
+    if (match.status === 'running') {
+      await pauseClock(false);
+      return;
+    }
+    const nowMs = Date.now();
+    const batch = writeBatch(db);
+    batch.update(matchRef, { status: 'running', runningSinceMs: nowMs, periodEnded: false });
+    for (const id of match.courtSlots) {
+      if (!players[id]?.excluded) batch.update(playerRef(id), { onCourtSinceMs: nowMs });
+    }
+    await batch.commit();
+  }, [match, players, matchRef, playerRef, pauseClock]);
+
+  const endPeriod = useCallback(() => pauseClock(true), [pauseClock]);
+
+  // periodStartAccumulatedMs guarda cuánto llevaba el partido en total al
+  // empezar este periodo, para poder mostrar la cuenta atrás del periodo en
+  // curso (no del partido completo) restando ese punto de partida. Vale
+  // igual para la 2ª parte que para el 2º, 3er o 4º cuarto. Solo se puede
+  // empezar tras terminar el anterior con "FIN" (periodEnded) y si aún
+  // queda un periodo por jugar.
+  const startNextPeriod = useCallback(async () => {
+    if (!match || match.status !== 'paused' || !match.periodEnded) return;
+    if (match.period >= (match.periodCount === 4 ? 4 : 2)) return;
     const nowMs = Date.now();
     const batch = writeBatch(db);
     batch.update(matchRef, {
       status: 'running',
-      period: 2,
+      period: match.period + 1,
       runningSinceMs: nowMs,
       periodStartAccumulatedMs: match.accumulatedMs,
+      periodEnded: false,
     });
     for (const id of match.courtSlots) {
       if (!players[id]?.excluded) batch.update(playerRef(id), { onCourtSinceMs: nowMs });
@@ -724,13 +744,15 @@ export function useMatchStore(matchId, enabled) {
       clock: {
         status: match?.status || 'idle',
         period: match?.period || 1,
+        periodCount: match?.periodCount === 4 ? 4 : 2,
+        periodEnded: !!match?.periodEnded,
         elapsedMs: liveElapsedMs,
         periodDurationMs,
         periodRemainingMs,
       },
       score: match?.score || { own: 0, rival: 0 },
       rivalShots: match?.rivalShots || 0,
-      timeouts: match?.timeouts || { own: { 1: 0, 2: 0 }, rival: { 1: 0, 2: 0 } },
+      timeouts: match?.timeouts || { own: {}, rival: {} },
       courtSlots: match?.courtSlots || [],
       bench: match?.bench || [],
       startingLineupIds: match?.startingLineupIds || [],
@@ -746,7 +768,8 @@ export function useMatchStore(matchId, enabled) {
     canUndo,
     startPeriod1,
     togglePause,
-    startPeriod2,
+    endPeriod,
+    startNextPeriod,
     finishMatch,
     rivalGoal,
     rivalGoalWithDetail,
