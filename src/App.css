@@ -3717,3 +3717,146 @@
   border-color: var(--border);
   color: var(--text);
 }
+
+/* ---------- Equipo titular por tiempo/cuarto (2026-09-19) ---------- */
+.match-not-running-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.banner-btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--danger);
+  font: 800 12px/1.1 var(--font-body);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+.banner-advice {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+  font-weight: 700;
+}
+.lineup-grid {
+  display: grid;
+  gap: 4px;
+  align-items: center;
+}
+.lineup-head {
+  text-align: center;
+  font: 800 12px/1 var(--font-mono);
+  color: var(--text-dim);
+  padding: 4px 0;
+}
+.lineup-head--now {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+.lineup-row-label {
+  text-align: center;
+  font: 800 12px/1 var(--font-mono);
+  color: var(--text-dim);
+}
+.lineup-row-label--gk {
+  color: var(--gk);
+}
+.lineup-cell {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+.lineup-pill {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-alt);
+  font: 700 14px/1 var(--font-mono);
+}
+.lineup-pill--gk {
+  border-color: var(--gk);
+  background: var(--gk-dim);
+  color: var(--gk);
+}
+.lineup-pill--empty,
+.lineup-pill--future {
+  opacity: 0.4;
+  font-weight: 400;
+}
+.lineup-pill--legend {
+  min-width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+.lineup-pill--repeat-warn {
+  border-color: var(--danger);
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+.lineup-pill--repeat-info {
+  border-color: var(--warning);
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+.lineup-select {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 2px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: 600 12px/1 var(--font-body);
+}
+.lineup-select--gk {
+  border-color: var(--gk);
+  background: var(--gk-dim);
+}
+.lineup-select--repeat-warn {
+  border-color: var(--danger);
+  background: var(--danger-dim);
+}
+.lineup-select--repeat-info {
+  border-color: var(--warning);
+  background: var(--warning-dim);
+}
+.lineup-advice {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.lineup-advice em {
+  font-style: normal;
+  opacity: 0.85;
+}
+.lineup-advice--warn {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+.lineup-advice--info {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+.lineup-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.alevin-rules-toggle {
+  align-items: flex-start;
+  line-height: 1.35;
+}

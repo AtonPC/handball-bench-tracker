@@ -27,7 +27,7 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount, alevinRules }) => {
     const count = periodCount === 4 ? 4 : 2;
     const zeroTimeouts = Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 0]));
     const ref = await addDoc(matchesCol, {
@@ -45,6 +45,9 @@ export function useMatches(clubId, teamId) {
       startingGoalkeeperId: startingGoalkeeperId || null,
       periodDurationMs: periodDurationMs || (count === 4 ? 10 : 20) * 60000,
       periodCount: count,
+      // Reglas de Alevín (titulares distintos en cada cuarto, sin cambios los
+      // 5 primeros minutos): ver utils/lineups.js.
+      alevinRules: !!alevinRules,
       periodEnded: false,
       lifecycle: 'scheduled', // 'scheduled' | 'live' | 'finished'
       status: 'idle', // cronómetro: 'idle' | 'running' | 'paused'
@@ -90,7 +93,12 @@ export function useMatches(clubId, teamId) {
     const courtSlots = validStarters.length === 7 ? validStarters : validIds.slice(0, 7);
     const bench = validIds.filter((pid) => !courtSlots.includes(pid));
     const batch = writeBatch(db);
-    batch.update(doc(db, 'matches', matchId), { lifecycle: 'live', courtSlots, bench });
+    // Los que empiezan el 1er periodo, con el portero primero (así se compara
+    // con el siguiente cuarto en las reglas de Alevín).
+    const firstLineup = startingGoalkeeperId && courtSlots.includes(startingGoalkeeperId)
+      ? [startingGoalkeeperId, ...courtSlots.filter((pid) => pid !== startingGoalkeeperId)]
+      : [...courtSlots];
+    batch.update(doc(db, 'matches', matchId), { lifecycle: 'live', courtSlots, bench, lineups: { 1: firstLineup } });
     for (const pid of validIds) {
       const rp = rosterById[pid];
       batch.set(doc(db, 'matches', matchId, 'players', pid), {

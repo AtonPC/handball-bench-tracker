@@ -14,6 +14,7 @@ import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
 import ActionStatsView from './ActionStatsView';
 import ConsoleChronology from './ConsoleChronology';
+import LineupModal from './LineupModal';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
@@ -23,6 +24,7 @@ import { useSaveEvents } from '../hooks/useSaveEvents';
 import { teamColorStyle } from '../utils/teamColors';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
 import { OUT_ZONES } from '../shotZones';
+import { lineupAdvice, orderLineup, validateLineup } from '../utils/lineups';
 
 // Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
 // "Datos" es la pantalla de anotar de siempre; las otras tres reutilizan
@@ -80,6 +82,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // Gol rival de 7 metros que espera a saber qué jugador nuestro cometió la
   // falta (se registra al elegir, o al omitir).
   const [pendingRivalSevenGoal, setPendingRivalSevenGoal] = useState(null);
+  // Diálogo del equipo titular del siguiente periodo (opcional).
+  const [showLineupModal, setShowLineupModal] = useState(false);
   // Solo se pide el dorsal rival que ha cometido la falta cuando metemos
   // NOSOTROS un gol de 7 metros — no hay entrada suelta para el rival, ya
   // que la falta de 7m siempre la sufre el equipo que lanza.
@@ -128,6 +132,20 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     }
   }
 
+  // Entre periodos (tras terminar uno), la barra ofrece elegir el equipo
+  // titular del siguiente. Con los avisos de Alevín puestos, además avisa si
+  // los que hay ahora en pista repiten a los que empezaron el periodo que
+  // acaba de terminar — sin bloquear nunca iniciar el siguiente.
+  const betweenPeriods = state.clock.status === 'paused' && state.clock.periodEnded && state.clock.period < state.clock.periodCount;
+  const nextShort = periodShortLabel(state.clock.period + 1, state.clock.periodCount);
+  let startersAdvice = null;
+  if (betweenPeriods && state.alevinRules) {
+    const goalkeeper = state.courtSlots.find((id) => state.players[id]?.isGK);
+    const nextIds = orderLineup(state.courtSlots, goalkeeper);
+    const check = validateLineup({ ids: nextIds, prevIds: state.lineups[state.clock.period] || [] });
+    startersAdvice = lineupAdvice({ repeated: check.repeated, convocados: state.convocados });
+  }
+
   // Al llegar a la 3ª exclusión, se abre el cambio en el acto — nadie sale
   // de pista sin que se pregunte quién entra.
   function handleExclusionStart(playerId) {
@@ -152,11 +170,25 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
 
       {!isRunning && (
         <div className="match-not-running-banner">
-          {state.clock.status === 'idle'
-            ? `⏸ PARTIDO NO INICIADO — pulsa ▶ (INICIAR ${periodShortLabel(1, state.clock.periodCount)}) arriba para poder anotar`
-            : state.clock.periodEnded
-              ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — puedes hacer cambios; pulsa ▶ (INICIAR ${periodShortLabel(state.clock.period + 1, state.clock.periodCount)}) arriba para seguir`
-              : '⏸ PARTIDO EN PAUSA — pulsa ▶ arriba para poder seguir anotando'}
+          <span>
+            {state.clock.status === 'idle'
+              ? `⏸ PARTIDO NO INICIADO — pulsa ▶ (INICIAR ${periodShortLabel(1, state.clock.periodCount)}) arriba para poder anotar`
+              : betweenPeriods
+                ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — puedes hacer cambios; pulsa ▶ (INICIAR ${nextShort}) arriba para seguir`
+                : '⏸ PARTIDO EN PAUSA — pulsa ▶ arriba para poder seguir anotando'}
+          </span>
+          {betweenPeriods && (
+            <button type="button" className="banner-btn" onClick={() => setShowLineupModal(true)}>
+              {state.lineups[state.clock.period + 1] ? `EQUIPO TITULAR DEL ${nextShort} ✓ · VER / CAMBIAR` : `ELEGIR EQUIPO TITULAR DEL ${nextShort}`}
+            </button>
+          )}
+          {betweenPeriods && startersAdvice && (
+            <span className="banner-advice">
+              ⚠ {startersAdvice.level === 'warn'
+                ? `${startersAdvice.repeated.map((id) => '#' + (state.players[id]?.number ?? '?')).join(', ')} ya empezó el ${periodShortLabel(state.clock.period, state.clock.periodCount)}: con ${state.convocados} convocados no se debería repetir (es solo un aviso, puedes iniciar igualmente)`
+                : `Repites ${startersAdvice.repeated.length} del ${periodShortLabel(state.clock.period, state.clock.periodCount)}; con ${state.convocados} convocados hay que repetir como mínimo ${startersAdvice.needed}`}
+            </span>
+          )}
         </div>
       )}
 
@@ -294,6 +326,23 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             ownSecondaryColor={team?.secondaryColor}
           />
         </div>
+      )}
+
+      {showLineupModal && (
+        <LineupModal
+          period={state.clock.period + 1}
+          periodCount={state.clock.periodCount}
+          players={state.players}
+          lineups={state.lineups}
+          alevinRules={state.alevinRules}
+          convocados={state.convocados}
+          onConfirm={(ids) => {
+            const result = store.setPeriodLineup(state.clock.period + 1, ids);
+            if (result.ok) setShowLineupModal(false);
+            else alert('No se pudo aplicar el equipo titular: el reloj ya no está entre periodos.');
+          }}
+          onCancel={() => setShowLineupModal(false)}
+        />
       )}
 
       {view === 'cronologia' && (

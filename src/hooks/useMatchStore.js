@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
+import { lineupsOf, orderLineup, validateLineup } from '../utils/lineups';
 
 const EXCLUSION_MS = 2 * 60 * 1000;
 
@@ -16,6 +17,13 @@ const TIME_FIELDS = new Set(['onCourtSinceMs', 'accumulatedMs']);
 export function canSubstituteNow(match) {
   if (!match) return false;
   return match.status === 'running' || (match.status === 'paused' && !!match.periodEnded);
+}
+
+// Los 7 que están en pista, con el portero primero — es lo que se guarda como
+// "equipo titular" del periodo que empieza (ver utils/lineups.js).
+function courtLineup(match, players) {
+  const goalkeeperId = match.courtSlots.find((id) => players[id]?.isGK);
+  return orderLineup(match.courtSlots, goalkeeperId);
 }
 
 function getPath(obj, path) {
@@ -310,12 +318,51 @@ export function useMatchStore(matchId, enabled) {
       runningSinceMs: nowMs,
       periodStartAccumulatedMs: match.accumulatedMs,
       periodEnded: false,
+      // Quién EMPIEZA este periodo: lo que haya en pista ahora mismo. Nunca
+      // bloquea iniciarlo; es lo que luego consulta la vista de titulares.
+      [`lineups.${match.period + 1}`]: courtLineup(match, players),
     });
     for (const id of match.courtSlots) {
       if (!players[id]?.excluded) batch.update(playerRef(id), { onCourtSinceMs: nowMs });
     }
     await batch.commit();
   }, [match, players, matchRef, playerRef]);
+
+  // Equipo titular del periodo que va a empezar (OPCIONAL, para cualquier
+  // partido): `ids` son los 7 en orden, el primero es el portero. Solo entre
+  // periodos (tras terminar el anterior). Lo único que se exige es que esté
+  // completo y sin nadie repetido dentro del propio equipo; si repite a
+  // jugadores del periodo anterior, la pantalla avisa pero esto lo aplica igual
+  // (nunca bloquea: la app también se usa en entrenamientos). Lo aplica de una
+  // vez: pista, banquillo y quién es el portero, más el registro en
+  // `lineups.{periodo}`. Es un evento del log: un Deshacer lo revierte mientras
+  // el reloj no cambie. Quien sale de la pista con una exclusión sin cumplir la
+  // pierde (si no, se quedaría "excluido" en el banquillo para siempre: el
+  // cierre automático solo mira la pista).
+  const setPeriodLineup = useCallback(
+    (period, ids) => {
+      if (!match) return { ok: false, reason: 'state' };
+      if (match.status !== 'paused' || !match.periodEnded || period !== match.period + 1) return { ok: false, reason: 'state' };
+      const check = validateLineup({ ids });
+      if (!check.canConfirm) return { ok: false, reason: 'invalid' };
+      if (ids.some((id) => !players[id] || players[id].disqualified)) return { ok: false, reason: 'players' };
+      const goalkeeperId = ids[0];
+      const bench = Object.keys(players).filter((id) => !ids.includes(id) && !players[id].disqualified);
+      const playerUpdates = {};
+      for (const id of Object.keys(players)) {
+        const update = {};
+        if (!!players[id].isGK !== (id === goalkeeperId)) update.isGK = id === goalkeeperId;
+        if (!ids.includes(id) && players[id].excluded) {
+          update.excluded = false;
+          update.exclusionEndsAtMs = null;
+        }
+        if (Object.keys(update).length > 0) playerUpdates[id] = update;
+      }
+      recordEvent(`Equipo titular del periodo ${period}`, { courtSlots: [...ids], bench, [`lineups.${period}`]: [...ids] }, playerUpdates);
+      return { ok: true };
+    },
+    [match, players, recordEvent]
+  );
 
   // Finaliza el partido: congela cronómetro y tiempos en pista, y lo marca
   // como 'finished' (pasa a solo consulta de estadísticas).
@@ -962,6 +1009,10 @@ export function useMatchStore(matchId, enabled) {
     () => ({
       lifecycle: match?.lifecycle || 'scheduled',
       canSubstitute: canSubstituteNow(match),
+      // Equipo titular de cada periodo y avisos de Alevín (ver utils/lineups.js).
+      alevinRules: !!match?.alevinRules,
+      lineups: lineupsOf(match),
+      convocados: Object.keys(players).length,
       rivalName: match?.rivalName || 'Rival',
       rivalCrestUrl: match?.rivalCrestUrl || '',
       ownTeamName: match?.ownTeamName || 'Mi equipo',
@@ -999,6 +1050,7 @@ export function useMatchStore(matchId, enabled) {
     togglePause,
     endPeriod,
     startNextPeriod,
+    setPeriodLineup,
     finishMatch,
     rivalGoal,
     rivalGoalWithDetail,

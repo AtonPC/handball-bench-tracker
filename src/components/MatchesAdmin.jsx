@@ -6,7 +6,7 @@ import { teamInitials } from '../utils/teamColors';
 import { PERIOD_FORMATS, periodCountOf, periodFormatOf, periodLongLabel } from '../utils/periods';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
-const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodFormat: 'halves', periodDurationMinutes: PERIOD_FORMATS.halves.minutes, jornada: '', rivalCrestUrl: '' };
+const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodFormat: 'halves', periodDurationMinutes: PERIOD_FORMATS.halves.minutes, alevinRules: false, jornada: '', rivalCrestUrl: '' };
 
 function formatMatchDateTime(ms) {
   if (!ms) return 'Sin fecha';
@@ -150,6 +150,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       venue: m.venue || '',
       scheduledAt: m.scheduledAt ? new Date(m.scheduledAt).toISOString().slice(0, 16) : '',
       periodFormat: periodFormatOf(m),
+      alevinRules: !!m.alevinRules,
       periodDurationMinutes: m.periodDurationMs ? m.periodDurationMs / 60000 : PERIOD_FORMATS[periodFormatOf(m)].minutes,
       jornada: m.jornada ?? '',
       rivalCrestUrl: m.rivalCrestUrl || '',
@@ -184,6 +185,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       startingLineupIds: startingIds,
       startingGoalkeeperId: startingGoalkeeperId || null,
       periodCount: PERIOD_FORMATS[form.periodFormat].count,
+      alevinRules: form.periodFormat === 'quarters' && form.alevinRules,
       periodDurationMs: (Number(form.periodDurationMinutes) || PERIOD_FORMATS[form.periodFormat].minutes) * 60000,
     };
     if (editingMatchId) {
@@ -287,12 +289,28 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
                 key={key}
                 type="button"
                 className={`btn btn-timeout${form.periodFormat === key ? ' admin-nav-tab--active' : ''}`}
-                onClick={() => setForm({ ...form, periodFormat: key, periodDurationMinutes: fmt.minutes })}
+                // Con cuartos se activan por defecto las reglas de Alevín; con
+                // tiempos, no aplican.
+                onClick={() => setForm({ ...form, periodFormat: key, periodDurationMinutes: fmt.minutes, alevinRules: key === 'quarters' })}
               >
                 {fmt.label}
               </button>
             ))}
           </div>
+          {form.periodFormat === 'quarters' && (
+            <label className="player-form-checkbox alevin-rules-toggle">
+              <input
+                type="checkbox"
+                checked={form.alevinRules}
+                onChange={(e) => setForm({ ...form, alevinRules: e.target.checked })}
+              />
+              <span>
+                <strong>Avisos de Alevín</strong>: avisa si en un cuarto empiezan jugadores que ya empezaron el
+                anterior (solo se puede repetir con menos de 14 convocados). Es solo un aviso: nunca impide iniciar
+                un cuarto ni hacer un cambio — desmárcalo en un entrenamiento o amistoso.
+              </span>
+            </label>
+          )}
           <label className="player-form-checkbox">
             Duración de cada {form.periodFormat === 'quarters' ? 'cuarto' : 'tiempo'} (minutos)
             <input

@@ -1,4 +1,5 @@
 import { formatClock } from '../utils/time';
+import LineupsGrid from './LineupsGrid';
 
 function StatsGroupTable({ title, players }) {
   return (
@@ -55,6 +56,14 @@ export default function MatchQuickStats({ state }) {
 
   return (
     <>
+      {/* Quién empezó cada tiempo o cuarto (solo dorsales; el portero, primera
+          fila) — para no repetir titulares de un cuarto a otro. */}
+      <LineupsGrid
+        title={state.clock.periodCount === 4 ? 'Titulares de cada cuarto' : 'Titulares de cada tiempo'}
+        lineups={state.lineups}
+        players={state.players}
+        periodCount={state.clock.periodCount}
+      />
       <StatsGroupTable title="Titulares" players={starters} />
       <StatsGroupTable title="Suplentes" players={subs} />
     </>
