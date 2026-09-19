@@ -139,7 +139,12 @@ export default function MatchHeader({ store, team, onBack, onFinish, onNeedLineu
         <div className="clock-row">
           <span className={`clock-time${display.extra ? ' clock-time--over' : ''}`}>
             {display.main}
-            {display.extra && <span className="clock-extra" title="Tiempo añadido">{display.extra}</span>}
+            {display.extra && (
+              <span className="clock-extra" title="Tiempo añadido">
+                <span className="clock-extra-label">Extra<br />time</span>
+                <span className="clock-extra-value">{display.extra}</span>
+              </span>
+            )}
           </span>
         </div>
         <div className="teams-score-row">
