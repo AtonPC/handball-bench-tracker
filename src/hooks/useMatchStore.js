@@ -333,9 +333,11 @@ export function useMatchStore(matchId, enabled) {
   }, [match, players, matchRef, playerRef]);
 
   // Equipo titular del periodo que va a empezar (OPCIONAL, para cualquier
-  // partido): `ids` son los 7 en orden, el primero es el portero. Solo entre
-  // periodos (tras terminar el anterior). Lo único que se exige es que esté
-  // completo y sin nadie repetido dentro del propio equipo; si repite a
+  // partido): `ids` son los 7 puestos en orden, el primero es el portero, y
+  // '' un puesto sin rellenar. Solo entre periodos (tras terminar el anterior).
+  // Lo único que se exige es que haya al menos un jugador y nadie repetido
+  // dentro del propio equipo: con menos de 7 se aplica igual (la pantalla ya
+  // pidió la segunda confirmación) y sin portero, también. Si repite a
   // jugadores del periodo anterior, la pantalla avisa pero esto lo aplica igual
   // (nunca bloquea: la app también se usa en entrenamientos). Lo aplica de una
   // vez: pista, banquillo y quién es el portero, más el registro en
@@ -349,20 +351,21 @@ export function useMatchStore(matchId, enabled) {
       if (match.status !== 'paused' || !match.periodEnded || period !== match.period + 1) return { ok: false, reason: 'state' };
       const check = validateLineup({ ids });
       if (!check.canConfirm) return { ok: false, reason: 'invalid' };
-      if (ids.some((id) => !players[id] || players[id].disqualified)) return { ok: false, reason: 'players' };
+      const chosen = ids.filter(Boolean);
+      if (chosen.some((id) => !players[id] || players[id].disqualified)) return { ok: false, reason: 'players' };
       const goalkeeperId = ids[0];
-      const bench = Object.keys(players).filter((id) => !ids.includes(id) && !players[id].disqualified);
+      const bench = Object.keys(players).filter((id) => !chosen.includes(id) && !players[id].disqualified);
       const playerUpdates = {};
       for (const id of Object.keys(players)) {
         const update = {};
         if (!!players[id].isGK !== (id === goalkeeperId)) update.isGK = id === goalkeeperId;
-        if (!ids.includes(id) && players[id].excluded) {
+        if (!chosen.includes(id) && players[id].excluded) {
           update.excluded = false;
           update.exclusionEndsAtMs = null;
         }
         if (Object.keys(update).length > 0) playerUpdates[id] = update;
       }
-      recordEvent(`Equipo titular del periodo ${period}`, { courtSlots: [...ids], bench, [`lineups.${period}`]: [...ids] }, playerUpdates);
+      recordEvent(`Equipo titular del periodo ${period}`, { courtSlots: chosen, bench, [`lineups.${period}`]: [...ids] }, playerUpdates);
       return { ok: true };
     },
     [match, players, recordEvent]

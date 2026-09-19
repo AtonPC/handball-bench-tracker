@@ -24,6 +24,7 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
     () => Object.values(players).filter((p) => !p.disqualified).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)),
     [players]
   );
+  const [checking, setChecking] = useState(false); // segunda confirmación (menos de 7)
   const check = validateLineup({ ids, prevIds });
   const advice = alevinRules ? lineupAdvice({ repeated: check.repeated, convocados }) : null;
   const short = (p) => periodShortLabel(p, periodCount);
@@ -32,7 +33,15 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
   const chosenElsewhere = (index) => new Set(ids.filter((id, i) => id && i !== index));
 
   function setSlot(index, id) {
+    setChecking(false);
     setIds((prev) => prev.map((x, i) => (i === index ? id : x)));
+  }
+
+  // Con los 7 puestos rellenos se confirma directamente; con menos, primero se
+  // pide una segunda confirmación ("¿es correcto?").
+  function handleConfirm() {
+    if (check.complete) onConfirm(ids);
+    else setChecking(true);
   }
 
   const adviceText = !advice ? null
@@ -45,7 +54,7 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
       <div className="modal modal--wide lineup-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Equipo titular del {short(period)}</h2>
         <p className="modal-hint" style={{ margin: 0 }}>
-          Elige quién empieza. La primera fila es el portero. Hay que confirmarlo para poder iniciar el periodo; los avisos de repetidos no impiden confirmarlo.
+          Elige quién empieza. La primera fila es el portero. Hay que confirmarlo para poder iniciar el periodo; los avisos de repetidos no impiden confirmarlo, y con menos de 7 jugadores se pide una segunda confirmación.
         </p>
 
         <div className="lineup-grid" style={{ gridTemplateColumns: `22px repeat(${periodCount}, minmax(0, 1fr))` }}>
@@ -77,15 +86,28 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
           </p>
         )}
         {!check.canConfirm && (
-          <p className="modal-hint" style={{ margin: 0 }}>Rellena los 7 puestos (el primero es el portero) para poder confirmarlo.</p>
+          <p className="modal-hint" style={{ margin: 0 }}>Elige al menos un jugador (el primero es el portero) para poder confirmarlo.</p>
         )}
 
-        <div className="player-form-actions">
-          <button className="btn btn-clock btn-start" disabled={!check.canConfirm} onClick={() => onConfirm(ids)}>
-            {advice?.level === 'warn' ? 'CONFIRMAR IGUALMENTE' : 'CONFIRMAR EQUIPO TITULAR'}
-          </button>
-          <button className="modal-cancel" onClick={onCancel}>Cancelar</button>
-        </div>
+        {checking ? (
+          <div className="lineup-doublecheck" role="alertdialog" aria-label="Confirmar equipo incompleto">
+            <p>
+              <strong>Solo has elegido {check.filledCount} de {LINEUP_SIZE} jugadores</strong>
+              {!check.hasGoalkeeper ? ' y no has puesto portero' : ''}. ¿Es correcto?
+            </p>
+            <div className="player-form-actions">
+              <button className="btn btn-clock btn-start" onClick={() => onConfirm(ids)}>SÍ, ES CORRECTO</button>
+              <button className="btn btn-timeout" onClick={() => setChecking(false)}>VOLVER A REVISAR</button>
+            </div>
+          </div>
+        ) : (
+          <div className="player-form-actions">
+            <button className="btn btn-clock btn-start" disabled={!check.canConfirm} onClick={handleConfirm}>
+              {advice?.level === 'warn' ? 'CONFIRMAR IGUALMENTE' : 'CONFIRMAR EQUIPO TITULAR'}
+            </button>
+            <button className="modal-cancel" onClick={onCancel}>Cancelar</button>
+          </div>
+        )}
       </div>
     </div>
   );

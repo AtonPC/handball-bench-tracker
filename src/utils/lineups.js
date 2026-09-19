@@ -32,14 +32,17 @@ export function lineupsOf(match) {
   return out;
 }
 
-// Comprueba un equipo titular en preparación. Lo ÚNICO que hace falta para
-// poder aplicarlo es que esté completo (7 puestos, portero el primero) y sin
-// nadie duplicado; lo de repetir es solo un aviso.
+// Comprueba un equipo titular en preparación. Para poder aplicarlo basta con
+// que haya al menos un jugador y ninguno duplicado; lo de repetir es solo un
+// aviso. Con MENOS de 7 (un entrenamiento con pocos niños, alguien que falta)
+// también se puede, pero la pantalla pide una segunda confirmación
+// (`complete` = 7 puestos rellenos, `hasGoalkeeper` = la primera fila lo está).
 //  ids: los 7 puestos en orden (el primero, el portero); '' = sin rellenar.
 //  prevIds: los que empezaron el periodo anterior.
 export function validateLineup({ ids, prevIds = [] }) {
   const filled = ids.filter(Boolean);
   const complete = ids.length === LINEUP_SIZE && ids.every(Boolean);
+  const hasGoalkeeper = !!ids[0];
   const seen = new Set();
   const duplicates = [];
   for (const id of filled) {
@@ -48,7 +51,14 @@ export function validateLineup({ ids, prevIds = [] }) {
   }
   const prev = new Set(prevIds);
   const repeated = [...new Set(filled.filter((id) => prev.has(id)))];
-  return { complete, duplicates, repeated, canConfirm: complete && duplicates.length === 0 };
+  return {
+    complete,
+    hasGoalkeeper,
+    filledCount: filled.length,
+    duplicates,
+    repeated,
+    canConfirm: filled.length > 0 && duplicates.length === 0,
+  };
 }
 
 // Aviso de las reglas de Alevín sobre quienes repiten del periodo anterior, o

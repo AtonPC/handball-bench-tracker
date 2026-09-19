@@ -3860,3 +3860,20 @@
   align-items: flex-start;
   line-height: 1.35;
 }
+
+/* Segunda confirmación cuando el equipo titular tiene menos de 7 jugadores */
+.lineup-doublecheck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  border: 1.5px solid var(--warning);
+  border-radius: 10px;
+  background: var(--warning-dim);
+}
+.lineup-doublecheck p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text);
+}
