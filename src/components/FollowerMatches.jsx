@@ -4,14 +4,14 @@ import FollowerMatchDetail from './FollowerMatchDetail';
 
 const LIFECYCLE_LABEL = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
 
-export default function FollowerMatches({ clubId, teamId, team }) {
+export default function FollowerMatches({ clubId, teamId, team, tier }) {
   const { matches } = useMatches(clubId, teamId);
   const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   const sorted = [...matches].sort((a, b) => (b.scheduledAt || 0) - (a.scheduledAt || 0));
 
   if (selectedMatchId) {
-    return <FollowerMatchDetail clubId={clubId} teamId={teamId} team={team} matchId={selectedMatchId} onBack={() => setSelectedMatchId(null)} />;
+    return <FollowerMatchDetail clubId={clubId} teamId={teamId} team={team} tier={tier} matchId={selectedMatchId} onBack={() => setSelectedMatchId(null)} />;
   }
 
   return (

@@ -31,10 +31,16 @@ function eventLabel(entry) {
   }[entry.type];
 }
 
-export default function ChronologyRow({ entry, playersById, authorizedById, compact }) {
-  const who = entry.side === 'own'
-    ? ownPlayerLabel(playersById, authorizedById, entry.playerId)
-    : (entry.number != null ? `Rival #${entry.number}` : 'Rival');
+// `anonymize` (Seguidor Estándar): un suceso de NUESTRO equipo no dice qué
+// jugador fue, salvo los goles (el goleador es lo que se celebra en directo).
+// Los del rival siguen con su dorsal: no son jugadores nuestros.
+export default function ChronologyRow({ entry, playersById, authorizedById, compact, anonymize = false }) {
+  const hideName = anonymize && entry.side === 'own' && entry.type !== 'goal';
+  const who = hideName
+    ? null
+    : entry.side === 'own'
+      ? ownPlayerLabel(playersById, authorizedById, entry.playerId)
+      : (entry.number != null ? `Rival #${entry.number}` : 'Rival');
   const label = eventLabel(entry);
   const iconType = eventIconType(entry);
 
@@ -43,7 +49,7 @@ export default function ChronologyRow({ entry, playersById, authorizedById, comp
       <p className="chrono-compact-row">
         <span className="chrono-compact-minute">{entry.minute}'</span>
         {iconType && <span className="chrono-compact-icon"><EventIcon type={iconType} size={13} /></span>}
-        <span>{label} — {who}</span>
+        <span>{who ? `${label} — ${who}` : label}</span>
       </p>
     );
   }
@@ -56,7 +62,7 @@ export default function ChronologyRow({ entry, playersById, authorizedById, comp
           <>
             <span className="chrono-row-icon"><EventIcon type={iconType} /></span>
             <span className="chrono-row-text">
-              <span className="chrono-row-who">{who}</span>
+              {who && <span className="chrono-row-who">{who}</span>}
               <span className="chrono-row-label">{label}</span>
             </span>
           </>

@@ -3062,3 +3062,9 @@
   font-weight: 600;
   color: var(--text);
 }
+
+/* Selector de nivel del seguidor (Estándar/Pro) en Solicitudes */
+.tier-select {
+  width: auto;
+  min-width: 110px;
+}

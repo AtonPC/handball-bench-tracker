@@ -17,13 +17,16 @@ import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
 import ActionStatsView from './ActionStatsView';
 import MatchSummaryView from './MatchSummaryView';
+import TeamTotalsCard from './TeamTotalsCard';
+import { isProTier } from '../utils/followerTier';
 
 // Detalle de UN partido concreto (en directo o ya finalizado — la consola
 // solo se usa para partidos en directo desde el marcador, pero un Seguidor
 // también puede querer revisar uno ya jugado). useMatchStore funciona
 // igual en ambos casos: un partido finalizado deja de tener el reloj en
 // marcha, así que sus estadísticas quedan congeladas en su valor final.
-export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onBack }) {
+export default function FollowerMatchDetail({ clubId, teamId, team, tier, matchId, onBack }) {
+  const pro = isProTier(tier);
   const store = useMatchStore(matchId, !!matchId);
   const rivalGoals = useRivalGoals(matchId);
   const rivalMisses = useRivalMisses(matchId);
@@ -136,16 +139,26 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
           )}
 
           {detailView === 'stats' && (
-            <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-              <h4>Estadísticas del partido</h4>
-              <MatchStatsTable
-                statePlayers={store.state.players}
-                playersById={playersById}
-                authorizedById={authorizedById}
-                rivalGoalsConceded={store.state.score.rival}
-                matchElapsedMs={store.state.clock.elapsedMs}
-              />
-            </div>
+            pro ? (
+              <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+                <h4>Estadísticas del partido</h4>
+                <MatchStatsTable
+                  statePlayers={store.state.players}
+                  playersById={playersById}
+                  authorizedById={authorizedById}
+                  rivalGoalsConceded={store.state.score.rival}
+                  matchElapsedMs={store.state.clock.elapsedMs}
+                />
+              </div>
+            ) : (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <TeamTotalsCard
+                  title="Estadísticas del equipo en el partido"
+                  rows={Object.values(store.state.players)}
+                  rivalGoalsConceded={store.state.score.rival}
+                />
+              </div>
+            )
           )}
 
           {detailView === 'chronology' && (
@@ -159,7 +172,7 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
               ) : (
                 <div className="chrono-rows">
                   {chronology.map((entry) => (
-                    <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
+                    <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} anonymize={!pro} />
                   ))}
                 </div>
               )}
@@ -179,6 +192,7 @@ export default function FollowerMatchDetail({ clubId, teamId, team, matchId, onB
                 rivalName={store.state.rivalName}
                 ownPrimaryColor={team?.primaryColor}
                 ownSecondaryColor={team?.secondaryColor}
+                showPlayerFilter={pro}
               />
             </div>
           )}

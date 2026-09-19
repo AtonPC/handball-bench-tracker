@@ -35,10 +35,16 @@ export function useMyAccessGrants(uid) {
 
   const all = [...follows, ...guardianships];
   const approvedTeamIds = [...new Set(all.filter((r) => r.status === 'approved').map((r) => r.teamId))];
+  // Nivel por equipo: si tiene un follow Y una tutela aprobados, gana el más
+  // alto. Sin campo `tier` = Estándar.
+  const tierByTeamId = {};
+  for (const r of all.filter((x) => x.status === 'approved')) {
+    tierByTeamId[r.teamId] = tierByTeamId[r.teamId] === 'pro' || r.tier === 'pro' ? 'pro' : 'standard';
+  }
   const pending = all.filter((r) => r.status === 'pending');
   const rejected = all.filter((r) => r.status === 'rejected');
 
-  return { all, approvedTeamIds, pending, rejected };
+  return { all, approvedTeamIds, tierByTeamId, pending, rejected };
 }
 
 // `user` es el usuario de Firebase Auth (auth.user), no el `identity` del

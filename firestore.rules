@@ -148,7 +148,10 @@ service cloud.firestore {
       );
       allow create: if isSignedIn() &&
         request.resource.data.personUid == request.auth.uid &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'pending' &&
+        // Quien pide acceso no se puede asignar el nivel Pro: lo decide el
+        // gestor al aprobar (update). Sin campo o 'standard' = Estándar.
+        (!('tier' in request.resource.data) || request.resource.data.tier == 'standard');
       allow update: if isSignedIn() &&
         exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) &&
         (isSystemAdmin() ||
@@ -164,7 +167,10 @@ service cloud.firestore {
       );
       allow create: if isSignedIn() &&
         request.resource.data.personUid == request.auth.uid &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'pending' &&
+        // Quien pide acceso no se puede asignar el nivel Pro: lo decide el
+        // gestor al aprobar (update). Sin campo o 'standard' = Estándar.
+        (!('tier' in request.resource.data) || request.resource.data.tier == 'standard');
       allow update: if isSignedIn() &&
         exists(/databases/$(database)/documents/teams/$(resource.data.teamId)) &&
         (isSystemAdmin() ||

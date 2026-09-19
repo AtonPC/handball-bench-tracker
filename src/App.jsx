@@ -72,7 +72,7 @@ export default function App() {
   const canManageClub = activeClubId ? isClubManagerOf(identity, activeClubId) : false;
 
   const store = useMatchStore(openMatchId, isAuthed);
-  const { all: myGrants, approvedTeamIds } = useMyAccessGrants(auth.user?.uid);
+  const { all: myGrants, approvedTeamIds, tierByTeamId } = useMyAccessGrants(auth.user?.uid);
 
   if (auth.loading) {
     return <div className="app-loading">Cargando…</div>;
@@ -88,7 +88,7 @@ export default function App() {
   if (!hasAnyAccess) {
     if (approvedTeamIds.length > 0) {
       return (
-        <FollowerHome identity={identity} approvedTeamIds={approvedTeamIds} user={auth.user} onLogout={auth.logout} />
+        <FollowerHome identity={identity} approvedTeamIds={approvedTeamIds} tierByTeamId={tierByTeamId} user={auth.user} onLogout={auth.logout} />
       );
     }
     return <FollowRequestScreen identity={identity} user={auth.user} onLogout={auth.logout} myGrants={myGrants} />;

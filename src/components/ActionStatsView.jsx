@@ -36,6 +36,9 @@ export default function ActionStatsView({
   shotEvents = [], saveEvents = [], rivalGoals = [], rivalMisses = [], players = [],
   ownTeamName = 'Nuestro equipo', rivalName = 'Rival',
   ownPrimaryColor, ownSecondaryColor,
+  // false (Seguidor Estándar): sin el desplegable de jugador — solo se puede
+  // ver el equipo entero, nunca el mapa de un jugador concreto.
+  showPlayerFilter = true,
 }) {
   // El cuadrito del botón de equipo es dos triángulos (un gradiente en
   // diagonal partido justo al 50%) con los colores reales del equipo. El
@@ -158,7 +161,7 @@ export default function ActionStatsView({
         )}
       </div>
 
-      {team === 'own' && (
+      {team === 'own' && showPlayerFilter && (
         <div className="list-search" style={{ marginTop: 'var(--space-2)' }}>
           <select className="player-form-input" value={effectivePlayerId} onChange={(e) => setPlayerId(e.target.value)}>
             <option value={ANY}>Equipo (todos)</option>

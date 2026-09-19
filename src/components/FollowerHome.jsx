@@ -18,6 +18,8 @@ import { useFollowerSession } from '../hooks/useFollowerSession';
 import { formatClock } from '../utils/time';
 import { teamColorStyle } from '../utils/teamColors';
 import { periodShortLabel } from '../utils/periods';
+import { FOLLOWER_TIERS, isProTier } from '../utils/followerTier';
+import TeamTotalsCard from './TeamTotalsCard';
 import GoalCelebration from './GoalCelebration';
 import PlayerStatsTable from './PlayerStatsTable';
 import AppSidebar from './AppSidebar';
@@ -30,7 +32,11 @@ import ActionStatsView from './ActionStatsView';
 import MatchSummaryView from './MatchSummaryView';
 import { rosterDisplayName, buildChronology } from '../utils/followerHelpers';
 
-function LiveMatchSection({ clubId, teamId, team, logView }) {
+// `tier` (ver utils/followerTier.js): un Seguidor Estándar ve la cronología en
+// directo, la celebración de gol con su goleador y las cifras del EQUIPO,
+// pero ninguna cifra individual de jugadores; el Pro lo ve todo.
+function LiveMatchSection({ clubId, teamId, team, logView, tier }) {
+  const pro = isProTier(tier);
   const { matches } = useMatches(clubId, teamId);
   const liveMatch = useMemo(() => matches.find((m) => m.lifecycle === 'live') || null, [matches]);
   const store = useMatchStore(liveMatch?.id || null, !!liveMatch);
@@ -198,7 +204,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
           <div className="follower-ticker">
             {recentEvents.length === 0 && <p>Todavía no ha pasado nada.</p>}
             {recentEvents.map((entry) => (
-              <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} compact />
+              <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} compact anonymize={!pro} />
             ))}
           </div>
           <span className="follower-score">{state.isHome ? state.score.rival : state.score.own}</span>
@@ -351,11 +357,12 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
             rivalName={state.rivalName}
             ownPrimaryColor={team?.primaryColor}
             ownSecondaryColor={team?.secondaryColor}
+            showPlayerFilter={pro}
           />
         </div>
       )}
 
-      {detailView === 'stats' && (
+      {detailView === 'stats' && (pro ? (
         <div className="card" style={{ marginTop: 'var(--space-4)' }}>
           <h4>Estadísticas del partido</h4>
           <MatchStatsTable
@@ -366,7 +373,15 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
             matchElapsedMs={state.clock.elapsedMs}
           />
         </div>
-      )}
+      ) : (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <TeamTotalsCard
+            title="Estadísticas del equipo en el partido"
+            rows={Object.values(state.players)}
+            rivalGoalsConceded={state.score.rival}
+          />
+        </div>
+      ))}
 
       {detailView === 'chronology' && (
         <div style={{ marginTop: 'var(--space-4)' }}>
@@ -379,7 +394,7 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
           ) : (
             <div className="chrono-rows">
               {chronology.map((entry) => (
-                <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} />
+                <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={authorizedById} anonymize={!pro} />
               ))}
             </div>
           )}
@@ -389,7 +404,8 @@ function LiveMatchSection({ clubId, teamId, team, logView }) {
   );
 }
 
-function AccumulatedSection({ clubId, teamId }) {
+function AccumulatedSection({ clubId, teamId, tier }) {
+  const pro = isProTier(tier);
   const { matches } = useMatches(clubId, teamId);
   const finishedMatches = useMemo(() => matches.filter((m) => m.lifecycle === 'finished'), [matches]);
   const finishedIds = useMemo(() => finishedMatches.map((m) => m.id), [finishedMatches]);
@@ -433,6 +449,17 @@ function AccumulatedSection({ clubId, teamId }) {
       <p className="modal-hint">
         Histórico de {finishedMatches.length} partido{finishedMatches.length === 1 ? '' : 's'} finalizado{finishedMatches.length === 1 ? '' : 's'} — no del partido en directo
       </p>
+      {!pro ? (
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <TeamTotalsCard
+            title="El equipo en la temporada"
+            rows={rows}
+            rivalGoalsConceded={teamRivalGoalsConceded}
+            matchesCount={finishedMatches.length}
+          />
+        </div>
+      ) : (
+      <>
       <div className="card-grid" style={{ marginTop: 'var(--space-3)' }}>
         <div className="card">
           <h4>Máximos goleadores</h4>
@@ -452,6 +479,8 @@ function AccumulatedSection({ clubId, teamId }) {
       <div style={{ marginTop: 'var(--space-4)' }}>
         <PlayerStatsTable rows={rows} minutesTotalMs={teamTotalMs} showMatches />
       </div>
+      </>
+      )}
         </>
       )}
     </div>
@@ -463,7 +492,7 @@ function AccumulatedSection({ clubId, teamId }) {
 // partido, no lo acumulado del equipo — pero siguen a un clic si hace
 // falta consultarlas. Sin partido en directo no tiene sentido esconderlas:
 // son lo único que hay que mostrar en ese momento.
-function FollowerLiveTab({ clubId, teamId, team, logView }) {
+function FollowerLiveTab({ clubId, teamId, team, logView, tier }) {
   const { matches } = useMatches(clubId, teamId);
   const hasLiveMatch = matches.some((m) => m.lifecycle === 'live');
   const [showSeason, setShowSeason] = useState(!hasLiveMatch);
@@ -481,7 +510,7 @@ function FollowerLiveTab({ clubId, teamId, team, logView }) {
 
   return (
     <>
-      <LiveMatchSection clubId={clubId} teamId={teamId} team={team} logView={logView} />
+      <LiveMatchSection clubId={clubId} teamId={teamId} team={team} logView={logView} tier={tier} />
       {hasLiveMatch && (
         <button
           type="button"
@@ -492,7 +521,7 @@ function FollowerLiveTab({ clubId, teamId, team, logView }) {
           {showSeason ? 'Ocultar' : 'Ver'} estadísticas de temporada
         </button>
       )}
-      {showSeason && <AccumulatedSection clubId={clubId} teamId={teamId} />}
+      {showSeason && <AccumulatedSection clubId={clubId} teamId={teamId} tier={tier} />}
     </>
   );
 }
@@ -511,16 +540,20 @@ const FOLLOWER_TABS = [
 // Nunca muestra el tiempo jugado individual de un jugador (para no dar
 // munición a fricciones familia/entrenador), ni el nombre de un jugador
 // propio con imageAuthorized === false.
-export default function FollowerHome({ identity, approvedTeamIds, user, onLogout, previewMode }) {
+export default function FollowerHome({ identity, approvedTeamIds, tierByTeamId, user, onLogout, previewMode }) {
   const teams = (identity.allTeams || []).filter((t) => approvedTeamIds.includes(t.id));
   const [teamId, setTeamId] = useState(teams[0]?.id || '');
   const [view, setView] = useState('live');
+  // En la vista previa del staff, el nivel se elige a mano para comprobar lo
+  // que ve cada tipo de seguidor (Estándar por defecto: lo más habitual).
+  const [previewTier, setPreviewTier] = useState('standard');
 
   useEffect(() => {
     if (!teams.some((t) => t.id === teamId)) setTeamId(teams[0]?.id || '');
   }, [teams, teamId]);
 
   const activeTeam = teams.find((t) => t.id === teamId) || null;
+  const tier = previewMode ? previewTier : (tierByTeamId?.[teamId] || 'standard');
 
   // No se registra sesión en previewMode: es el staff comprobando qué ven
   // las familias, no una visita real de un Seguidor.
@@ -564,11 +597,26 @@ export default function FollowerHome({ identity, approvedTeamIds, user, onLogout
       />
       <main className="app-main">
         <div className="admin-panel">
+          {previewMode && (
+            <div className="home-away-toggle att-toggle" role="group" aria-label="Ver como">
+              <span className="modal-hint" style={{ margin: 0, alignSelf: 'center' }}>Ver como seguidor:</span>
+              {Object.entries(FOLLOWER_TIERS).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`btn btn-timeout${previewTier === key ? ' admin-nav-tab--active' : ''}`}
+                  onClick={() => setPreviewTier(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {view === 'live' && (
-            <FollowerLiveTab clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} />
+            <FollowerLiveTab clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} logView={logView} tier={tier} />
           )}
           {view === 'roster' && <FollowerRoster clubId={activeTeam.clubId} teamId={activeTeam.id} />}
-          {view === 'matches' && <FollowerMatches clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
+          {view === 'matches' && <FollowerMatches clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} tier={tier} />}
           {view === 'club' && <FollowerClub clubId={activeTeam.clubId} teamId={activeTeam.id} team={activeTeam} />}
         </div>
       </main>

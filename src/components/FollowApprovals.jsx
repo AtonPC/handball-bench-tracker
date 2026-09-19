@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTeams } from '../hooks/useTeams';
 import { useAccessApprovals, useTeamAccessRequests } from '../hooks/useAccessApprovals';
+import { FOLLOWER_TIERS, normalizeTier } from '../utils/followerTier';
 
 const KIND_LABEL = { follow: 'Seguidor', guardianship: 'Tutela' };
 
@@ -19,11 +20,15 @@ export default function FollowApprovals({ clubId, identity }) {
   const [teamId, setTeamId] = useState('');
   const activeTeamId = teamId || teams[0]?.id || '';
   const { pending, approved, rejected } = useTeamAccessRequests(activeTeamId);
-  const { approveRequest, rejectRequest } = useAccessApprovals();
+  const { approveRequest, rejectRequest, setTier } = useAccessApprovals();
 
   return (
     <div className="admin-panel">
       <p className="modal-hint">Solicitudes de acceso de seguidores y tutores</p>
+      <p className="modal-hint">
+        Al aprobar, entran como <strong>Estándar</strong> (solo estadísticas del equipo). Puedes subir a <strong>Pro</strong>
+        (también estadísticas individuales de jugadores) a quien corresponda desde "Aprobados".
+      </p>
 
       <select className="player-form-input" style={{ marginBottom: 10 }} value={activeTeamId} onChange={(e) => setTeamId(e.target.value)}>
         {teams.length === 0 && <option value="">Sin equipos todavía</option>}
@@ -63,7 +68,18 @@ export default function FollowApprovals({ clubId, identity }) {
                     {KIND_LABEL[r.kind]}{guardianshipPlayerText(r)}
                   </span>
                 </div>
-                <button className="btn btn-timeout btn-danger-text" onClick={() => rejectRequest(r.kind, r.id, identity)}>Revocar</button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select
+                    className="player-form-input tier-select"
+                    value={normalizeTier(r.tier)}
+                    onChange={(e) => setTier(r.kind, r.id, e.target.value)}
+                    title="Estándar: solo estadísticas del equipo. Pro: también las individuales."
+                    aria-label="Nivel de seguidor"
+                  >
+                    {Object.entries(FOLLOWER_TIERS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                  </select>
+                  <button className="btn btn-timeout btn-danger-text" onClick={() => rejectRequest(r.kind, r.id, identity)}>Revocar</button>
+                </div>
               </div>
             ))}
           </div>

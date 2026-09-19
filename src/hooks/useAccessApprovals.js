@@ -55,5 +55,12 @@ export function useAccessApprovals() {
     });
   }, []);
 
-  return { approveRequest, rejectRequest };
+  // Nivel de Seguidor (ver utils/followerTier.js). Lo cambia el gestor del
+  // club; las reglas solo dejan actualizar estas solicitudes a un gestor o
+  // administrador.
+  const setTier = useCallback((kind, id, tier) => {
+    return updateDoc(doc(db, KIND_TO_COLLECTION[kind], id), { tier });
+  }, []);
+
+  return { approveRequest, rejectRequest, setTier };
 }
