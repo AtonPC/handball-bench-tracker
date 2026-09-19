@@ -3,6 +3,7 @@ import { formatClock } from '../utils/time';
 import { teamInitials } from '../utils/teamColors';
 import TimeoutsMenu from './TimeoutsMenu';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
+import { lineupAdvice, orderLineup, validateLineup } from '../utils/lineups';
 
 // Cabecera de la consola en directo (2026-09-16, mockup "Consola
 // Luminosa" aprobado por el usuario): reloj+parte arriba, escudos+nombres+
@@ -31,6 +32,30 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
     if (result && !result.ok && result.reason === 'clock') {
       alert('No se puede deshacer esta acción porque el reloj ha cambiado desde entonces (pausa, reanudación u otro periodo): los minutos de los jugadores saldrían mal. Corrígela a mano — por ejemplo, con el cambio inverso.');
     }
+  }
+
+  // Iniciar el siguiente periodo. Con los avisos de Alevín puestos, si no se ha
+  // elegido su equipo titular, avisa (y de quien repite del periodo anterior)
+  // antes de empezar. Es SOLO un aviso: aceptar inicia el periodo igualmente y
+  // nunca se impide empezar (la app se usa también en entrenamientos).
+  function handleStartNext() {
+    const { alevinRules, lineups, courtSlots, players, convocados } = store.state;
+    const next = clock.period + 1;
+    if (alevinRules && !lineups[next]) {
+      const goalkeeper = courtSlots.find((id) => players[id]?.isGK);
+      const check = validateLineup({ ids: orderLineup(courtSlots, goalkeeper), prevIds: lineups[clock.period] || [] });
+      const advice = lineupAdvice({ repeated: check.repeated, convocados });
+      const dorsales = (advice?.repeated || []).map((id) => '#' + (players[id]?.number ?? '?')).join(', ');
+      let message = `Aún no has elegido el equipo titular del ${shortLabel(next)} (botón «ELEGIR EQUIPO TITULAR» de la barra roja).`;
+      if (advice?.level === 'warn') {
+        message += `\n\nAviso: ${dorsales} ya empezó el ${shortLabel(clock.period)}; con ${convocados} convocados no se debería repetir.`;
+      } else if (advice) {
+        message += `\n\nAviso: repites ${advice.repeated.length} del ${shortLabel(clock.period)} (${dorsales}); con ${convocados} convocados hay que repetir como mínimo ${advice.needed}.`;
+      }
+      message += `\n\n¿Iniciar el ${shortLabel(next)} igualmente?`;
+      if (!confirm(message)) return;
+    }
+    store.startNextPeriod();
   }
 
   // "Pausar" es solo para paradas del árbitro durante el juego (una lesión,
@@ -78,7 +103,7 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
       playTone = 'pause';
     } else if (ended) {
       playLabel = `Iniciar ${shortLabel(clock.period + 1)}`;
-      onPlay = store.startNextPeriod;
+      onPlay = handleStartNext;
     }
 
     const stopLabel = isLastPeriod ? `Terminar ${shortLabel(clock.period)} y finalizar el partido` : `Terminar ${shortLabel(clock.period)} (FIN)`;
