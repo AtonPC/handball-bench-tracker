@@ -12,8 +12,7 @@ import { formatClock } from '../utils/time';
 // clásica — las dos escriben exactamente los mismos datos.
 // El rival no tiene CAMBIO ni PARADA (la parada de nuestro portero se anota
 // desde nuestro lado, o eligiendo una zona de portería en el FALLO rival), ni
-// RECUPERACIÓN (no existe en el modelo): esas quedan solo en la vista clásica,
-// igual que el 7 metros cometido.
+// RECUPERACIÓN (no existe en el modelo): esas quedan solo en la vista clásica.
 const OWN_BUTTONS = [
   { key: 'goal', label: 'GOL', icon: Target },
   { key: 'save', label: 'PARADA', icon: Hand },

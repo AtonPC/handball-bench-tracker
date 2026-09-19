@@ -58,6 +58,12 @@ function ActionForm({ kind, initial, players, isAdd, onSubmit, onCancel }) {
           {goalZones.map((z) => <option key={z} value={z}>{z}</option>)}
         </select>
       )}
+      {fields.includes('foulPlayer') && (
+        <select className="player-form-input" value={values.foulPlayerId || ''} onChange={(e) => set('foulPlayerId', e.target.value)}>
+          <option value="">Falta del 7m: nadie / no aplica</option>
+          {players.map((p) => <option key={p.id} value={p.id}>Falta del 7m: #{p.number} {p.name}</option>)}
+        </select>
+      )}
       {isAdd && kind === 'rivalMiss' && (
         <select className="player-form-input" value={values.savedByPlayerId || ''} onChange={(e) => set('savedByPlayerId', e.target.value)}>
           <option value="">Se fue fuera (no lo paró nadie)</option>
@@ -76,7 +82,7 @@ function initialValues(kind, action) {
   if (!action) return { type: kind === 'ownGoal' ? 'goal' : 'miss' };
   const d = action.data;
   return {
-    playerId: d.playerId || '', number: d.number ?? '', rivalNumber: d.rivalNumber ?? '', minute: d.minute ?? '',
+    playerId: d.playerId || '', foulPlayerId: d.foulPlayerId || '', number: d.number ?? '', rivalNumber: d.rivalNumber ?? '', minute: d.minute ?? '',
     shotZone: d.shotZone || '', goalZone: d.goalZone || '',
     type: kind === 'ownGoal' ? 'goal' : 'miss',
   };

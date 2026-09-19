@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ClipboardList, GitCompare, Target, Users } from 'lucide-react';
+import { ClipboardList, GitCompare, History, Target, Users } from 'lucide-react';
 import MatchHeader from './MatchHeader';
 import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
@@ -8,10 +8,12 @@ import RivalShotModal from './RivalShotModal';
 import DorsalNumberModal from './DorsalNumberModal';
 import ShotDetailModal from './ShotDetailModal';
 import SaverChooserModal from './SaverChooserModal';
+import PlayerPickerModal from './PlayerPickerModal';
 import ReducedEntry from './ReducedEntry';
 import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
 import ActionStatsView from './ActionStatsView';
+import ConsoleChronology from './ConsoleChronology';
 import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
@@ -34,6 +36,7 @@ const TABS = [
   { key: 'jugadores', label: 'Jugadores', icon: Users },
   { key: 'partido', label: 'Partido', icon: GitCompare },
   { key: 'acciones', label: 'Acciones', icon: Target },
+  { key: 'cronologia', label: 'Cronología', icon: History },
 ];
 
 // Forma de anotar en "Datos": la clásica (una fila por jugador) o la reducida
@@ -74,6 +77,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // Fallo rival por parada que espera a que se elija qué portero la paró
   // (solo cuando no hay exactamente un portero en pista).
   const [pendingRivalSave, setPendingRivalSave] = useState(null);
+  // Gol rival de 7 metros que espera a saber qué jugador nuestro cometió la
+  // falta (se registra al elegir, o al omitir).
+  const [pendingRivalSevenGoal, setPendingRivalSevenGoal] = useState(null);
   // Solo se pide el dorsal rival que ha cometido la falta cuando metemos
   // NOSOTROS un gol de 7 metros — no hay entrada suelta para el rival, ya
   // que la falta de 7m siempre la sufre el equipo que lanza.
@@ -230,8 +236,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
                 exclusionCancel: () => store.cancelExclusion(player.id),
                 yellowCardGive: () => store.playerYellowCard(player.id),
                 yellowCardCancel: () => store.cancelYellowCard(player.id),
-                sevenMeterInc: () => store.playerSevenMeterCommitted(player.id, 1),
-                sevenMeterDec: () => store.playerSevenMeterCommitted(player.id, -1),
               }}
             />
           ))}
@@ -292,6 +296,21 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
+      {view === 'cronologia' && (
+        <div className="console-tab-content">
+          <ConsoleChronology
+            matchId={matchId}
+            state={state}
+            shotEvents={shotEvents}
+            saveEvents={saveEvents}
+            rivalGoals={rivalGoals}
+            rivalMisses={rivalMisses}
+            rivalExclusions={rivalExclusionsLive}
+            rivalYellowCards={rivalYellowCards}
+          />
+        </div>
+      )}
+
       {substitution && (
         <SubstitutionModal
           outPlayer={state.players[substitution.outPlayerId]}
@@ -307,8 +326,10 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         <RivalShotModal
           kind="goal"
           onConfirm={(detail) => {
-            store.rivalGoalWithDetail(detail);
             setShowRivalGoalModal(false);
+            // Un gol rival de 7m implica una falta nuestra: se pregunta quién.
+            if (detail.shotZone === '7 metros') setPendingRivalSevenGoal(detail);
+            else store.rivalGoalWithDetail(detail);
           }}
           onCancel={() => setShowRivalGoalModal(false)}
         />
@@ -320,6 +341,31 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           saverName={soleGoalkeeper ? `#${soleGoalkeeper.number} ${soleGoalkeeper.name}` : null}
           onConfirm={handleRivalMissConfirm}
           onCancel={() => setShowRivalMissModal(false)}
+        />
+      )}
+
+      {pendingRivalSevenGoal && (
+        <PlayerPickerModal
+          title="Gol rival de 7 metros — ¿quién cometió la falta?"
+          hint="Los que están en pista ahora. Si ya hubo un cambio, pulsa «Ver suplentes»."
+          players={[...courtPlayers].sort((a, b) => (a.number ?? 0) - (b.number ?? 0))}
+          extraPlayers={[...benchPlayers].sort((a, b) => (a.number ?? 0) - (b.number ?? 0))}
+          extraLabel="Suplentes"
+          onSelect={(foulPlayerId) => {
+            store.rivalGoalWithDetail({ ...pendingRivalSevenGoal, foulPlayerId });
+            setPendingRivalSevenGoal(null);
+          }}
+          onSkip={() => {
+            store.rivalGoalWithDetail(pendingRivalSevenGoal);
+            setPendingRivalSevenGoal(null);
+          }}
+          skipLabel="Registrar el gol sin indicar quién"
+          // El gol ya está confirmado: cerrar el diálogo equivale a omitir.
+          cancelLabel={null}
+          onCancel={() => {
+            store.rivalGoalWithDetail(pendingRivalSevenGoal);
+            setPendingRivalSevenGoal(null);
+          }}
         />
       )}
 

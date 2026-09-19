@@ -341,37 +341,51 @@ export function useMatchStore(matchId, enabled) {
       if (match.score.rival <= 0) return;
       runExclusive(async () => {
         const goalDoc = await latestDetailDoc('rivalGoals');
-        recordEvent('Gol rival (-1)', { 'score.rival': match.score.rival - 1 }, {}, { deletes: goalDoc ? [goalDoc] : [] });
+        // Si ese gol llevaba la falta de un jugador nuestro (7m), se le quita.
+        const foulId = goalDoc?.data.foulPlayerId;
+        const foulPlayer = foulId ? players[foulId] : null;
+        recordEvent('Gol rival (-1)', { 'score.rival': match.score.rival - 1 },
+          foulPlayer ? { [foulId]: { sevenMetersCommitted: Math.max(0, (foulPlayer.sevenMetersCommitted || 0) - 1) } } : {},
+          { deletes: goalDoc ? [goalDoc] : [] });
       });
     },
-    [match, recordEvent, runExclusive, latestDetailDoc]
+    [match, players, recordEvent, runExclusive, latestDetailDoc]
   );
 
   // Gol rival con detalle: dorsal de quien marca, minuto (del propio reloj
   // del partido) y, si se rellenan, zona de lanzamiento y de entrada a
   // portería. Se guarda como documento propio en matches/{id}/rivalGoals,
   // no solo como un +1 al marcador.
+  // `foulPlayerId` (opcional, solo en un gol rival de 7 metros): el jugador
+  // NUESTRO que cometió la falta que dio el 7m. Se guarda en el propio gol y
+  // se suma a su contador `sevenMetersCommitted`, todo en el mismo evento —
+  // un solo Deshacer lo revierte, y un "−1" del gol rival también le quita
+  // el 7m al jugador (ver rivalGoal).
   const rivalGoalWithDetail = useCallback(
-    ({ number, shotZone, goalZone }) => {
+    ({ number, shotZone, goalZone, foulPlayerId }) => {
       if (!match || match.status !== 'running') return;
       const next = Math.max(0, match.score.rival + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'rivalGoals'));
-      recordEvent(`Gol rival #${number}`, { 'score.rival': next }, {}, {
-        create: {
-          ref,
-          data: {
-            number,
-            minute,
-            period: match.period,
-            shotZone: shotZone || null,
-            goalZone: goalZone || null,
-            createdAt: Date.now(),
+      const foulPlayer = foulPlayerId ? players[foulPlayerId] : null;
+      recordEvent(`Gol rival #${number}`, { 'score.rival': next },
+        foulPlayer ? { [foulPlayerId]: { sevenMetersCommitted: (foulPlayer.sevenMetersCommitted || 0) + 1 } } : {},
+        {
+          create: {
+            ref,
+            data: {
+              number,
+              minute,
+              period: match.period,
+              shotZone: shotZone || null,
+              goalZone: goalZone || null,
+              foulPlayerId: foulPlayer ? foulPlayerId : null,
+              createdAt: Date.now(),
+            },
           },
-        },
-      });
+        });
     },
-    [match, matchId, liveElapsedMs, recordEvent]
+    [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
   const rivalShot = useCallback(
@@ -654,18 +668,6 @@ export function useMatchStore(matchId, enabled) {
       });
     },
     [match, players, matchId, liveElapsedMs, recordEvent, runExclusive, latestDetailDoc]
-  );
-
-  // Falta propia que provoca un lanzamiento de 7 metros para el rival —
-  // contador simple por jugador, igual que las recuperaciones, sin zona ni
-  // documento de detalle propio.
-  const playerSevenMeterCommitted = useCallback(
-    (playerId, delta = 1) => {
-      if (!match || match.status !== 'running') return;
-      const next = Math.max(0, (players[playerId].sevenMetersCommitted || 0) + delta);
-      recordEvent(delta > 0 ? '7 metros cometido' : '7 metros cometido (-1)', {}, { [playerId]: { sevenMetersCommitted: next } });
-    },
-    [match, players, recordEvent]
   );
 
   // Solo tiene sentido para quien juega de portero en este partido. El "−1"
@@ -1001,7 +1003,6 @@ export function useMatchStore(matchId, enabled) {
     playerShot,
     playerShotWithDetail,
     playerRecovery,
-    playerSevenMeterCommitted,
     playerSave,
     playerExclusion,
     cancelExclusion,

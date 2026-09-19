@@ -2,7 +2,10 @@ import { useState } from 'react';
 import ShotZoneDiagram from './ShotZoneDiagram';
 import { OUT_ZONES, missingZoneWarning } from '../shotZones';
 
-const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
+// Teclado en DOS filas de 6 (1-6 / 7-9 0 C ⌫) con el dorsal a la izquierda, en
+// vez de 4 filas de 3 con el dorsal encima: así el dorsal, el teclado y el
+// diagrama de zonas caben juntos en la pantalla de un móvil, sin scroll.
+const KEYPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'C', '⌫'];
 
 // UN solo interfaz para todo lo que anota un tiro del rival (2026-09-19):
 // dorsal + de dónde vino + por dónde fue. Cambia solo qué se anota al
@@ -43,16 +46,16 @@ export default function RivalShotModal({ kind = 'goal', playerName, saverName, o
   }
 
   const title = kind === 'goal'
-    ? 'Gol rival — ¿qué dorsal ha marcado?'
+    ? 'Gol rival'
     : kind === 'miss'
-      ? 'Fallo rival — ¿qué dorsal ha fallado? (opcional)'
+      ? 'Fallo rival'
       : `Parada — ${playerName}`;
 
   const hint = kind === 'goal'
-    ? 'De dónde vino y por dónde entró (opcional)'
+    ? 'Dorsal que marcó (obligatorio) · de dónde vino y por dónde entró (opcional)'
     : kind === 'miss'
-      ? 'De dónde vino y por dónde fue: si lo paró nuestro portero, marca la zona de la portería; si se fue fuera, marca "Fuera" (opcional)'
-      : '¿Qué dorsal rival ha tirado? (opcional) — y de dónde vino y dónde paró el balón';
+      ? 'Dorsal (opcional) · de dónde vino y por dónde fue: zona de portería = la paró nuestro portero; "Fuera" = solo fallo'
+      : 'Dorsal que tiró (opcional) · de dónde vino y dónde paró el balón';
 
   // Lo que va a pasar al confirmar, con la zona elegida: para que en un
   // Fallo nadie se lleve una parada (o se quede sin ella) sin saberlo.
@@ -77,9 +80,8 @@ export default function RivalShotModal({ kind = 'goal', playerName, saverName, o
       <div className="modal rival-goal-modal" onClick={(e) => e.stopPropagation()}>
         <h2>{title}</h2>
 
-        <div className="rival-goal-display">{number || '—'}</div>
-
-        <div className="keypad">
+        <div className="keypad-compact">
+          <div className="keypad-compact-display" aria-label="Dorsal rival">{number || '—'}</div>
           {KEYPAD_DIGITS.map((key) => (
             <button
               key={key}
@@ -92,7 +94,7 @@ export default function RivalShotModal({ kind = 'goal', playerName, saverName, o
           ))}
         </div>
 
-        <p className="modal-hint">{hint}</p>
+        <p className="modal-hint rival-modal-hint">{hint}</p>
         <ShotZoneDiagram
           showGoal
           showOut={kind === 'miss'}
@@ -102,7 +104,7 @@ export default function RivalShotModal({ kind = 'goal', playerName, saverName, o
           goalZone={goalZone}
           onGoalZone={setGoalZone}
         />
-        {effect && <p className="modal-hint rival-shot-effect">{effect}</p>}
+        {effect && <p className="modal-hint rival-modal-hint rival-shot-effect">{effect}</p>}
 
         <div className="player-form-actions">
           <button className="btn btn-clock btn-start" disabled={numberRequired && !number} onClick={handleConfirm}>

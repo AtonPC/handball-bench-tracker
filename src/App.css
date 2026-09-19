@@ -3300,17 +3300,9 @@
      1) dorsal + nombre (hasta 2 líneas) + iconos pequeños: exclusión,
         amarilla y cambio;
      2) Gol, Fallo y Recup. (o Parada, Gol, Fallo en el portero) en una línea.
-   El contador de 7 metros deja de ir en la fila de arriba y pasa a la segunda
-   línea del nombre (junto al reloj), pequeño. En tablet/escritorio no cambia
-   nada: esto solo aplica por debajo de 600px. */
-.player-sub-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.stat-stepper--inline {
-  display: none;
-}
+   (El contador de 7m por jugador se quitó: ahora se anota al confirmar un
+   gol rival de 7 metros, preguntando quién de nuestro equipo hizo la falta.)
+   En tablet/escritorio no cambia nada: esto solo aplica por debajo de 600px. */
 @media (max-width: 599px) {
   .player-panel {
     padding: 6px;
@@ -3382,37 +3374,6 @@
     gap: 3px;
     font-size: 12px;
   }
-  .hide-on-phone {
-    display: none;
-  }
-
-  /* Segunda línea del nombre: el reloj y el 7m, pequeño. */
-  .stat-stepper--inline {
-    display: flex;
-    flex-shrink: 0;
-    height: 26px;
-    padding: 1px;
-    margin-left: auto;
-    border-radius: 6px;
-  }
-  .stat-stepper--inline .stat-btn {
-    width: 22px;
-    height: 22px;
-    font-size: 14px;
-  }
-  .stat-stepper--inline .stat-display {
-    flex-direction: row;
-    gap: 3px;
-    min-width: 0;
-    padding: 0 3px;
-  }
-  .stat-stepper--inline .stat-icon {
-    font-size: 9px;
-  }
-  .stat-stepper--inline .stat-count {
-    font-size: 12px;
-  }
-
   /* Fila de abajo: tres contadores iguales en una sola línea. */
   .player-row-stats {
     display: grid;
@@ -3438,5 +3399,74 @@
     flex: 1;
     min-width: 0;
     padding: 0;
+  }
+}
+
+/* ---------- Modal del rival: dorsal + teclado + diagrama sin scroll (2026-09-19) ----------
+   El teclado de 4 filas de 56px con el dorsal encima obligaba a hacer scroll
+   para llegar a las zonas. Ahora: dorsal a la izquierda y teclado en dos
+   filas de 6 (~90px en total), textos más cortos, y el diagrama se encoge si
+   la pantalla es baja en vez de empujar el botón de registrar fuera de vista. */
+.rival-goal-modal {
+  max-height: 96svh;
+  padding: 12px;
+  gap: 8px;
+}
+.rival-goal-modal h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.rival-goal-modal .shot-zone-diagram {
+  max-height: 46svh;
+}
+.keypad-compact {
+  display: grid;
+  grid-template-columns: 64px repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(2, 42px);
+  gap: 6px;
+}
+.keypad-compact-display {
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-alt);
+  font: 700 30px/1 var(--font-mono);
+  color: var(--accent);
+}
+.keypad-compact .keypad-btn {
+  min-height: 0;
+  padding: 0;
+  font-size: 18px;
+  border-radius: 8px;
+}
+.rival-modal-hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* Pestaña Cronología de la consola: filtro por minuto */
+.chrono-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.chrono-filter .player-form-input--number {
+  width: 96px;
+}
+
+/* Cronología en móvil vertical: el nombre puede ocupar dos líneas en vez de
+   cortarse con "…" (pasaba con nombres largos, p. ej. "Portera Larga Ro…"). */
+@media (max-width: 599px) {
+  .chrono-row-who {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+    line-height: 1.2;
   }
 }

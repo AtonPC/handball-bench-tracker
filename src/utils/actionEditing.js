@@ -17,7 +17,7 @@ export const ACTION_KINDS = {
   ownRecovery: { sub: 'recoveryEvents', side: 'own', label: 'Recuperación', fields: ['player', 'minute'] },
   ownExclusion: { sub: 'exclusionEvents', side: 'own', label: 'Exclusión', fields: ['player', 'minute'] },
   ownYellow: { sub: 'yellowCardEvents', side: 'own', label: 'Tarjeta amarilla', fields: ['player', 'minute'] },
-  rivalGoal: { sub: 'rivalGoals', side: 'rival', label: 'Gol rival', fields: ['number', 'minute', 'shotZone', 'goalZone'] },
+  rivalGoal: { sub: 'rivalGoals', side: 'rival', label: 'Gol rival', fields: ['number', 'minute', 'shotZone', 'goalZone', 'foulPlayer'] },
   rivalMiss: { sub: 'rivalMisses', side: 'rival', label: 'Fallo rival', fields: ['number', 'minute', 'shotZone', 'goalZone'] },
   rivalExclusion: { sub: 'rivalExclusions', side: 'rival', label: 'Exclusión rival', fields: ['number', 'minute'] },
   rivalSevenMeter: { sub: 'rivalSevenMeters', side: 'rival', label: '7 metros rival', fields: ['number', 'minute'] },
@@ -79,7 +79,11 @@ export function effectsOf(kind, data) {
       if (data.disqualified) eff.set[data.playerId] = { disqualified: true };
       break;
     case 'ownYellow': eff.set[data.playerId] = { yellowCard: true }; break;
-    case 'rivalGoal': eff.score.rival += 1; break;
+    case 'rivalGoal':
+      eff.score.rival += 1;
+      // Gol rival de 7m: la falta la cometió un jugador nuestro.
+      if (data.foulPlayerId) addDelta(eff, data.foulPlayerId, 'sevenMetersCommitted', 1);
+      break;
     default: break; // fallos, exclusiones, 7m y amarillas rivales: sin contador
   }
   return eff;
@@ -139,6 +143,7 @@ export function planEdit(action, changes, ctx = {}) {
   }
   if (fields.includes('shotZone') && changes.shotZone !== undefined) patch.shotZone = changes.shotZone || null;
   if (fields.includes('goalZone') && changes.goalZone !== undefined) patch.goalZone = changes.goalZone || null;
+  if (fields.includes('foulPlayer') && changes.foulPlayerId !== undefined) patch.foulPlayerId = changes.foulPlayerId || null;
 
   let newKind = kind;
   if ((kind === 'ownGoal' || kind === 'ownMiss') && changes.type) {
@@ -202,7 +207,7 @@ export function planAdd(kind, values, ctx = {}) {
       }
       created = { sub: 'yellowCardEvents', data: { playerId: values.playerId, ...base } };
       break;
-    case 'rivalGoal': created = { sub: 'rivalGoals', data: { number: Number(values.number), ...base, ...zones } }; break;
+    case 'rivalGoal': created = { sub: 'rivalGoals', data: { number: Number(values.number), foulPlayerId: values.foulPlayerId || null, ...base, ...zones } }; break;
     case 'rivalMiss': created = { sub: 'rivalMisses', data: { number: values.number ? Number(values.number) : null, ...base, ...zones } }; break;
     case 'rivalExclusion': created = { sub: 'rivalExclusions', data: { number: Number(values.number), ...base, endsAtMs: createdAt } }; break;
     case 'rivalSevenMeter': created = { sub: 'rivalSevenMeters', data: { number: Number(values.number), shotEventId: null, ...base } }; break;
@@ -272,7 +277,10 @@ export function describeAction(action, playersById) {
       return { title: `${ACTION_KINDS[kind].label} — ${who}`, detail: zones };
     case 'ownExclusion': return { title: `${data.disqualified ? 'Roja (3ª exclusión)' : 'Exclusión'} — ${who}`, detail: '' };
     case 'ownSave': return { title: `Parada — ${who}`, detail: [data.rivalNumber != null ? `tiró ${rivalNo(data.rivalNumber)}` : null, zones].filter(Boolean).join(' · ') };
-    case 'rivalGoal': case 'rivalMiss': return { title: `${ACTION_KINDS[kind].label} — ${rivalNo(data.number)}`, detail: zones };
+    case 'rivalGoal': case 'rivalMiss': {
+      const foul = kind === 'rivalGoal' && data.foulPlayerId && playersById[data.foulPlayerId];
+      return { title: `${ACTION_KINDS[kind].label} — ${rivalNo(data.number)}`, detail: [zones, foul ? `falta de #${foul.number} ${foul.name}` : null].filter(Boolean).join(' · ') };
+    }
     default: return { title: `${ACTION_KINDS[kind].label} — ${rivalNo(data.number)}`, detail: '' };
   }
 }
