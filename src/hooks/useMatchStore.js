@@ -1,42 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const EXCLUSION_MS = 2 * 60 * 1000;
 
-function buildSnapshot(match, players) {
-  const playersSnap = {};
-  for (const id of Object.keys(players)) {
-    const p = players[id];
-    playersSnap[id] = {
-      accumulatedMs: p.accumulatedMs,
-      onCourtSinceMs: p.onCourtSinceMs,
-      excluded: p.excluded,
-      exclusionEndsAtMs: p.exclusionEndsAtMs,
-      goals: p.goals,
-      shots: p.shots,
-      saves: p.saves,
-      recoveries: p.recoveries,
-      exclusionsCount: p.exclusionsCount,
-      disqualified: p.disqualified,
-      yellowCard: p.yellowCard,
-      isGK: p.isGK,
-    };
-  }
-  return {
-    match: {
-      status: match.status,
-      period: match.period,
-      accumulatedMs: match.accumulatedMs,
-      runningSinceMs: match.runningSinceMs,
-      score: match.score,
-      rivalShots: match.rivalShots,
-      timeouts: match.timeouts,
-      courtSlots: match.courtSlots,
-      bench: match.bench,
-    },
-    players: playersSnap,
-  };
+// Campos de reloj de un jugador: si un evento los toca (cambio, exclusión...),
+// deshacerlo solo es exacto mientras el reloj del partido no haya cambiado
+// desde entonces (ver recordEvent y undo).
+const TIME_FIELDS = new Set(['onCourtSinceMs', 'accumulatedMs']);
+
+function getPath(obj, path) {
+  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+
+// Valor ANTERIOR de cada campo que va a cambiar un evento (rutas con puntos
+// como 'score.own' incluidas). Se guarda como lista {path, value}, no como
+// mapa, porque Firestore no admite claves con puntos ni arrays anidados;
+// un campo que no existía se guarda como null.
+function beforeValues(source, paths) {
+  return paths.map((path) => {
+    const value = getPath(source, path);
+    return { path, value: value === undefined ? null : value };
+  });
 }
 
 // Store de un partido concreto (matchId): cronómetro, marcador, jugadores en
@@ -137,27 +122,88 @@ export function useMatchStore(matchId, enabled) {
     return result;
   }, [players, now]);
 
-  // `extra.create` permite que un evento, además de los cambios habituales,
-  // cree un documento aparte (p. ej. el detalle de un gol rival) — se guarda
-  // su ruta en el propio evento para que el deshacer también lo borre.
+  // Un evento puede, además de cambiar el partido/los jugadores:
+  //  - `extra.creates` (array; `extra.create` singular sigue aceptándose):
+  //    crear documentos de detalle (p. ej. una Parada crea también su Fallo
+  //    rival emparejado, ver playerSaveWithDetail). Se guarda su ruta en el
+  //    evento para que el deshacer los borre.
+  //  - `extra.deletes` (array de {ref, data}): borrar documentos de detalle
+  //    (un "−1" borra el gol/parada/... que restaba). Se guarda su contenido
+  //    en el evento para que el deshacer los recree.
+  // El evento guarda solo el valor ANTERIOR de lo que cambia (`undo`), no una
+  // foto del partido entero: así deshacer no pisa nada que no sea de este
+  // evento — antes, tras una pausa o un cambio de periodo, restaurar la foto
+  // entera devolvía el reloj y el periodo a un estado ya pasado.
   const recordEvent = useCallback(async (label, matchUpdate, playerUpdates, extra) => {
     if (!match) return;
-    const snapshot = buildSnapshot(match, players);
     const batch = writeBatch(db);
-    if (matchUpdate && Object.keys(matchUpdate).length > 0) batch.update(matchRef, matchUpdate);
-    for (const id of Object.keys(playerUpdates || {})) {
+    const matchKeys = Object.keys(matchUpdate || {});
+    const playerIds = Object.keys(playerUpdates || {});
+    if (matchKeys.length > 0) batch.update(matchRef, matchUpdate);
+    for (const id of playerIds) {
       batch.update(playerRef(id), playerUpdates[id]);
     }
-    // extra.creates (array) es lo normal ahora — un evento puede crear más
-    // de un documento de detalle a la vez (p. ej. una Parada crea también
-    // su Fallo rival emparejado, ver playerSaveWithDetail). extra.create
-    // (singular) se sigue aceptando por compatibilidad con quien ya lo usa.
     const creates = extra?.creates || (extra?.create ? [extra.create] : []);
     for (const c of creates) batch.set(c.ref, c.data);
     const createdRefPaths = creates.map((c) => c.ref.path);
-    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, snapshot, createdRefPaths });
+    const deletes = extra?.deletes || [];
+    for (const d of deletes) batch.delete(d.ref);
+    const deletedDocs = deletes.map((d) => ({ path: d.ref.path, data: d.data }));
+
+    const touchesTime = playerIds.some((id) => Object.keys(playerUpdates[id]).some((k) => TIME_FIELDS.has(k)));
+    const undo = {
+      match: beforeValues(match, matchKeys),
+      players: playerIds.map((id) => ({ id, fields: beforeValues(players[id] || {}, Object.keys(playerUpdates[id])) })),
+      // Solo si toca relojes de jugador: estado del reloj del partido en
+      // este momento, para saber en el deshacer si sigue siendo el mismo.
+      clock: touchesTime ? { status: match.status, runningSinceMs: match.runningSinceMs ?? null, period: match.period } : null,
+    };
+    batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, undo, createdRefPaths, deletedDocs });
     await batch.commit();
   }, [match, players, matchRef, playerRef, eventsCol]);
+
+  // Un "−1" primero busca en Firestore el detalle que va a restar (el último
+  // gol de ese jugador, la última parada...). Mientras tanto se ignoran
+  // otros "−1" para que dos toques seguidos no borren el mismo documento
+  // dos veces. No se espera al commit (sin conexión no resolvería nunca).
+  const busyRef = useRef(false);
+  const runExclusive = useCallback(async (fn) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      await fn();
+    } finally {
+      busyRef.current = false;
+    }
+  }, []);
+
+  // Último documento (por createdAt) de una subcolección del partido que
+  // cumpla todas las condiciones de igualdad. Si no se puede leer (p. ej.
+  // sin conexión ni caché), devuelve null y el "−1" se limita al contador,
+  // como antes — mejor que dejar el botón muerto en pleno partido.
+  const latestDetailDoc = useCallback(async (sub, conditions = []) => {
+    try {
+      const constraints = conditions.map(([field, value]) => where(field, '==', value));
+      const snap = await getDocs(query(collection(db, 'matches', matchId, sub), ...constraints));
+      let best = null;
+      snap.forEach((d) => {
+        const data = d.data();
+        if (!best || (data.createdAt || 0) > (best.data.createdAt || 0)) best = { ref: d.ref, id: d.id, data };
+      });
+      return best;
+    } catch (err) {
+      console.warn(`No se pudo leer ${sub} para restar`, err);
+      return null;
+    }
+  }, [matchId]);
+
+  // Parada y Fallo rival emparejados: se enlazan por `pairId` (el id de la
+  // parada). Los emparejados antes de existir ese campo comparten el mismo
+  // createdAt exacto — se buscan por ahí.
+  const findPairedDoc = useCallback((sub, source) => {
+    if (source.data.pairId) return latestDetailDoc(sub, [['pairId', source.data.pairId]]);
+    return latestDetailDoc(sub, [['createdAt', source.data.createdAt]]);
+  }, [latestDetailDoc]);
 
   // --- Controles del cronómetro maestro (no pasan por el log de deshacer) ---
   const startPeriod1 = useCallback(async () => {
@@ -263,13 +309,23 @@ export function useMatchStore(matchId, enabled) {
   }, [match, players, matchRef, playerRef]);
 
   // --- Marcador y acciones rivales (delta: +1 o -1, para poder corregir toques) ---
+  // El "−1" borra también el último gol rival con detalle (dorsal, zonas):
+  // antes solo bajaba el marcador y ese gol seguía contando en "tiros del
+  // rival", en las zonas y en la cronología.
   const rivalGoal = useCallback(
     (delta = 1) => {
       if (!match || match.status !== 'running') return;
-      const next = Math.max(0, match.score.rival + delta);
-      recordEvent(delta > 0 ? 'Gol rival' : 'Gol rival (-1)', { 'score.rival': next }, {});
+      if (delta > 0) {
+        recordEvent('Gol rival', { 'score.rival': match.score.rival + 1 }, {});
+        return;
+      }
+      if (match.score.rival <= 0) return;
+      runExclusive(async () => {
+        const goalDoc = await latestDetailDoc('rivalGoals');
+        recordEvent('Gol rival (-1)', { 'score.rival': match.score.rival - 1 }, {}, { deletes: goalDoc ? [goalDoc] : [] });
+      });
     },
-    [match, recordEvent]
+    [match, recordEvent, runExclusive, latestDetailDoc]
   );
 
   // Gol rival con detalle: dorsal de quien marca, minuto (del propio reloj
@@ -328,6 +384,27 @@ export function useMatchStore(matchId, enabled) {
     [match, matchId, liveElapsedMs, recordEvent]
   );
 
+  // "−1" del Fallo rival: borra el último fallo rival. Si era un tiro parado
+  // (tiene su Parada emparejada) borra también esa parada y se la resta al
+  // portero que la tenía anotada — un solo toque deja las dos estadísticas
+  // como si ese tiro nunca se hubiera anotado.
+  const rivalMissDec = useCallback(() => {
+    if (!match || match.status !== 'running') return;
+    runExclusive(async () => {
+      const missDoc = await latestDetailDoc('rivalMisses');
+      if (!missDoc) return;
+      const deletes = [missDoc];
+      const playerUpdates = {};
+      const saveDoc = await findPairedDoc('saveEvents', missDoc);
+      if (saveDoc) {
+        deletes.push(saveDoc);
+        const gk = players[saveDoc.data.playerId];
+        if (gk && (gk.saves || 0) > 0) playerUpdates[saveDoc.data.playerId] = { saves: gk.saves - 1 };
+      }
+      recordEvent('Fallo rival (-1)', {}, playerUpdates, { deletes });
+    });
+  }, [match, players, recordEvent, runExclusive, latestDetailDoc, findPairedDoc]);
+
   // Exclusión rival: solo el dorsal, sin zonas — a diferencia del gol rival,
   // no cambia el marcador. Se guarda en matches/{id}/rivalExclusions con su
   // propia cuenta atrás (endsAtMs) para poder mostrarla en directo, igual
@@ -363,13 +440,15 @@ export function useMatchStore(matchId, enabled) {
   // 7 metros provocado por el rival: solo dorsal y minuto, igual que una
   // exclusión rival — no cambia el marcador (el gol/fallo de 7m resultante
   // se anota aparte, como un gol/fallo propio normal con zona "7 metros").
+  // `shotEventId` (opcional) es el gol propio de 7m que originó este 7m
+  // rival: si más tarde se resta ese gol, se borra también este registro.
   const rivalSevenMeter = useCallback(
-    (number) => {
+    (number, shotEventId = null) => {
       if (!match || match.status !== 'running') return;
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'rivalSevenMeters'));
       recordEvent(`7 metros cometido por rival #${number}`, {}, {}, {
-        create: { ref, data: { number, minute, period: match.period, createdAt: Date.now() } },
+        create: { ref, data: { number, minute, period: match.period, shotEventId, createdAt: Date.now() } },
       });
     },
     [match, matchId, liveElapsedMs, recordEvent]
@@ -424,32 +503,61 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // --- Acciones por jugador (delta: +1 o -1, para poder corregir toques) ---
+  // Regla común de todos los "−1" de aquí abajo: restar es DESHACER esa
+  // anotación entera, no solo bajar un número. Se borra el último documento
+  // de detalle de ese tipo del jugador (y sus enlazados) en el mismo batch
+  // que baja el contador y el marcador, para que zonas, cronología y "tiros
+  // del rival" no sigan contando algo que ya no existe. Con el contador a 0
+  // no hace nada (antes un "−1" en un jugador sin goles bajaba igualmente
+  // el marcador del equipo).
   const playerGoal = useCallback(
     (playerId, delta = 1) => {
       if (!match || match.status !== 'running') return;
-      const nextGoals = Math.max(0, players[playerId].goals + delta);
-      const nextScore = Math.max(0, match.score.own + delta);
-      recordEvent(delta > 0 ? 'Gol' : 'Gol (-1)', { 'score.own': nextScore }, {
-        [playerId]: { goals: nextGoals },
+      if (delta > 0) {
+        recordEvent('Gol', { 'score.own': match.score.own + 1 }, { [playerId]: { goals: players[playerId].goals + 1 } });
+        return;
+      }
+      if ((players[playerId]?.goals || 0) <= 0) return;
+      runExclusive(async () => {
+        const goalDoc = await latestDetailDoc('shotEvents', [['playerId', playerId], ['type', 'goal']]);
+        const deletes = goalDoc ? [goalDoc] : [];
+        // Si ese gol fue de 7m y llevó un "7m cometido por rival #N"
+        // enlazado, se quita también.
+        if (goalDoc?.data.shotZone === '7 metros') {
+          const sevenMeter = await latestDetailDoc('rivalSevenMeters', [['shotEventId', goalDoc.id]]);
+          if (sevenMeter) deletes.push(sevenMeter);
+        }
+        recordEvent('Gol (-1)', { 'score.own': Math.max(0, match.score.own - 1) }, {
+          [playerId]: { goals: players[playerId].goals - 1 },
+        }, { deletes });
       });
     },
-    [match, players, recordEvent]
+    [match, players, recordEvent, runExclusive, latestDetailDoc]
   );
 
   const playerShot = useCallback(
     (playerId, delta = 1) => {
       if (!match || match.status !== 'running') return;
-      const next = Math.max(0, players[playerId].shots + delta);
-      recordEvent(delta > 0 ? 'Lanzamiento' : 'Lanzamiento (-1)', {}, { [playerId]: { shots: next } });
+      if (delta > 0) {
+        recordEvent('Lanzamiento', {}, { [playerId]: { shots: players[playerId].shots + 1 } });
+        return;
+      }
+      if ((players[playerId]?.shots || 0) <= 0) return;
+      runExclusive(async () => {
+        const missDoc = await latestDetailDoc('shotEvents', [['playerId', playerId], ['type', 'miss']]);
+        recordEvent('Lanzamiento (-1)', {}, { [playerId]: { shots: players[playerId].shots - 1 } }, {
+          deletes: missDoc ? [missDoc] : [],
+        });
+      });
     },
-    [match, players, recordEvent]
+    [match, players, recordEvent, runExclusive, latestDetailDoc]
   );
 
   // Gol/Fallo con zona (lanzamiento y, si es gol, entrada a portería), igual
   // que el gol rival: se guarda como documento propio en matches/{id}/shotEvents.
   const playerGoalWithDetail = useCallback(
     (playerId, { shotZone, goalZone }) => {
-      if (!match || match.status !== 'running') return;
+      if (!match || match.status !== 'running') return null;
       const nextGoals = Math.max(0, players[playerId].goals + 1);
       const nextScore = Math.max(0, match.score.own + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -460,6 +568,8 @@ export function useMatchStore(matchId, enabled) {
           data: { playerId, type: 'goal', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
         },
       });
+      // Se devuelve el id del gol para poder enlazarle el 7m rival, si lo hay.
+      return ref.id;
     },
     [match, players, matchId, liveElapsedMs, recordEvent]
   );
@@ -481,23 +591,28 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // El "+1" real queda registrado con su minuto en matches/{id}/recoveryEvents
-  // (para la cronología de la vista de Seguidor); el "-1" es una corrección
-  // de un toque accidental, no un suceso nuevo, así que no crea evento.
+  // (para la cronología de la vista de Seguidor); el "−1" borra la última
+  // recuperación de ese jugador, para que la cronología no la siga mostrando.
   const playerRecovery = useCallback(
     (playerId, delta = 1) => {
       if (!match || match.status !== 'running') return;
-      const next = Math.max(0, players[playerId].recoveries + delta);
-      if (delta > 0 && match) {
+      if (delta > 0) {
         const minute = Math.floor(liveElapsedMs / 60000) + 1;
         const ref = doc(collection(db, 'matches', matchId, 'recoveryEvents'));
-        recordEvent('Recuperación', {}, { [playerId]: { recoveries: next } }, {
+        recordEvent('Recuperación', {}, { [playerId]: { recoveries: players[playerId].recoveries + 1 } }, {
           create: { ref, data: { playerId, minute, period: match.period, createdAt: Date.now() } },
         });
-      } else {
-        recordEvent('Recuperación (-1)', {}, { [playerId]: { recoveries: next } });
+        return;
       }
+      if ((players[playerId]?.recoveries || 0) <= 0) return;
+      runExclusive(async () => {
+        const recoveryDoc = await latestDetailDoc('recoveryEvents', [['playerId', playerId]]);
+        recordEvent('Recuperación (-1)', {}, { [playerId]: { recoveries: players[playerId].recoveries - 1 } }, {
+          deletes: recoveryDoc ? [recoveryDoc] : [],
+        });
+      });
     },
-    [match, players, matchId, liveElapsedMs, recordEvent]
+    [match, players, matchId, liveElapsedMs, recordEvent, runExclusive, latestDetailDoc]
   );
 
   // Falta propia que provoca un lanzamiento de 7 metros para el rival —
@@ -512,14 +627,30 @@ export function useMatchStore(matchId, enabled) {
     [match, players, recordEvent]
   );
 
-  // Solo tiene sentido para quien juega de portero en este partido.
+  // Solo tiene sentido para quien juega de portero en este partido. El "−1"
+  // borra la última parada del portero Y su Fallo rival emparejado (una
+  // parada es a la vez un tiro fallado del rival): antes se quedaba el
+  // fallo rival huérfano, inflando "tiros del rival" y sus zonas.
   const playerSave = useCallback(
     (playerId, delta = 1) => {
       if (!match || match.status !== 'running') return;
-      const next = Math.max(0, players[playerId].saves + delta);
-      recordEvent(delta > 0 ? 'Parada' : 'Parada (-1)', {}, { [playerId]: { saves: next } });
+      if (delta > 0) {
+        recordEvent('Parada', {}, { [playerId]: { saves: players[playerId].saves + 1 } });
+        return;
+      }
+      if ((players[playerId]?.saves || 0) <= 0) return;
+      runExclusive(async () => {
+        const saveDoc = await latestDetailDoc('saveEvents', [['playerId', playerId]]);
+        const deletes = [];
+        if (saveDoc) {
+          deletes.push(saveDoc);
+          const missDoc = await findPairedDoc('rivalMisses', saveDoc);
+          if (missDoc) deletes.push(missDoc);
+        }
+        recordEvent('Parada (-1)', {}, { [playerId]: { saves: players[playerId].saves - 1 } }, { deletes });
+      });
     },
-    [match, players, recordEvent]
+    [match, players, recordEvent, runExclusive, latestDetailDoc, findPairedDoc]
   );
 
   // Parada con zona: se guarda como documento propio en
@@ -548,6 +679,7 @@ export function useMatchStore(matchId, enabled) {
               playerId, minute, period,
               shotZone: shotZone || null, goalZone: goalZone || null,
               rivalNumber: rivalNumber || null,
+              pairId: saveRef.id,
               createdAt,
             },
           },
@@ -556,6 +688,7 @@ export function useMatchStore(matchId, enabled) {
             data: {
               number: rivalNumber || null, minute, period,
               shotZone: shotZone || null, goalZone: goalZone || null,
+              pairId: saveRef.id,
               createdAt,
             },
           },
@@ -613,21 +746,26 @@ export function useMatchStore(matchId, enabled) {
 
   // Cancela una exclusión en curso (toque accidental): el jugador vuelve a
   // pista de inmediato y se descuenta del contador de exclusiones.
+  // También borra la exclusión de la cronología (su último exclusionEvents):
+  // antes el contador bajaba pero la exclusión seguía saliendo en la
+  // cronología del Seguidor.
   const cancelExclusion = useCallback(
     (playerId) => {
-      const nowMs = Date.now();
       const p = players[playerId];
       if (!p.excluded) return;
-      recordEvent('Cancelar exclusión', {}, {
-        [playerId]: {
-          exclusionsCount: Math.max(0, p.exclusionsCount - 1),
-          excluded: false,
-          exclusionEndsAtMs: null,
-          onCourtSinceMs: match.status === 'running' ? nowMs : null,
-        },
+      runExclusive(async () => {
+        const exclusionDoc = await latestDetailDoc('exclusionEvents', [['playerId', playerId]]);
+        recordEvent('Cancelar exclusión', {}, {
+          [playerId]: {
+            exclusionsCount: Math.max(0, p.exclusionsCount - 1),
+            excluded: false,
+            exclusionEndsAtMs: null,
+            onCourtSinceMs: match.status === 'running' ? Date.now() : null,
+          },
+        }, { deletes: exclusionDoc ? [exclusionDoc] : [] });
       });
     },
-    [match, players, recordEvent]
+    [match, players, recordEvent, runExclusive, latestDetailDoc]
   );
 
   // Tarjeta amarilla propia: una amonestación, no una sanción temporal —
@@ -648,15 +786,19 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // Anula una tarjeta amarilla marcada por error — mismo criterio que
-  // cancelExclusion (solo se corrige el campo del jugador, sin borrar el
-  // documento de detalle; el "Deshacer" general sí lo borra si es la
-  // última acción).
+  // cancelExclusion: baja el campo del jugador y borra su documento de
+  // detalle, para que no siga saliendo en la cronología.
   const cancelYellowCard = useCallback(
     (playerId) => {
       if (!players[playerId]?.yellowCard) return;
-      recordEvent('Cancelar tarjeta amarilla', {}, { [playerId]: { yellowCard: false } });
+      runExclusive(async () => {
+        const yellowDoc = await latestDetailDoc('yellowCardEvents', [['playerId', playerId]]);
+        recordEvent('Cancelar tarjeta amarilla', {}, { [playerId]: { yellowCard: false } }, {
+          deletes: yellowDoc ? [yellowDoc] : [],
+        });
+      });
     },
-    [players, recordEvent]
+    [players, recordEvent, runExclusive, latestDetailDoc]
   );
 
   // --- Sustitución ---
@@ -706,26 +848,57 @@ export function useMatchStore(matchId, enabled) {
   );
 
   // --- Deshacer ---
+  // Deshace el ÚLTIMO evento: devuelve cada campo que cambió a su valor
+  // anterior, borra los documentos de detalle que creó y recrea los que
+  // borró. Si el evento tocaba relojes de jugador (cambio, exclusión...) y
+  // el reloj del partido ha cambiado desde entonces (pausa, reanudar, otro
+  // periodo), no se deshace: los minutos individuales saldrían mal, y es
+  // mejor avisar que corromperlos — devuelve { ok: false, reason: 'clock' }.
+  // Los eventos guardados antes de este formato traen una foto entera
+  // (`snapshot`) y se siguen deshaciendo como antes.
   const undo = useCallback(async () => {
     const snap = await getDocs(query(eventsCol, orderBy('createdAt', 'desc'), limit(1)));
-    if (snap.empty) return;
+    if (snap.empty) return { ok: true };
     const eventDoc = snap.docs[0];
     const eventData = eventDoc.data();
-    const { match: matchSnap, players: playersSnap } = eventData.snapshot;
     const batch = writeBatch(db);
-    batch.update(matchRef, matchSnap);
-    for (const id of Object.keys(playersSnap)) {
-      batch.update(playerRef(id), playersSnap[id]);
+
+    if (eventData.undo) {
+      const clock = eventData.undo.clock;
+      if (clock && match && (
+        match.status !== clock.status
+        || (match.runningSinceMs ?? null) !== clock.runningSinceMs
+        || match.period !== clock.period
+      )) {
+        return { ok: false, reason: 'clock' };
+      }
+      const matchPatch = {};
+      for (const { path, value } of eventData.undo.match) matchPatch[path] = value;
+      if (Object.keys(matchPatch).length > 0) batch.update(matchRef, matchPatch);
+      for (const { id, fields } of eventData.undo.players) {
+        const patch = {};
+        for (const { path, value } of fields) patch[path] = value;
+        batch.update(playerRef(id), patch);
+      }
+    } else if (eventData.snapshot) {
+      const { match: matchSnap, players: playersSnap } = eventData.snapshot;
+      batch.update(matchRef, matchSnap);
+      for (const id of Object.keys(playersSnap)) {
+        batch.update(playerRef(id), playersSnap[id]);
+      }
     }
+
     // createdRefPaths (array) es el formato actual; createdRefPath
     // (singular) es el de eventos ya guardados antes de que un evento
     // pudiera crear más de un documento — se sigue soportando por si el
     // más reciente todavía es uno de esos.
     const paths = eventData.createdRefPaths || (eventData.createdRefPath ? [eventData.createdRefPath] : []);
     for (const p of paths) batch.delete(doc(db, p));
+    for (const d of eventData.deletedDocs || []) batch.set(doc(db, d.path), d.data);
     batch.delete(eventDoc.ref);
     await batch.commit();
-  }, [eventsCol, matchRef, playerRef]);
+    return { ok: true };
+  }, [eventsCol, matchRef, playerRef, match]);
 
   const periodDurationMs = match?.periodDurationMs || 20 * 60 * 1000;
   const periodElapsedMs = liveElapsedMs - (match?.periodStartAccumulatedMs || 0);
@@ -775,6 +948,7 @@ export function useMatchStore(matchId, enabled) {
     rivalGoalWithDetail,
     rivalShot,
     rivalMiss,
+    rivalMissDec,
     rivalExclusion,
     cancelRivalExclusion,
     rivalSevenMeter,

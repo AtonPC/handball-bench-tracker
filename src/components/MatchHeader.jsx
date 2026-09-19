@@ -26,6 +26,13 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
   const shortLabel = (p) => periodShortLabel(p, periodCount);
   const longLabel = (p) => periodLongLabel(p, periodCount);
 
+  async function handleUndo() {
+    const result = await store.undo();
+    if (result && !result.ok && result.reason === 'clock') {
+      alert('No se puede deshacer esta acción porque el reloj ha cambiado desde entonces (pausa, reanudación u otro periodo): los minutos de los jugadores saldrían mal. Corrígela a mano — por ejemplo, con el cambio inverso.');
+    }
+  }
+
   // "Pausar" es solo para paradas del árbitro durante el juego (una lesión,
   // lo que sea) — nunca termina el periodo por sí sola. Terminar el periodo
   // es una acción aparte, explícita y con aviso, para no confundir una cosa
@@ -77,7 +84,7 @@ export default function MatchHeader({ store, team, onBack, onFinish }) {
         <button className="icon-btn-sm" onClick={onBack}>
           <ArrowLeft size={14} /> PARTIDOS
         </button>
-        <button className="icon-btn-sm" onClick={store.undo} disabled={!store.canUndo}>
+        <button className="icon-btn-sm" onClick={handleUndo} disabled={!store.canUndo}>
           <Undo2 size={14} /> DESHACER
         </button>
       </div>

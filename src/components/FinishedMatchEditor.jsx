@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useMatchEditor } from '../hooks/useMatchEditor';
 import { useRivalGoals } from '../hooks/useRivalGoals';
+import { useRivalMisses } from '../hooks/useRivalMisses';
+import { useShotEvents } from '../hooks/useShotEvents';
+import { useSaveEvents } from '../hooks/useSaveEvents';
+import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
+import { checkMatchCoherence } from '../utils/coherence';
 import { SHOT_ZONES, GOAL_ZONES } from '../shotZones';
 
 const emptyRivalGoal = { number: '', minute: '', shotZone: '', goalZone: '' };
@@ -10,6 +15,11 @@ export default function FinishedMatchEditor({ store, onBack }) {
   const { state, matchId } = store;
   const { updateMatchInfo, updatePlayerStats, addRivalGoalRecord, removeRivalGoalRecord } = useMatchEditor(matchId);
   const rivalGoals = useRivalGoals(matchId);
+  const rivalMisses = useRivalMisses(matchId);
+  const shotEvents = useShotEvents(matchId);
+  const saveEvents = useSaveEvents(matchId);
+  const recoveryEvents = useRecoveryEvents(matchId);
+  const [showCoherence, setShowCoherence] = useState(false);
 
   const [matchInfo, setMatchInfo] = useState({
     rivalName: state.rivalName,
@@ -122,6 +132,41 @@ export default function FinishedMatchEditor({ store, onBack }) {
           guardadas del jugador y del equipo (incluido el acumulado de la pestaña Estadísticas) — úsalo solo
           para corregir errores de anotación o adaptar el resultado a lo que registró la federación.
         </p>
+
+        <div className="matches-header">
+          <p className="modal-hint" style={{ margin: 0 }}>
+            Cada dato está a la vez en un contador y en su detalle (cronología, zonas). Comprueba si coinciden.
+          </p>
+          <button className="btn btn-timeout" onClick={() => setShowCoherence((v) => !v)}>
+            {showCoherence ? 'Ocultar comprobación' : 'Comprobar coherencia'}
+          </button>
+        </div>
+        {showCoherence && (() => {
+          const issues = checkMatchCoherence({
+            players, score: state.score, shotEvents, saveEvents, recoveryEvents, rivalGoals, rivalMisses,
+          });
+          if (issues.length === 0) return <p className="modal-hint">Todo cuadra: contadores y detalle coinciden.</p>;
+          return (
+            <>
+              <div className="stats-table-wrap">
+                <table className="stats-table">
+                  <thead><tr><th>Quién</th><th>Qué</th><th>Contador</th><th>Detalle</th></tr></thead>
+                  <tbody>
+                    {issues.map((i) => (
+                      <tr key={`${i.who}-${i.what}`}>
+                        <td>{i.who}</td><td>{i.what}</td><td>{i.counter}</td><td>{i.records}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="modal-hint">
+                Solo se listan las diferencias; no se corrige nada solo. Es normal que salgan en partidos anotados sin
+                detalle de cada acción o con paradas anteriores al 16-09. Los contadores se corrigen aquí abajo.
+              </p>
+            </>
+          );
+        })()}
 
         <h3 className="stats-section-title">Datos del partido</h3>
         <form className="player-form" onSubmit={saveMatchInfo}>

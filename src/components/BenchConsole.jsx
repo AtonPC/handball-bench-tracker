@@ -49,6 +49,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // NOSOTROS un gol de 7 metros — no hay entrada suelta para el rival, ya
   // que la falta de 7m siempre la sufre el equipo que lanza.
   const [showSevenMeterFoulModal, setShowSevenMeterFoulModal] = useState(false);
+  // Id del gol de 7m que originó ese aviso — se guarda en el 7m rival para
+  // que, si luego se resta ese gol, el 7m rival se borre con él.
+  const [sevenMeterShotId, setSevenMeterShotId] = useState(null);
   const rivalExclusionsLive = useRivalExclusionsLive(matchId);
   const rivalMisses = useRivalMisses(matchId);
   const rivalYellowCards = useRivalYellowCards(matchId);
@@ -147,6 +150,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             onGoal={store.rivalGoal}
             onOpenGoalDetail={() => setShowRivalGoalModal(true)}
             onOpenMissDetail={() => setShowRivalMissModal(true)}
+            onMissDec={store.rivalMissDec}
             onOpenExclusion={() => setShowRivalExclusionModal(true)}
             onCancelExclusion={store.cancelRivalExclusion}
             onOpenYellowCard={() => setShowRivalYellowCardModal(true)}
@@ -259,12 +263,13 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           kind={shotDetailFor.kind}
           onConfirm={(detail) => {
             if (shotDetailFor.kind === 'goal') {
-              store.playerGoalWithDetail(shotDetailFor.playerId, detail);
+              const goalId = store.playerGoalWithDetail(shotDetailFor.playerId, detail);
               // El 7m rival solo se registra cuando NOSOTROS marcamos de 7
               // metros: ese gol confirma que hubo falta, y aquí se pregunta
               // qué dorsal rival la cometió (queda como estadística del
               // rival, igual que antes).
               if (detail.shotZone === '7 metros') {
+                setSevenMeterShotId(goalId);
                 setShowSevenMeterFoulModal(true);
               }
             } else {
@@ -281,10 +286,14 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           title="Gol de 7 metros — ¿qué dorsal rival ha cometido la falta?"
           confirmLabel="REGISTRAR 7 METROS"
           onConfirm={(detail) => {
-            store.rivalSevenMeter(detail.number);
+            store.rivalSevenMeter(detail.number, sevenMeterShotId);
             setShowSevenMeterFoulModal(false);
+            setSevenMeterShotId(null);
           }}
-          onCancel={() => setShowSevenMeterFoulModal(false)}
+          onCancel={() => {
+            setShowSevenMeterFoulModal(false);
+            setSevenMeterShotId(null);
+          }}
         />
       )}
 

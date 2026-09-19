@@ -15,7 +15,7 @@ import { formatClock } from '../utils/time';
 // rival derivada del gol propio.
 export default function RivalPanel({
   rivalName, rivalGoals, rivalMissesCount, rivalExclusionsLive, rivalYellowCards,
-  onGoal, onOpenGoalDetail, onOpenMissDetail, onOpenExclusion, onCancelExclusion,
+  onGoal, onOpenGoalDetail, onOpenMissDetail, onMissDec, onOpenExclusion, onCancelExclusion,
   onOpenYellowCard, onCancelYellowCard, matchRunning,
 }) {
   const exclusionSummary = summarizeRivalExclusions(rivalExclusionsLive);
@@ -56,7 +56,7 @@ export default function RivalPanel({
 
       <div className="player-row-stats">
         <StatStepper icon="GOL" label="Goles rival" count={rivalGoals} onInc={onOpenGoalDetail} onDec={() => onGoal(-1)} disabled={!matchRunning} />
-        <StatStepper icon="FALLO" label="Fallo rival" count={rivalMissesCount} onInc={onOpenMissDetail} disabled={!matchRunning} />
+        <StatStepper icon="FALLO" label="Fallo rival" count={rivalMissesCount} onInc={onOpenMissDetail} onDec={onMissDec} disabled={!matchRunning} />
       </div>
 
       {exclusionSummary.length > 0 && (
