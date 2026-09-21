@@ -240,7 +240,7 @@ export default function PhoneConsole({
       <button type="button" disabled={!isRunning} onClick={() => open({ kind: 'pick', action: 'steal', team: t, step: 1 })}>Robo</button>
       <button type="button" disabled={!isRunning} onClick={() => open({ kind: 'pick', action: 'turnover', team: t, step: 1 })}>Pérdida</button>
       <button type="button" disabled={!isRunning} onClick={() => open({ kind: 'pick', action: 'sanction', team: t, step: 1 })}>Sanción</button>
-      <button type="button" disabled={!isRunning} onClick={() => fl.passive(t)}>Pasivo</button>
+      <button type="button" disabled={!isRunning || (!!possession && possession !== t)} title="El pasivo es del equipo que tiene la pelota" onClick={() => fl.passive(t)}>Pasivo</button>
     </div>
   );
 

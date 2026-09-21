@@ -21,6 +21,9 @@ const countBy = (list, fn) => list.filter(fn).length;
 export default function TabletSummary({
   statePlayers = {}, shotEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
   rivalYellowCards = [], teamActions = [], possessions = { own: 0, rival: 0 },
+  // Con los nombres se pinta la cabecera (vistas de Seguidor y de partido acabado); en la
+  // consola de tablet ya salen en el marcador.
+  ownTeamName, rivalName,
 }) {
   const players = Object.values(statePlayers);
   const sum = (key) => players.reduce((s, p) => s + (p[key] || 0), 0);
@@ -73,6 +76,12 @@ export default function TabletSummary({
 
   return (
     <div className="tsum">
+      {ownTeamName && (
+        <div className="tsum-teams">
+          <span className="tsum-team tsum-team--own">{ownTeamName}</span>
+          <span className="tsum-team tsum-team--rival">{rivalName}</span>
+        </div>
+      )}
       {rows.map((r) => (
         <div key={r.label} className="tsum-row">
           <span className="tsum-v tsum-v--own"><b>{r.a}</b>{r.as && <small>{r.as}</small>}</span>

@@ -28,8 +28,14 @@ export function ownPlayerLabel(playersById, authorizedById, playerId) {
 // con el desempate de Firestore sin relación con el orden real) — sin él
 // no salían en el orden en que pasaron de verdad, solo agrupados por tipo
 // de suceso.
-export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, ownExclusions, ownYellowCards, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards }) {
+export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, ownExclusions, ownYellowCards, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards, teamActions = [], ownAssists = [] }) {
   const entries = [];
+  // Robos del rival, pérdidas y pasivos de cualquier equipo, y asistencias nuestras (2026-09-21).
+  for (const a of teamActions) {
+    const type = a.kind === 'steal' ? 'recovery' : a.kind === 'passive' ? 'passive' : 'turnover';
+    entries.push({ id: `ta-${a.id}`, minute: a.minute, createdAt: a.createdAt, type, side: a.team, playerId: a.playerId || null, number: a.number || null });
+  }
+  for (const a of ownAssists) entries.push({ id: `oa-${a.id}`, minute: a.minute, createdAt: a.createdAt, type: 'assist', side: 'own', playerId: a.playerId });
   for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'own', playerId: g.playerId });
   // missKind distingue de un vistazo por qué no fue gol: 'out' si la
   // entrada fue una de las 3 zonas de "Fuera" (se fue fuera de verdad),

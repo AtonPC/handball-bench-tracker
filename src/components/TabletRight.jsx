@@ -149,8 +149,9 @@ export default function TabletRight({
       </div>
 
       <div className="tc-pas">
-        <button type="button" disabled={!isRunning} onClick={() => onPassive('own')}>Pasivo a nosotros</button>
-        <button type="button" disabled={!isRunning} onClick={() => onPassive('rival')}>Pasivo al rival</button>
+        {/* El pasivo se pita al equipo que tiene la pelota: si se sabe quién la tiene, solo a ese. */}
+        <button type="button" disabled={!isRunning || (!!possession && possession !== 'own')} title="Solo cuando tenemos la pelota" onClick={() => onPassive('own')}>Pasivo a nosotros</button>
+        <button type="button" disabled={!isRunning || (!!possession && possession !== 'rival')} title="Solo cuando el rival tiene la pelota" onClick={() => onPassive('rival')}>Pasivo al rival</button>
       </div>
 
       <div className="tc-tabs" role="tablist">

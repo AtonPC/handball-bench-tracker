@@ -44,6 +44,27 @@ export default function EventIcon({ type, size = 18 }) {
           <path d="M4.5 17.5v-5h5" />
         </svg>
       );
+    case 'turnover':
+      return (
+        <svg {...props} stroke="var(--danger)" {...STROKE}>
+          <path d="M5 8h10a4 4 0 0 1 0 8H7" />
+          <path d="M9 12l-4 4 4 4" />
+        </svg>
+      );
+    case 'passive':
+      return (
+        <svg {...props} stroke="var(--warning)" {...STROKE}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M10 9v6M14 9v6" />
+        </svg>
+      );
+    case 'assist':
+      return (
+        <svg {...props} stroke="var(--accent)" {...STROKE}>
+          <path d="M4 12h13" />
+          <path d="M13 7l5 5-5 5" />
+        </svg>
+      );
     case 'card-red':
       return (
         <svg {...props}>

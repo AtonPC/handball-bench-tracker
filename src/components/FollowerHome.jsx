@@ -30,7 +30,8 @@ import FollowerClub from './FollowerClub';
 import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
 import ActionStatsView from './ActionStatsView';
-import MatchSummaryView from './MatchSummaryView';
+import TabletSummary from './TabletSummary';
+import { useTeamActionEvents } from '../hooks/useTeamActionEvents';
 import { rosterDisplayName, buildChronology } from '../utils/followerHelpers';
 
 // `tier` (ver utils/followerTier.js): un Seguidor Estándar ve la cronología en
@@ -46,6 +47,7 @@ function LiveMatchSection({ clubId, teamId, team, logView, tier }) {
   const rivalExclusions = useRivalExclusionsLive(liveMatch?.id || null);
   const rivalSevenMeters = useRivalSevenMeters(liveMatch?.id || null);
   const rivalYellowCards = useRivalYellowCards(liveMatch?.id || null);
+  const teamActions = useTeamActionEvents(liveMatch?.id || null);
   const shotEvents = useShotEvents(liveMatch?.id || null);
   const saveEvents = useSaveEvents(liveMatch?.id || null);
   const recoveryEvents = useRecoveryEvents(liveMatch?.id || null);
@@ -335,12 +337,15 @@ function LiveMatchSection({ clubId, teamId, team, logView, tier }) {
       {detailView === 'summary' && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <h3 className="stats-section-title">Resumen del partido</h3>
-          <MatchSummaryView
+          <TabletSummary
             statePlayers={state.players}
             shotEvents={shotEvents}
             rivalGoals={rivalGoals}
             rivalMisses={rivalMisses}
             rivalExclusions={rivalExclusions}
+            rivalYellowCards={rivalYellowCards}
+            teamActions={teamActions}
+            possessions={state.possessions}
             ownTeamName={state.ownTeamName}
             rivalName={state.rivalName}
           />

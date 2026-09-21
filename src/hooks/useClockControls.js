@@ -66,8 +66,8 @@ export function useClockControls(store, { onNeedLineup, onFinish }) {
 
   function handleFinish() {
     const message = isLastPeriod
-      ? `¿Terminar «${longLabel(clock.period)}» y dar el partido por finalizado? Esto es definitivo y no se puede deshacer.`
-      : '¿Finalizar el partido ahora, sin jugar el resto de periodos? Esto da el partido por terminado de forma definitiva y no se puede deshacer.';
+      ? `¿Terminar «${longLabel(clock.period)}» y dar el partido por finalizado? Si te equivocas, podrás reabrirlo desde las estadísticas del partido (botón REABRIR PARTIDO).`
+      : '¿Finalizar el partido ahora, sin jugar el resto de periodos? Si te equivocas, podrás reabrirlo desde las estadísticas del partido (botón REABRIR PARTIDO).';
     if (confirm(message)) onFinish();
   }
 

@@ -16,7 +16,8 @@ import { buildChronology } from '../utils/followerHelpers';
 import ChronologyRow from './ChronologyRow';
 import MatchStatsTable from './FollowerMatchStatsTable';
 import ActionStatsView from './ActionStatsView';
-import MatchSummaryView from './MatchSummaryView';
+import TabletSummary from './TabletSummary';
+import { useTeamActionEvents } from '../hooks/useTeamActionEvents';
 import TeamTotalsCard from './TeamTotalsCard';
 import { isProTier } from '../utils/followerTier';
 
@@ -38,6 +39,7 @@ export default function FollowerMatchDetail({ clubId, teamId, team, tier, matchI
   const exclusionEvents = useExclusionEvents(matchId);
   const yellowCardEvents = useYellowCardEvents(matchId);
   const rivalYellowCards = useRivalYellowCards(matchId);
+  const teamActions = useTeamActionEvents(matchId);
   const { players } = usePlayers(clubId, teamId);
 
   const authorizedById = useMemo(
@@ -126,12 +128,15 @@ export default function FollowerMatchDetail({ clubId, teamId, team, tier, matchI
           {detailView === 'summary' && (
             <div style={{ marginTop: 'var(--space-4)' }}>
               <h3 className="stats-section-title">Resumen del partido</h3>
-              <MatchSummaryView
+              <TabletSummary
                 statePlayers={store.state.players}
                 shotEvents={shotEvents}
                 rivalGoals={rivalGoals}
                 rivalMisses={rivalMisses}
                 rivalExclusions={rivalExclusions}
+                rivalYellowCards={rivalYellowCards}
+                teamActions={teamActions}
+                possessions={store.state.possessions}
                 ownTeamName={store.state.ownTeamName}
                 rivalName={store.state.rivalName}
               />

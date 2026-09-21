@@ -129,8 +129,21 @@ export default function App() {
           <nav className="admin-nav">
             <button className="btn btn-logout" onClick={backToMatches}>← PARTIDOS</button>
             <span className="admin-nav-role">Estadísticas</span>
+            {canUseBench && (
+              <button
+                className="btn btn-timeout"
+                style={{ marginLeft: 'auto' }}
+                onClick={async () => {
+                  if (!confirm('¿Reabrir este partido? Vuelve a estar en directo, con el cronómetro parado donde se quedó, y podrás seguir anotando con el ▶.')) return;
+                  await store.reopenMatch();
+                  setOpenSubView('bench');
+                }}
+              >
+                REABRIR PARTIDO
+              </button>
+            )}
             {canManageRoster && (
-              <div className="player-form-actions" style={{ marginLeft: 'auto' }}>
+              <div className="player-form-actions" style={canUseBench ? undefined : { marginLeft: 'auto' }}>
                 <button className="btn-icon" onClick={() => openEditFinishedStats(openMatchId)} title="Editar" aria-label="Editar partido finalizado">
                   <Settings size={18} />
                 </button>

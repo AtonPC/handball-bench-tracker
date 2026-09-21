@@ -3,6 +3,8 @@ import { useRecoveryEvents } from '../hooks/useRecoveryEvents';
 import { useExclusionEvents } from '../hooks/useExclusionEvents';
 import { useYellowCardEvents } from '../hooks/useYellowCardEvents';
 import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
+import { useTeamActionEvents } from '../hooks/useTeamActionEvents';
+import { useAssistEvents } from '../hooks/useAssistEvents';
 import { buildChronology } from '../utils/followerHelpers';
 import ChronologyRow from './ChronologyRow';
 
@@ -21,6 +23,8 @@ export default function ConsoleChronology({
   const exclusionEvents = useExclusionEvents(matchId);
   const yellowCardEvents = useYellowCardEvents(matchId);
   const rivalSevenMeters = useRivalSevenMeters(matchId);
+  const teamActions = useTeamActionEvents(matchId);
+  const assistEvents = useAssistEvents(matchId);
   const [minute, setMinute] = useState('');
 
   // ChronologyRow espera jugadores de la plantilla (displayName); aquí son
@@ -43,8 +47,10 @@ export default function ConsoleChronology({
       rivalExclusions,
       rivalSevenMeters,
       rivalYellowCards,
+      teamActions,
+      ownAssists: assistEvents,
     }),
-    [shotEvents, saveEvents, recoveryEvents, exclusionEvents, yellowCardEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards]
+    [shotEvents, saveEvents, recoveryEvents, exclusionEvents, yellowCardEvents, rivalGoals, rivalMisses, rivalExclusions, rivalSevenMeters, rivalYellowCards, teamActions, assistEvents]
   );
 
   const wanted = minute === '' ? null : Number(minute);

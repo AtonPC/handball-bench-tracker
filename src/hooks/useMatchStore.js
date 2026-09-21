@@ -411,6 +411,16 @@ export function useMatchStore(matchId, enabled) {
     await batch.commit();
   }, [match, players, matchRef, playerRef]);
 
+  // Reabre un partido FINALIZADO por error (2026-09-21): vuelve a estar «en directo»,
+  // con el cronómetro parado donde se quedó y sin fin de periodo, listo para darle al ▶
+  // y seguir. Los tiempos de los jugadores se congelaron al finalizar y siguen ahí.
+  const reopenMatch = useCallback(async () => {
+    if (!match || match.lifecycle !== 'finished') return;
+    const batch = writeBatch(db);
+    batch.update(matchRef, { lifecycle: 'live', status: 'paused', periodEnded: false });
+    await batch.commit();
+  }, [match, matchRef]);
+
   // --- Marcador y acciones rivales (delta: +1 o -1, para poder corregir toques) ---
   // El "−1" borra también el último gol rival con detalle (dorsal, zonas):
   // antes solo bajaba el marcador y ese gol seguía contando en "tiros del
@@ -1232,6 +1242,7 @@ export function useMatchStore(matchId, enabled) {
     startNextPeriod,
     setPeriodLineup,
     finishMatch,
+    reopenMatch,
     rivalGoal,
     rivalGoalWithDetail,
     rivalShot,

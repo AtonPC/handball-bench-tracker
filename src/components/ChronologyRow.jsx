@@ -11,6 +11,9 @@ function eventIconType(entry) {
   if (entry.type === 'save') return 'save';
   if (entry.type === 'goal') return 'goal';
   if (entry.type === 'recovery') return 'recovery';
+  if (entry.type === 'turnover') return 'turnover';
+  if (entry.type === 'passive') return 'passive';
+  if (entry.type === 'assist') return 'assist';
   if (entry.type === 'sevenMeter') return 'sevenMeter';
   return null;
 }
@@ -27,6 +30,9 @@ function eventLabel(entry) {
     save: 'Parada',
     recovery: 'Robo',
     exclusion: entry.disqualified ? 'Roja' : 'Exclusión',
+    turnover: 'Pérdida',
+    passive: 'Pasivo',
+    assist: 'Asistencia',
     yellowCard: 'Tarjeta amarilla',
     sevenMeter: '7 metros provocados',
   }[entry.type];
@@ -37,7 +43,9 @@ function eventLabel(entry) {
 // Los del rival siguen con su dorsal: no son jugadores nuestros.
 export default function ChronologyRow({ entry, playersById, authorizedById, compact, anonymize = false }) {
   const hideName = anonymize && entry.side === 'own' && entry.type !== 'goal';
-  const who = hideName
+  // Sin nadie concreto (pasivo, o robo/pérdida sin jugador ni dorsal) solo va la etiqueta.
+  const noWho = entry.type === 'passive' || (entry.side === 'own' ? !entry.playerId && ['recovery', 'turnover'].includes(entry.type) : entry.number == null && ['recovery', 'turnover'].includes(entry.type));
+  const who = hideName || noWho
     ? null
     : entry.side === 'own'
       ? ownPlayerLabel(playersById, authorizedById, entry.playerId)

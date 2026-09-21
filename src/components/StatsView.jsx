@@ -9,7 +9,9 @@ import { useSaveEvents } from '../hooks/useSaveEvents';
 import { hasCapability } from '../permissions';
 import PlayerStatsTable from './PlayerStatsTable';
 import ActionStatsView from './ActionStatsView';
-import MatchSummaryView from './MatchSummaryView';
+import TabletSummary from './TabletSummary';
+import { useTeamActionEvents } from '../hooks/useTeamActionEvents';
+import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 
 const SUBSTITUTION_LABELS = new Set(['Cambio', 'Cambio por expulsión']);
 
@@ -51,6 +53,8 @@ export default function StatsView({ store, identity, teamId, team }) {
   const shotEvents = useShotEvents(matchId);
   const saveEvents = useSaveEvents(matchId);
   const rivalMisses = useRivalMisses(matchId);
+  const teamActions = useTeamActionEvents(matchId);
+  const rivalYellowCards = useRivalYellowCards(matchId);
 
   const players = Object.values(state.players)
     .map((p) => ({ ...p, attempts: p.goals + p.shots, shotsFaced: (p.saves || 0) + state.score.rival }))
@@ -93,12 +97,15 @@ export default function StatsView({ store, identity, teamId, team }) {
 
       <div style={{ marginTop: 'var(--space-4)' }}>
         <h3 className="stats-section-title">Resumen del partido</h3>
-        <MatchSummaryView
+        <TabletSummary
           statePlayers={state.players}
           shotEvents={shotEvents}
           rivalGoals={rivalGoals}
           rivalMisses={rivalMisses}
           rivalExclusions={rivalExclusions}
+          rivalYellowCards={rivalYellowCards}
+          teamActions={teamActions}
+          possessions={state.possessions}
           ownTeamName={state.ownTeamName}
           rivalName={state.rivalName}
         />

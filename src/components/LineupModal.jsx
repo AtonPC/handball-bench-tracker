@@ -1,44 +1,58 @@
 import { useMemo, useState } from 'react';
 import { LINEUP_SIZE, lineupAdvice, validateLineup } from '../utils/lineups';
-import { periodShortLabel } from '../utils/periods';
+import { periodLongLabel, periodShortLabel } from '../utils/periods';
 
-// Equipo titular del siguiente tiempo o cuarto, elegido ANTES de darle al ▶
-// (2026-09-19). Con las reglas de Alevín puestas es un PASO OBLIGATORIO: sin
-// confirmarlo no se puede iniciar el periodo. Lo que se elija aquí NUNCA se
-// bloquea: repetir a quienes empezaron el anterior solo avisa (la app se usa
-// también en entrenamientos y amistosos; el interruptor del partido lo
-// desactiva entero). Una columna por periodo con los dorsales de
-// quienes lo empezaron; las anteriores solo se consultan, la del periodo que va
-// a empezar se rellena aquí, y la primera fila es SIEMPRE el portero (color
-// aparte). Con las reglas de Alevín puestas (`alevinRules`), se avisa de quien
-// repite: con 14 o más convocados no se debería repetir a nadie; con menos, sí
-// se puede y se recuerda cuántos hay que repetir como mínimo.
+// Equipo titular del siguiente tiempo o cuarto, elegido ANTES de darle al ▶ (mockup
+// aprobado, 2026-09-21). Con las reglas de Alevín puestas es un PASO OBLIGATORIO: sin
+// confirmarlo no se puede iniciar el periodo. Lo que se elija aquí NUNCA se bloquea:
+// repetir a quienes empezaron el anterior solo avisa (la app se usa también en
+// entrenamientos y amistosos; el interruptor del partido lo desactiva entero).
+//  - Izquierda: los equipos titulares de los periodos ya jugados (solo dorsales; la
+//    primera fila es el portero) para no repetir de un periodo a otro.
+//  - Derecha: los 7 puestos (el primero, el portero) y la plantilla debajo. Se toca un
+//    puesto y luego a quien lo ocupa; el siguiente puesto libre se marca solo. Quien
+//    empezó el periodo anterior sale marcado («empezó 1C»).
+//  - Con menos de 7 jugadores se pide una segunda confirmación.
+// Con las reglas de Alevín, se avisa de quien repite: con 14 o más convocados no se
+// debería repetir a nadie; con menos, sí se puede y se recuerda cuántos hay que
+// repetir como mínimo.
 export default function LineupModal({ period, periodCount, players, lineups, alevinRules, convocados, onConfirm, onCancel }) {
   const prevIds = lineups[period - 1] || [];
   const [ids, setIds] = useState(() => {
     const existing = lineups[period];
-    return existing ? [...existing] : Array(LINEUP_SIZE).fill('');
+    return existing ? [...existing, ...Array(LINEUP_SIZE).fill('')].slice(0, LINEUP_SIZE) : Array(LINEUP_SIZE).fill('');
   });
+  const [active, setActive] = useState(0); // puesto que se está rellenando
+  const [checking, setChecking] = useState(false); // segunda confirmación (menos de 7)
   // Los expulsados (roja) no pueden volver a jugar: no se ofrecen.
-  const eligible = useMemo(
+  const roster = useMemo(
     () => Object.values(players).filter((p) => !p.disqualified).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)),
     [players]
   );
-  const [checking, setChecking] = useState(false); // segunda confirmación (menos de 7)
   const check = validateLineup({ ids, prevIds });
   const advice = alevinRules ? lineupAdvice({ repeated: check.repeated, convocados }) : null;
   const short = (p) => periodShortLabel(p, periodCount);
   const numberOf = (id) => players[id]?.number ?? '?';
   const dorsales = (list) => list.map((id) => `#${numberOf(id)}`).join(', ');
-  const chosenElsewhere = (index) => new Set(ids.filter((id, i) => id && i !== index));
+  const filled = ids.filter(Boolean);
+  const past = Array.from({ length: period - 1 }, (_, i) => i + 1);
 
-  function setSlot(index, id) {
+  // Toca a un jugador: ocupa el puesto activo (si ya estaba en otro, lo deja libre; si
+  // ya ocupaba el activo, lo quita) y el siguiente puesto libre pasa a ser el activo.
+  function pick(id) {
     setChecking(false);
-    setIds((prev) => prev.map((x, i) => (i === index ? id : x)));
+    if (ids[active] === id) {
+      setIds((prev) => prev.map((x, i) => (i === active ? '' : x)));
+      return;
+    }
+    const next = ids.map((x) => (x === id ? '' : x));
+    next[active] = id;
+    let nx = next.findIndex((x, i) => i > active && !x);
+    if (nx < 0) nx = next.findIndex((x) => !x);
+    setIds(next);
+    setActive(nx < 0 ? active : nx);
   }
 
-  // Con los 7 puestos rellenos se confirma directamente; con menos, primero se
-  // pide una segunda confirmación ("¿es correcto?").
   function handleConfirm() {
     if (check.complete) onConfirm(ids);
     else setChecking(true);
@@ -51,61 +65,73 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal modal--wide lineup-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Equipo titular del {short(period)}</h2>
-        <p className="modal-hint" style={{ margin: 0 }}>
-          Elige quién empieza. La primera fila es el portero. Hay que confirmarlo para poder iniciar el periodo; los avisos de repetidos no impiden confirmarlo, y con menos de 7 jugadores se pide una segunda confirmación.
+      <div className="modal modal--wide lu-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Equipo titular del ${periodLongLabel(period, periodCount)}`}>
+        <h2>Equipo titular del {periodLongLabel(period, periodCount)}</h2>
+        <p className="lu-hint">
+          Elige quién empieza. El primer puesto es el portero. Hay que confirmarlo para poder iniciar el periodo; los avisos de repetidos no impiden confirmarlo, y con menos de 7 jugadores se pide una segunda confirmación.
         </p>
 
-        <div className="lineup-grid" style={{ gridTemplateColumns: `22px repeat(${periodCount}, minmax(0, 1fr))` }}>
-          <span />
-          {Array.from({ length: periodCount }, (_, i) => i + 1).map((p) => (
-            <span key={p} className={`lineup-head${p === period ? ' lineup-head--now' : ''}`}>{short(p)}</span>
-          ))}
-          {Array.from({ length: LINEUP_SIZE }, (_, row) => (
-            <LineupRow
-              key={row}
-              row={row}
-              period={period}
-              periodCount={periodCount}
-              lineups={lineups}
-              ids={ids}
-              eligible={eligible}
-              taken={chosenElsewhere(row)}
-              repeated={check.repeated}
-              repeatLevel={advice?.level}
-              numberOf={numberOf}
-              onChange={(id) => setSlot(row, id)}
-            />
-          ))}
+        <div className={`lu-grid${past.length === 0 ? ' lu-grid--nopast' : ''}`}>
+          {past.length > 0 && (
+            <div className="lu-past" style={{ gridTemplateColumns: `22px repeat(${past.length}, minmax(0, 1fr))` }} aria-label="Equipos titulares de los periodos anteriores">
+              <span />
+              {past.map((p) => <span key={p} className="lu-past-h">{short(p)}</span>)}
+              {Array.from({ length: LINEUP_SIZE }, (_, row) => (
+                <PastRow key={row} row={row} past={past} lineups={lineups} ids={ids} numberOf={numberOf} isLast={(p) => p === period - 1} />
+              ))}
+            </div>
+          )}
+          <div className="lu-pick">
+            <div className="lu-slots">
+              {ids.map((id, i) => {
+                const rep = id && prevIds.includes(id);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`lu-slot${i === 0 ? ' lu-slot--gk' : ''}${active === i ? ' lu-slot--act' : ''}${rep ? ' lu-slot--rep' : ''}`}
+                    onClick={() => { setActive(i); setChecking(false); }}
+                    aria-label={`${i === 0 ? 'Portero' : `Puesto ${i + 1}`}: ${id ? `#${numberOf(id)} ${players[id]?.name}` : 'vacío'}`}
+                  >
+                    <i>{i === 0 ? 'P' : ''}</i>{id ? `#${numberOf(id)} ${players[id]?.name}` : '—'}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="lu-roster">
+              {roster.map((p) => {
+                const inn = ids.includes(p.id);
+                const rep = prevIds.includes(p.id);
+                return (
+                  <button key={p.id} type="button" className={`lu-rp${inn ? ' lu-rp--in' : ''}${rep ? ' lu-rp--rep' : ''}`} onClick={() => pick(p.id)}>
+                    <b>{p.number}</b>{(p.name || '').split(' ')[0]}<small>{rep ? `empezó ${short(period - 1)}` : ''}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {adviceText && (
-          <p className={`lineup-advice lineup-advice--${advice.level}`}>
-            {advice.level === 'warn' ? '⚠ ' : 'ℹ '}{adviceText} <em>Es solo un aviso: puedes confirmar igualmente.</em>
-          </p>
+          <div className={`lu-adv lu-adv--${advice.level}`}>{advice.level === 'warn' ? '⚠ ' : 'ℹ '}{adviceText} <em>Es solo un aviso: puedes confirmar igualmente.</em></div>
         )}
-        {!check.canConfirm && (
-          <p className="modal-hint" style={{ margin: 0 }}>Elige al menos un jugador (el primero es el portero) para poder confirmarlo.</p>
-        )}
+        {!check.canConfirm && <p className="lu-hint">Elige al menos un jugador (el primero es el portero) para poder confirmarlo.</p>}
 
         {checking ? (
-          <div className="lineup-doublecheck" role="alertdialog" aria-label="Confirmar equipo incompleto">
-            <p>
-              <strong>Solo has elegido {check.filledCount} de {LINEUP_SIZE} jugadores</strong>
+          <div className="lu-chk" role="alertdialog" aria-label="Confirmar equipo incompleto">
+            <span>
+              <strong>Solo has elegido {filled.length} de {LINEUP_SIZE} jugadores</strong>
               {!check.hasGoalkeeper ? ' y no has puesto portero' : ''}. ¿Es correcto?
-            </p>
-            <div className="player-form-actions">
-              <button className="btn btn-clock btn-start" onClick={() => onConfirm(ids)}>SÍ, ES CORRECTO</button>
-              <button className="btn btn-timeout" onClick={() => setChecking(false)}>VOLVER A REVISAR</button>
-            </div>
+            </span>
+            <button type="button" className="lu-btn" onClick={() => onConfirm(ids)}>SÍ, ES CORRECTO</button>
+            <button type="button" className="lu-btn lu-btn--g" onClick={() => setChecking(false)}>VOLVER A REVISAR</button>
           </div>
         ) : (
-          <div className="player-form-actions">
-            <button className="btn btn-clock btn-start" disabled={!check.canConfirm} onClick={handleConfirm}>
+          <div className="lu-btns">
+            <button type="button" className="lu-btn" disabled={!check.canConfirm} onClick={handleConfirm}>
               {advice?.level === 'warn' ? 'CONFIRMAR IGUALMENTE' : 'CONFIRMAR EQUIPO TITULAR'}
             </button>
-            <button className="modal-cancel" onClick={onCancel}>Cancelar</button>
+            <button type="button" className="lu-btn lu-btn--g" onClick={onCancel}>Cancelar</button>
           </div>
         )}
       </div>
@@ -113,44 +139,16 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
   );
 }
 
-function LineupRow({ row, period, periodCount, lineups, ids, eligible, taken, repeated, repeatLevel, numberOf, onChange }) {
+function PastRow({ row, past, lineups, ids, numberOf, isLast }) {
   const isGK = row === 0;
   return (
     <>
-      <span className={`lineup-row-label${isGK ? ' lineup-row-label--gk' : ''}`}>{isGK ? 'P' : ''}</span>
-      {Array.from({ length: periodCount }, (_, i) => i + 1).map((p) => {
-        if (p < period) {
-          const id = lineups[p]?.[row];
-          // El del periodo anterior se marca si se repite en el nuevo.
-          const repeats = p === period - 1 && id && repeated.includes(id);
-          return (
-            <span key={p} className="lineup-cell">
-              {id
-                ? <span className={`lineup-pill${isGK ? ' lineup-pill--gk' : ''}${repeats ? ` lineup-pill--repeat-${repeatLevel || 'info'}` : ''}`}>{numberOf(id)}</span>
-                : <span className="lineup-pill lineup-pill--empty">—</span>}
-            </span>
-          );
-        }
-        if (p > period) {
-          return <span key={p} className="lineup-cell"><span className="lineup-pill lineup-pill--future">·</span></span>;
-        }
-        const value = ids[row];
-        const repeats = value && repeated.includes(value);
-        return (
-          <span key={p} className="lineup-cell">
-            <select
-              className={`lineup-select${isGK ? ' lineup-select--gk' : ''}${repeats ? ` lineup-select--repeat-${repeatLevel || 'info'}` : ''}`}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              aria-label={isGK ? 'Portero' : `Puesto ${row + 1}`}
-            >
-              <option value="">—</option>
-              {eligible.filter((pl) => !taken.has(pl.id)).map((pl) => (
-                <option key={pl.id} value={pl.id}>{pl.number} · {pl.name}</option>
-              ))}
-            </select>
-          </span>
-        );
+      <span className="lu-past-r">{isGK ? 'P' : ''}</span>
+      {past.map((p) => {
+        const id = lineups[p]?.[row];
+        // Los del periodo anterior se marcan si se repiten en el nuevo.
+        const rep = isLast(p) && id && ids.includes(id);
+        return <span key={p} className={`lu-pc${isGK ? ' lu-pc--gk' : ''}${rep ? ' lu-pc--rep' : ''}`}>{id ? numberOf(id) : '—'}</span>;
       })}
     </>
   );
