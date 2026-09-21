@@ -15,7 +15,10 @@ import MatchSummaryView from './MatchSummaryView';
 import ActionStatsView from './ActionStatsView';
 import ConsoleChronology from './ConsoleChronology';
 import LineupModal from './LineupModal';
-import { useRivalExclusionsLive } from '../hooks/useRivalExclusions';
+import ShotPanel from './ShotPanel';
+import AssistToast from './AssistToast';
+import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
+import { useBoardScale } from '../hooks/useIsPhone';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -25,6 +28,7 @@ import { teamColorStyle } from '../utils/teamColors';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
 import { missKindOf } from '../shotZones';
 import { lineupAdvice, orderLineup, validateLineup } from '../utils/lineups';
+import { countRivalDorsals, rivalDorsalShortcuts, rivalDorsalStatus } from '../utils/rivalDorsals';
 
 // Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
 // "Datos" es la pantalla de anotar de siempre; las otras tres reutilizan
@@ -70,6 +74,11 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     saveEntryMode(mode);
   }
   const [substitution, setSubstitution] = useState(null); // { outPlayerId, forced }
+  // LANZAMIENTO (pantalla única para anotar cualquier tiro) y el aviso opcional
+  // de asistente que sale tras un gol nuestro.
+  const [shotPanel, setShotPanel] = useState(null); // { side: 'own' | 'rival' }
+  const [assistFor, setAssistFor] = useState(null); // { goalId, scorerId }
+  const boardScale = useBoardScale();
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
@@ -108,6 +117,47 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // Igual que en FollowerHome/FollowerMatchDetail: jugadores del PARTIDO,
   // no de la plantilla, es lo que espera ActionStatsView.
   const actionPlayers = Object.values(state.players).sort((a, b) => a.number - b.number);
+
+  // Accesos directos de dorsales rivales: los que ya se han usado en este
+  // partido (más usados primero) y, si quedan huecos, la lista de partida.
+  const rivalExclusionSummary = summarizeRivalExclusions(rivalExclusionsLive);
+  const rivalShortcuts = rivalDorsalShortcuts({
+    counts: countRivalDorsals(rivalGoals, rivalMisses, rivalExclusionsLive, rivalYellowCards),
+    initial: state.rivalDorsals,
+    limit: 6,
+  });
+  const rivalStatusOf = (number) => rivalDorsalStatus(number, rivalExclusionSummary, rivalYellowCards);
+
+  // Resultado del panel LANZAMIENTO → se anota con las funciones de siempre del
+  // store (mismos datos que los diálogos clásicos, más contraataque y falta).
+  function handleShotSubmit(r) {
+    setShotPanel(null);
+    if (r.side === 'own') {
+      const detail = { shotZone: r.shotZone, goalZone: r.goalZone, counter: r.counter };
+      let shotId = null;
+      if (r.kind === 'goal') {
+        shotId = store.playerGoalWithDetail(r.shooter, detail);
+        // Un gol de 7 metros no lleva asistente.
+        if (shotId && r.shotZone !== '7 metros') setAssistFor({ goalId: shotId, scorerId: r.shooter });
+      } else {
+        // Parada del portero rival o fallo (fuera, palo...): en los dos casos es un fallo nuestro.
+        shotId = store.playerShotWithDetail(r.shooter, detail);
+      }
+      if (shotId && r.shotZone === '7 metros' && r.foul) store.rivalSevenMeter(Number(r.foul), shotId);
+      return;
+    }
+    const detail = { number: Number(r.shooter), shotZone: r.shotZone, goalZone: r.goalZone, counter: r.counter };
+    const foulPlayerId = r.shotZone === '7 metros' ? r.foul : null;
+    if (r.kind === 'goal') {
+      store.rivalGoalWithDetail({ ...detail, foulPlayerId });
+    } else if (r.kind === 'save') {
+      // La paró nuestro portero: con uno solo en pista se le acredita directamente.
+      if (soleGoalkeeper) store.registerRivalShot({ ...detail, saverId: soleGoalkeeper.id, foulPlayerId });
+      else setPendingRivalSave({ ...detail, foulPlayerId });
+    } else {
+      store.registerRivalShot({ ...detail, saverId: null, foulPlayerId });
+    }
+  }
 
   // Portero(s) en pista ahora: es a quien se acredita la parada de un Fallo
   // rival cuya zona cae dentro de la portería. Un excluido o expulsado no
@@ -229,15 +279,11 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           lastEvent={store.lastEvent}
           rivalExclusionsLive={rivalExclusionsLive}
           actions={{
-            goal: (id) => setShotDetailFor({ playerId: id, kind: 'goal' }),
-            miss: (id) => setShotDetailFor({ playerId: id, kind: 'miss' }),
-            save: (id) => setSaveDetailForId(id),
+            shot: (side) => setShotPanel({ side }),
             recovery: (id) => store.playerRecovery(id, 1),
             exclusion: (id) => handleExclusionStart(id),
             yellow: (id) => store.playerYellowCard(id),
             substituteMany: store.substituteMany,
-            rivalGoal: () => setShowRivalGoalModal(true),
-            rivalMiss: () => setShowRivalMissModal(true),
             rivalExclusion: () => setShowRivalExclusionModal(true),
             rivalYellow: () => setShowRivalYellowCardModal(true),
             cancelOwnExclusion: (id) => store.cancelExclusion(id),
@@ -248,6 +294,10 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
 
       {view === 'datos' && entryMode === 'classic' && (
         <div className="player-panel">
+          <div className="shot-launch-row">
+            <button type="button" className="shot-launch-btn shot-launch-btn--own" disabled={!isRunning} onClick={() => setShotPanel({ side: 'own' })}>LANZAMIENTO</button>
+            <button type="button" className="shot-launch-btn shot-launch-btn--rival" disabled={!isRunning} onClick={() => setShotPanel({ side: 'rival' })}>LANZAMIENTO RIVAL</button>
+          </div>
           {courtPlayers.map((player) => (
             <PlayerRow
               key={player.id}
@@ -358,6 +408,33 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
             rivalYellowCards={rivalYellowCards}
           />
         </div>
+      )}
+
+      {shotPanel && (
+        <ShotPanel
+          side={shotPanel.side}
+          scale={boardScale}
+          ownName={state.ownTeamName}
+          rivalName={state.rivalName}
+          courtPlayers={courtPlayers}
+          benchPlayers={benchPlayers.filter((p) => !p.disqualified)}
+          shortcuts={rivalShortcuts}
+          statusOf={rivalStatusOf}
+          onSubmit={handleShotSubmit}
+          onCancel={() => setShotPanel(null)}
+        />
+      )}
+
+      {assistFor && (
+        <AssistToast
+          scorer={state.players[assistFor.scorerId]}
+          candidates={playingNow.filter((p) => p.id !== assistFor.scorerId).sort((a, b) => (a.number ?? 0) - (b.number ?? 0))}
+          onPick={(playerId) => {
+            store.setGoalAssist(assistFor.goalId, playerId);
+            setAssistFor(null);
+          }}
+          onDismiss={() => setAssistFor(null)}
+        />
       )}
 
       {substitution && (

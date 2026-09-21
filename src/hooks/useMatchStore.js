@@ -1066,6 +1066,8 @@ export function useMatchStore(matchId, enabled) {
       canSubstitute: canSubstituteNow(match),
       // Equipo titular de cada periodo y avisos de Alevín (ver utils/lineups.js).
       alevinRules: !!match?.alevinRules,
+      // Dorsales rivales conocidos antes del partido (opcional): accesos directos del LANZAMIENTO.
+      rivalDorsals: match?.rivalDorsals || [],
       lineups: lineupsOf(match),
       convocados: Object.keys(players).length,
       rivalName: match?.rivalName || 'Rival',

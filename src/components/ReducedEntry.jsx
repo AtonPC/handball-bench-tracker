@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Hand, Repeat, RectangleVertical, Target, Timer, X, Zap } from 'lucide-react';
+import { Repeat, RectangleVertical, Target, Timer, Zap } from 'lucide-react';
 import PlayerPickerModal from './PlayerPickerModal';
 import MultiSubstitutionModal from './MultiSubstitutionModal';
 import { summarizeRivalExclusions } from '../hooks/useRivalExclusions';
@@ -10,21 +10,18 @@ import { formatClock } from '../utils/time';
 // tipo de acción. Al pulsarlo se elige al jugador de una lista (o, con el
 // rival, se teclea el dorsal como siempre) y sigue el mismo flujo que la vista
 // clásica — las dos escriben exactamente los mismos datos.
-// El rival no tiene CAMBIO ni PARADA (la parada de nuestro portero se anota
-// desde nuestro lado, o eligiendo una zona de portería en el FALLO rival), ni
-// RECUPERACIÓN (no existe en el modelo): esas quedan solo en la vista clásica.
+// GOL, FALLO y PARADA ya no son botones sueltos: todo tiro (nuestro o rival) se
+// anota desde LANZAMIENTO, una sola pantalla (ShotPanel). El rival no tiene
+// CAMBIO ni RECUPERACIÓN.
 const OWN_BUTTONS = [
-  { key: 'goal', label: 'GOL', icon: Target },
-  { key: 'save', label: 'PARADA', icon: Hand },
-  { key: 'miss', label: 'FALLO', icon: X },
+  { key: 'shot', label: 'LANZAMIENTO', icon: Target },
   { key: 'recovery', label: 'RECUP.', icon: Zap },
   { key: 'exclusion', label: "EXCL. 2'", icon: Timer },
   { key: 'yellow', label: 'AMARILLA', icon: RectangleVertical },
   { key: 'sub', label: 'CAMBIO', icon: Repeat },
 ];
 const RIVAL_BUTTONS = [
-  { key: 'goal', label: 'GOL', icon: Target },
-  { key: 'miss', label: 'FALLO', icon: X },
+  { key: 'shot', label: 'LANZAMIENTO RIVAL', icon: Target },
   { key: 'exclusion', label: "EXCL. 2'", icon: Timer },
   { key: 'yellow', label: 'AMARILLA', icon: RectangleVertical },
 ];
@@ -34,9 +31,6 @@ const RIVAL_BUTTONS = [
 // cambio. Igual que en la fila clásica: la parada es solo de portero y la
 // recuperación solo de jugadores de campo.
 const PICKER_CONFIG = {
-  goal: { title: 'GOL — ¿quién ha marcado?', filter: () => true },
-  miss: { title: 'FALLO — ¿quién ha fallado?', filter: () => true },
-  save: { title: 'PARADA — ¿qué portero?', filter: (p) => p.isGK },
   recovery: { title: 'RECUPERACIÓN — ¿quién?', filter: (p) => !p.isGK },
   exclusion: { title: "EXCLUSIÓN 2' — ¿quién?", filter: () => true },
   yellow: {
@@ -59,20 +53,15 @@ export default function ReducedEntry({ state, isRunning, lastEvent, rivalExclusi
       setSubOpen(true);
       return;
     }
-    // Con un solo portero en pista, la parada no necesita elegir a nadie.
-    if (key === 'save') {
-      const goalkeepers = playingNow.filter(PICKER_CONFIG.save.filter);
-      if (goalkeepers.length === 1) {
-        actions.save(goalkeepers[0].id);
-        return;
-      }
+    if (key === 'shot') {
+      actions.shot('own');
+      return;
     }
     setPicker(key);
   }
 
   function pressRival(key) {
-    if (key === 'goal') actions.rivalGoal();
-    else if (key === 'miss') actions.rivalMiss();
+    if (key === 'shot') actions.shot('rival');
     else if (key === 'exclusion') actions.rivalExclusion();
     else if (key === 'yellow') actions.rivalYellow();
   }
