@@ -21,7 +21,6 @@ import AssistToast from './AssistToast';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { useBoardScale, useIsTablet } from '../hooks/useIsPhone';
 import TabletConsole from './TabletConsole';
-import MultiSubstitutionModal from './MultiSubstitutionModal';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -84,7 +83,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [assistFor, setAssistFor] = useState(null); // { goalId, scorerId }
   const boardScale = useBoardScale();
   const isTablet = useIsTablet();
-  const [showMultiSub, setShowMultiSub] = useState(false);
   // Con la disposición de tablet no hay pestañas superiores ni vistas de móvil.
   const phoneView = isTablet ? null : view;
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
@@ -246,11 +244,13 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     rivalYellow: (number) => {
       if (rivalYellowCards.some((e) => e.number === Number(number))) {
         alert(`El dorsal #${number} ya tiene tarjeta amarilla en este partido.`);
-        return;
+        return false;
       }
       store.rivalYellowCard(Number(number));
+      return true;
     },
-    openSubstitution: () => setShowMultiSub(true),
+    // Cambio múltiple (se elige en la propia consola de tablet): pares saliente → entrante.
+    substituteMany: (pairs) => store.substituteMany(pairs),
   };
 
   return (
@@ -471,6 +471,11 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           scale={boardScale}
           isRunning={isRunning}
           actions={tabletActions}
+          assistFor={assistFor}
+          onAssist={(playerId) => {
+            if (playerId && assistFor) store.setGoalAssist(assistFor.goalId, playerId);
+            setAssistFor(null);
+          }}
           summaryNode={(
             <TabletSummary
               statePlayers={state.players}
@@ -514,18 +519,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         />
       )}
 
-      {showMultiSub && (
-        <MultiSubstitutionModal
-          courtPlayers={courtPlayers}
-          benchPlayers={benchPlayers}
-          onConfirm={(pairs) => {
-            setShowMultiSub(false);
-            store.substituteMany(pairs);
-          }}
-          onCancel={() => setShowMultiSub(false)}
-        />
-      )}
-
       {shotPanel && !isTablet && (
         <ShotPanel
           side={shotPanel.side}
@@ -541,7 +534,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         />
       )}
 
-      {assistFor && (
+      {assistFor && !isTablet && (
         <AssistToast
           scorer={state.players[assistFor.scorerId]}
           candidates={playingNow.filter((p) => p.id !== assistFor.scorerId).sort((a, b) => (a.number ?? 0) - (b.number ?? 0))}

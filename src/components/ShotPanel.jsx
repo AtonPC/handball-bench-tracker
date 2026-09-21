@@ -52,22 +52,28 @@ export function DorsalChips({ shortcuts, statusOf, selected, onPick }) {
   });
 }
 
-export function PlayerButtons({ players, selected, onPick, extra, wide }) {
+// Extras de la consola de tablet: `bench` (rejilla de suplentes), `tagOf(p)` (marca de
+// sanción {text, kind: 'excl'|'yellow'|'red'} junto al nombre), `marks` ({id: 'out'|'in'}
+// en el modo cambio) y `canPick(p)` (por defecto, no los sancionados).
+export function PlayerButtons({ players, selected, onPick, extra, wide, bench, tagOf, marks, canPick }) {
   return (
-    <div className={`shp-players${wide ? ' shp-players--wide' : ''}`}>
+    <div className={`shp-players${wide ? ' shp-players--wide' : ''}${bench ? ' shp-players--bench' : ''}`}>
       {players.map((p) => {
         const off = p.excluded || p.disqualified;
+        const tag = tagOf ? tagOf(p) : null;
+        const mark = marks?.[p.id];
         return (
           <button
             key={p.id}
             type="button"
-            className={`shp-player${p.isGK ? ' shp-player--gk' : ''}${selected === p.id ? ' shp-player--sel' : ''}${off ? ' shp-player--off' : ''}`}
-            disabled={off}
+            className={`shp-player${p.isGK ? ' shp-player--gk' : ''}${selected === p.id ? ' shp-player--sel' : ''}${off ? ' shp-player--off' : ''}${tag ? ` shp-player--${tag.kind}` : ''}${mark ? ` shp-player--${mark}` : ''}`}
+            disabled={canPick ? !canPick(p) : off}
             onClick={() => onPick(p.id)}
-            aria-label={`Dorsal ${p.number} ${p.name}`}
+            aria-label={`Dorsal ${p.number} ${p.name}${tag ? (tag.kind === 'yellow' ? ' con amarilla' : tag.kind === 'red' ? ' expulsado' : ' excluido') : ''}`}
           >
             <span className="shp-player-n">{p.number}</span>
             <span className="shp-player-name">{(p.name || '').split(' ')[0]}</span>
+            {tag && <span className={`shp-player-tag shp-player-tag--${tag.kind}`}>{tag.text}</span>}
             {extra && <span className="shp-player-x">{extra(p)}</span>}
           </button>
         );
