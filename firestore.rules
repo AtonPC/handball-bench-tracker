@@ -309,6 +309,21 @@ service cloud.firestore {
         );
       }
 
+      // Robos del rival, pérdidas (de cualquier equipo) y pasivos (2026-09-21): un
+      // documento por acción, con {kind: 'steal'|'turnover'|'passive', team}.
+      // Mismos permisos que recoveryEvents.
+      match /teamActionEvents/{teamActionEventId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
+
       // Asistencia propia (2026-09-21): opcional, enlazada a un gol propio
       // (shotEventId). Mismos permisos que recoveryEvents.
       match /assistEvents/{assistEventId} {

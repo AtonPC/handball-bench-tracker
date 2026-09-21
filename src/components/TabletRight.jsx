@@ -5,6 +5,7 @@ import { teamInitials } from '../utils/teamColors';
 import { useClockControls } from '../hooks/useClockControls';
 
 // Columna derecha de la consola de tablet / PC (mockup aprobado, 2026-09-21).
+// Pasivo a nosotros / al rival: evento de equipo (cuenta como pérdida del que lo sufre).
 // Todo cabe sin scroll: conmutador Lanzamiento | Estadísticas, atajos
 // (Partidos · Deshacer · Finalizar), cuadro del reloj, marcador con la pelota de
 // posesión sobre el escudo, bolitas de tiempos muertos y, debajo, las pestañas
@@ -28,7 +29,7 @@ function BallIcon() {
 const sum = (map) => Object.values(map || {}).reduce((s, n) => s + (n || 0), 0);
 
 export default function TabletRight({
-  store, team, onBack, onFinish, onNeedLineup, center, onCenter, rightTab, onRightTab, summaryNode, chronologyNode,
+  store, team, onBack, onFinish, onNeedLineup, center, onCenter, rightTab, onRightTab, summaryNode, chronologyNode, isRunning, onPassive,
 }) {
   const { clock, score, timeouts, possession, ownTeamName, rivalName, rivalCrestUrl, isHome, alevinRules, lineups } = store.state;
   const ctl = useClockControls(store, { onNeedLineup, onFinish });
@@ -172,6 +173,11 @@ export default function TabletRight({
             {i === 1 && <span>T.M.</span>}
           </div>
         ))}
+      </div>
+
+      <div className="tc-pas">
+        <button type="button" disabled={!isRunning} onClick={() => onPassive('own')}>Pasivo a nosotros</button>
+        <button type="button" disabled={!isRunning} onClick={() => onPassive('rival')}>Pasivo al rival</button>
       </div>
 
       <div className="tc-tabs" role="tablist">

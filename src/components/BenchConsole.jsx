@@ -12,6 +12,7 @@ import PlayerPickerModal from './PlayerPickerModal';
 import ReducedEntry from './ReducedEntry';
 import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
+import TabletSummary from './TabletSummary';
 import ActionStatsView from './ActionStatsView';
 import ConsoleChronology from './ConsoleChronology';
 import LineupModal from './LineupModal';
@@ -26,6 +27,7 @@ import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { useRivalGoals } from '../hooks/useRivalGoals';
 import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
+import { useTeamActionEvents } from '../hooks/useTeamActionEvents';
 import { teamColorStyle } from '../utils/teamColors';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
 import { missKindOf } from '../shotZones';
@@ -116,6 +118,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const rivalGoals = useRivalGoals(matchId);
   const shotEvents = useShotEvents(matchId);
   const saveEvents = useSaveEvents(matchId);
+  const teamActions = useTeamActionEvents(matchId);
 
   const courtPlayers = state.courtSlots.map((id) => state.players[id]).filter(Boolean);
   const benchPlayers = state.bench.map((id) => state.players[id]).filter(Boolean);
@@ -225,6 +228,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const tabletActions = {
     submitShot: handleShotSubmit,
     recovery: (id) => store.playerRecovery(id, 1),
+    // Robo / pérdida de un equipo; el jugador (o el dorsal rival) es opcional.
+    steal: (team, who) => (team === 'own' && who
+      ? store.playerRecovery(who, 1)
+      : store.teamAction({ kind: 'steal', team, ...(team === 'own' ? { playerId: null } : { number: who }) })),
+    turnover: (team, who) => store.teamAction({ kind: 'turnover', team, ...(team === 'own' ? { playerId: who } : { number: who }) }),
+    passive: (team) => store.teamAction({ kind: 'passive', team }),
     exclusion: (id) => handleExclusionStart(id),
     yellow: (id) => store.playerYellowCard(id),
     rivalExclusion: (number) => store.rivalExclusion(Number(number)),
@@ -456,14 +465,15 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           isRunning={isRunning}
           actions={tabletActions}
           summaryNode={(
-            <MatchSummaryView
+            <TabletSummary
               statePlayers={state.players}
               shotEvents={shotEvents}
               rivalGoals={rivalGoals}
               rivalMisses={rivalMisses}
               rivalExclusions={rivalExclusionsLive}
-              ownTeamName={state.ownTeamName}
-              rivalName={state.rivalName}
+              rivalYellowCards={rivalYellowCards}
+              teamActions={teamActions}
+              possessions={state.possessions}
             />
           )}
           chronologyNode={(

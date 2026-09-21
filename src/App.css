@@ -4148,3 +4148,22 @@
 .tc-dot--on i { background: var(--warning); }
 .tc-launch { position: relative; width: 100%; display: flex; justify-content: center; }
 .tc-locked { position: absolute; inset: 0; z-index: 10; background: rgba(238, 241, 245, 0.78); display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; font-weight: 800; font-size: 15px; color: var(--text); border-radius: 12px; }
+
+/* Columna derecha de tablet: Pasivo y Resumen como en el mockup (2026-09-21) */
+.tc-actions { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tc-selected { justify-content: space-between; gap: 10px; }
+.tc-selected-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-side { display: flex; flex: none; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.tc-side button { height: 30px; padding: 0 12px; border: 0; background: #fff; font-weight: 800; font-size: 12px; cursor: pointer; }
+.tc-side .on { background: var(--text); color: #fff; }
+.tc-pas { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tc-pas button { height: 40px; border: 1px solid var(--text); border-radius: 10px; background: #fff; font-weight: 800; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; padding: 0; }
+.tc-pas button:disabled { opacity: 0.35; cursor: default; }
+.tsum { display: flex; flex-direction: column; }
+.tsum-row { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--bg); font-size: 13px; font-weight: 700; }
+.tsum-l { text-align: center; color: var(--text-dim); font-size: 12px; }
+.tsum-v { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.tsum-v b { font-size: 15px; font-weight: 800; }
+.tsum-v small { font-size: 10px; font-weight: 700; color: var(--text-dim); }
+.tsum-v--own b { color: var(--own); }
+.tsum-v--rival b { color: var(--rival); }

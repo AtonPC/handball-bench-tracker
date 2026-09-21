@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeftRight, Timer, Zap } from 'lucide-react';
+import { ArrowLeftRight, CircleSlash, Timer, Zap } from 'lucide-react';
 import TabletRight from './TabletRight';
 import { useTabletZoom } from '../hooks/useIsPhone';
 import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './ShotPanel';
@@ -50,7 +50,14 @@ export default function TabletConsole({
   }
   const selectedLabel = ownSelected
     ? `Nos · #${ownSelected.number} ${ownSelected.name}`
-    : rivalSelected ? `Rival · #${rivalSelected}` : 'Elige a alguien en la columna de la izquierda';
+    : rivalSelected ? `Rival · #${rivalSelected}` : side === 'own' ? 'Nos · sin jugador' : 'Rival · sin dorsal';
+  // Robo y pérdida valen con o sin jugador (o dorsal): la persona es opcional.
+  const who = side === 'own' ? ownSelected?.id : rivalSelected;
+  function changeSide(next) {
+    if (next === side) return;
+    setSide(next);
+    setShooter(null);
+  }
 
   return (
     <div className="tc-grid" style={zoom < 1 ? { zoom } : undefined}>
@@ -96,9 +103,16 @@ export default function TabletConsole({
               onSubmit={submitShot}
             />
             </div>
-            <div className="tc-selected">{selectedLabel}</div>
+            <div className="tc-selected">
+              <span className="tc-selected-l">{selectedLabel}</span>
+              <span className="tc-side" role="group" aria-label="Equipo">
+                <button type="button" className={side === 'own' ? 'on' : ''} onClick={() => changeSide('own')}>Nos</button>
+                <button type="button" className={side === 'rival' ? 'on' : ''} onClick={() => changeSide('rival')}>Rival</button>
+              </span>
+            </div>
             <div className="tc-actions">
-              <button type="button" className="tc-act" disabled={!isRunning || !ownSelected} onClick={() => actions.recovery(ownSelected.id)}><Zap size={16} /> ROBO</button>
+              <button type="button" className="tc-act" disabled={!isRunning} onClick={() => actions.steal(side, who)}><Zap size={16} /> ROBO</button>
+              <button type="button" className="tc-act" disabled={!isRunning} onClick={() => actions.turnover(side, who)}><CircleSlash size={16} /> PÉRDIDA</button>
               <button type="button" className="tc-act tc-act--excl" disabled={!isRunning || (!ownSelected && !rivalSelected)} onClick={() => (ownSelected ? actions.exclusion(ownSelected.id) : actions.rivalExclusion(rivalSelected))}><Timer size={16} /> EXCLUSIÓN 2&apos;</button>
               <button type="button" className="tc-act tc-act--yellow" disabled={!isRunning || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.yellowCard)} onClick={() => (ownSelected ? actions.yellow(ownSelected.id) : actions.rivalYellow(rivalSelected))}>AMARILLA</button>
               <button type="button" className="tc-act tc-act--dark" disabled={!state.canSubstitute} onClick={actions.openSubstitution}><ArrowLeftRight size={16} /> CAMBIO</button>
@@ -117,6 +131,8 @@ export default function TabletConsole({
         onNeedLineup={onNeedLineup}
         center={center}
         onCenter={setCenter}
+        isRunning={isRunning}
+        onPassive={actions.passive}
         rightTab={rightTab}
         onRightTab={setRightTab}
         summaryNode={summaryNode}

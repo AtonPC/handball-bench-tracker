@@ -4,7 +4,7 @@ import { db } from '../firebase';
 
 const MATCH_SUBCOLLECTIONS = [
   'players', 'events', 'rivalGoals', 'rivalMisses', 'shotEvents', 'saveEvents', 'rivalExclusions', 'recoveryEvents', 'exclusionEvents', 'rivalSevenMeters',
-  'yellowCardEvents', 'rivalYellowCards', 'assistEvents',
+  'yellowCardEvents', 'rivalYellowCards', 'assistEvents', 'teamActionEvents',
 ];
 
 const matchesCol = collection(db, 'matches');
@@ -111,6 +111,7 @@ export function useMatches(clubId, teamId) {
         saves: 0,
         recoveries: 0,
         assists: 0,
+        turnovers: 0,
         exclusionsCount: 0,
         disqualified: false,
         yellowCard: false,

@@ -41,6 +41,14 @@ function beforeValues(source, paths) {
   });
 }
 
+// Cambio de posesión (2026-09-21): la pelota pasa a `to`. Cuenta una posesión más
+// para ese equipo solo si antes la tenía el otro (o nadie); si ya la tenía, nada.
+function possessionUpdate(match, to) {
+  if (!to || (match?.possession || null) === to) return {};
+  const counter = to === 'own' ? 'possessionsOwn' : 'possessionsRival';
+  return { possession: to, [counter]: (match?.[counter] || 0) + 1 };
+}
+
 // Store de un partido concreto (matchId): cronómetro, marcador, jugadores en
 // vivo, sustituciones y el log de eventos para deshacer. El partido y su
 // convocatoria ya deben existir (creados desde Gestión de Partidos).
@@ -766,7 +774,7 @@ export function useMatchStore(matchId, enabled) {
       if (delta > 0) {
         const minute = Math.floor(liveElapsedMs / 60000) + 1;
         const ref = doc(collection(db, 'matches', matchId, 'recoveryEvents'));
-        recordEvent('Recuperación', {}, { [playerId]: { recoveries: players[playerId].recoveries + 1 } }, {
+        recordEvent('Recuperación', possessionUpdate(match, 'own'), { [playerId]: { recoveries: players[playerId].recoveries + 1 } }, {
           create: { ref, data: { playerId, minute, period: match.period, createdAt: Date.now() } },
         });
         return;
@@ -780,6 +788,34 @@ export function useMatchStore(matchId, enabled) {
       });
     },
     [match, players, matchId, liveElapsedMs, recordEvent, runExclusive, latestDetailDoc]
+  );
+
+  // Robo, pérdida o pasivo de un EQUIPO (2026-09-21). Jugador (o dorsal rival) es
+  // OPCIONAL. Un robo nuestro con jugador sigue siendo una recuperación
+  // (playerRecovery). El pasivo es de equipo: cuenta como pérdida del que lo
+  // sufre y no lleva jugador. La pelota pasa sola al que la recupera o al
+  // contrario del que la pierde. Un solo Deshacer lo revierte todo.
+  const teamAction = useCallback(
+    ({ kind, team, playerId = null, number = null }) => {
+      if (!match || match.status !== 'running') return;
+      const player = team === 'own' && kind === 'turnover' && playerId ? players[playerId] : null;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'teamActionEvents'));
+      const to = kind === 'steal' ? team : (team === 'own' ? 'rival' : 'own');
+      const label = kind === 'steal' ? 'Robo' : kind === 'turnover' ? 'Pérdida' : 'Pasivo';
+      recordEvent(label, possessionUpdate(match, to), player ? { [playerId]: { turnovers: (player.turnovers || 0) + 1 } } : {}, {
+        create: {
+          ref,
+          data: {
+            kind, team,
+            playerId: player ? playerId : null,
+            number: team === 'rival' && number ? String(number) : null,
+            minute, period: match.period, createdAt: Date.now(),
+          },
+        },
+      });
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
   );
 
   // Solo tiene sentido para quien juega de portero en este partido. El "−1"
@@ -1034,7 +1070,7 @@ export function useMatchStore(matchId, enabled) {
     async (team) => {
       if (!match || (match.possession || null) === team) return;
       const batch = writeBatch(db);
-      batch.update(matchRef, { possession: team });
+      batch.update(matchRef, possessionUpdate(match, team));
       await batch.commit();
     },
     [match, matchRef]
@@ -1105,6 +1141,8 @@ export function useMatchStore(matchId, enabled) {
       alevinRules: !!match?.alevinRules,
       // Quién tiene la pelota ahora ('own' | 'rival' | null): se toca en el escudo.
       possession: match?.possession || null,
+      // Posesiones contadas (cada cambio de pelota anotado suma una al que la recibe).
+      possessions: { own: match?.possessionsOwn || 0, rival: match?.possessionsRival || 0 },
       // Dorsales rivales conocidos antes del partido (opcional): accesos directos del LANZAMIENTO.
       rivalDorsals: match?.rivalDorsals || [],
       lineups: lineupsOf(match),
@@ -1168,6 +1206,7 @@ export function useMatchStore(matchId, enabled) {
     playerShot,
     playerShotWithDetail,
     playerRecovery,
+    teamAction,
     playerSave,
     playerExclusion,
     cancelExclusion,
