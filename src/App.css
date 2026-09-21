@@ -4414,3 +4414,43 @@
 .tsum-team { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: #fff; padding: 3px 10px; }
 .tsum-team--own { background: var(--own); text-align: left; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 .tsum-team--rival { background: var(--rival); text-align: right; clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%); }
+
+/* ===== LiveStats como el mockup: tabla compacta con resaltado y mapa de calor (2026-09-21) ===== */
+.ls { max-width: 640px; margin: 0 auto; }
+.ls-lead-w { white-space: pre; overflow: hidden; text-overflow: clip; min-height: 13px; }
+.ls-seg--full { width: 100%; }
+.ls-seg--full button { flex: 1; }
+.ls-tscroll { width: 100%; overflow: auto; max-height: 440px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.ls-tin { min-width: 480px; }
+.ls-tg { display: grid; align-items: center; }
+.ls-tgh { position: sticky; top: 0; z-index: 3; }
+.ls-th { height: 32px; border: 0; background: var(--bg); font-weight: 800; font-size: 11px; padding: 0 2px; text-align: center; letter-spacing: 0.03em; cursor: pointer; color: var(--text); }
+.ls-th--n { text-align: left; padding-left: 8px; }
+.ls-th--s { background: #dbe7f6; color: #0f3f77; }
+.ls-td { height: 29px; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; border-bottom: 1px solid var(--bg); }
+.ls-td--n { justify-content: flex-start; padding-left: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; line-height: 29px; }
+.ls-td--l { background: #fff3d6; color: #7a520a; font-weight: 800; }
+.ls-td--z { color: #a8b1c2; font-weight: 600; }
+.ls-empty { margin: 0; padding: 10px; font-size: 12px; color: var(--text-dim); }
+.ls-who { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.ls-chip { height: 30px; min-width: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-alt); font-weight: 800; font-size: 12px; cursor: pointer; }
+.ls-chip--sel { background: var(--text); color: #fff; border-color: var(--text); }
+.sb-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; }
+.sb-out--stat, .sb-cell--stat { pointer-events: none; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: var(--text); }
+.sb-out--stat { border: 1.5px dashed #9aa8bd; background: #f3f6fa; border-radius: 6px; font-size: 12px; }
+.sb-cell--stat { border: 1px solid #cfd8e4; }
+.sb-zone--stat { pointer-events: none; }
+.sb-zl--n { width: 44px; font-size: 12px; }
+.sb-seven--stat { pointer-events: none; }
+.sb-post { margin: 2px 0 0; font-size: 12px; font-weight: 700; color: #3d4a66; text-align: center; }
+/* Móvil (hoja de estadísticas) */
+.ls--compact .ls-team { width: 46px; height: 46px; padding: 0; justify-content: center; }
+.ls--compact .ls-team i { width: 38px; height: 38px; font-size: 14px; }
+.ls--compact .ls-seg button { padding: 0 12px; font-size: 11px; }
+.ls--compact .ls-leads { display: flex; overflow-x: auto; }
+.ls--compact .ls-lead { flex: none; width: 104px; }
+.ls--compact .ls-tin { min-width: 560px; }
+.ls--compact .ls-who { flex-wrap: nowrap; overflow-x: auto; }
+.ls--compact .ls-chip { flex: none; }
+.ls--compact .sb-zl--n { font-size: 10px; width: 40px; }
+.ls--compact .sb-out--stat, .ls--compact .sb-cell--stat { font-size: 12px; }

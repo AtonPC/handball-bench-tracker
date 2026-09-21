@@ -278,6 +278,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       rivalExclusions={rivalExclusionsLive}
       rivalYellowCards={rivalYellowCards}
       teamActions={teamActions}
+      compact={!isTablet}
     />
   );
 

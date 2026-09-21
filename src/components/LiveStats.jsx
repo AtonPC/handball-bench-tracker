@@ -1,197 +1,244 @@
 import { useMemo, useState } from 'react';
-import ActionStatsView from './ActionStatsView';
-import LineupsGrid from './LineupsGrid';
-import PlayerStatsTable from './PlayerStatsTable';
-import SortableTh from './SortableTh';
-import { useSortableTable } from '../hooks/useSortableTable';
-import { missKindOf } from '../shotZones';
+import StatsBoard from './StatsBoard';
+import { GOAL_ZONES, OUT_ZONES, POST_ZONES } from '../shotZones';
 import { teamInitials } from '../utils/teamColors';
 
-// Estadísticas completas del partido en directo (2026-09-21, mockup aprobado): centro
-// de la consola de tablet y hoja «Estadísticas» del móvil.
-//  - Arriba, los dos escudos (el del equipo elegido, encendido) y el selector
+// Estadísticas completas del partido en directo (mockup aprobado, 2026-09-21): centro de
+// la consola de tablet y hoja «Estadísticas» del móvil.
+//  - Arriba, el escudo de cada equipo (el elegido, encendido) y el selector
 //    Jugadores | Zonas.
-//  - Jugadores: tarjetas con los líderes (categoría, número, «#dorsal Nombre») y una
-//    tabla con todo — Goles/Tiros juntos, Paradas/Tiros del portero, porcentajes,
-//    asistencias, robos y pérdidas — cuyas cabeceras ordenan (primer toque de mayor a
-//    menor, segundo al revés). Del rival, lo mismo por dorsal.
-//  - Zonas: los mapas de portería y cancha (ActionStatsView) del equipo elegido.
-const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
-const countBy = (list, fn) => list.filter(fn).length;
+//  - Jugadores: cinco tarjetas de líderes (categoría, número y «#dorsal Nombre») y una
+//    tabla compacta — Jugador, G/T, %, P/T, P%, Rob, Pér, Exc, Am, Roj, Asi (del rival:
+//    Dorsal, G/T, %, Rob, Pér, Exc, Am, Roj). El máximo de cada columna va resaltado, los
+//    ceros en gris y las cabeceras ordenan (primer toque de mayor a menor, segundo al revés).
+//  - Zonas: «Goles» (goles/tiros por zona, en verde) o «Fallos» (en rojo), filtrable por
+//    jugador o dorsal, sobre la portería y la cancha (StatsBoard).
+const EMPTY = { g: 0, t: 0, sv: 0, f: 0, ro: 0, pe: 0, ex: 0, am: 0, rj: 0, as: 0 };
 
-function Leaders({ items }) {
-  return (
-    <div className="ls-leads">
-      {items.map((l) => (
-        <div key={l.label} className="ls-lead">
-          <div className="ls-lead-l">{l.label}</div>
-          <div className="ls-lead-n">{l.n}</div>
-          <div className="ls-lead-w">{l.who}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+const COLS = {
+  own: [['n', 'Jugador'], ['gt', 'G/T'], ['gp', '%'], ['pt', 'P/T'], ['pp', 'P%'], ['ro', 'Rob'], ['pe', 'Pér'], ['ex', 'Exc'], ['am', 'Am'], ['rj', 'Roj'], ['as', 'Asi']],
+  rival: [['n', 'Dorsal'], ['gt', 'G/T'], ['gp', '%'], ['ro', 'Rob'], ['pe', 'Pér'], ['ex', 'Exc'], ['am', 'Am'], ['rj', 'Roj']],
+};
+const LEADS = {
+  own: [['Goles', 'g'], ['Robos', 'ro'], ['Pérdidas', 'pe'], ['Paradas', 'sv'], ['Asistencias', 'as']],
+  rival: [['Goles', 'g'], ['Robos', 'ro'], ['Pérdidas', 'pe'], ['Exclusiones', 'ex'], ['Amarillas', 'am']],
+};
 
-// El que más tiene de algo; «—» si nadie pasa de cero.
-function leader(rows, label, valueOf, whoOf) {
-  let best = null;
-  for (const r of rows) {
-    const v = valueOf(r);
-    if (v > 0 && (!best || v > valueOf(best))) best = r;
+// Fila de estadísticas por jugador nuestro.
+function ownStats(state) {
+  const out = {};
+  for (const p of Object.values(state.players)) {
+    const gk = p.isGK || (p.saves || 0) > 0;
+    out[p.id] = {
+      ...EMPTY,
+      g: p.goals || 0, t: (p.goals || 0) + (p.shots || 0),
+      sv: p.saves || 0, f: gk ? (p.saves || 0) + state.score.rival : 0,
+      ro: p.recoveries || 0, pe: p.turnovers || 0, ex: p.exclusionsCount || 0,
+      am: p.yellowCard ? 1 : 0, rj: p.disqualified ? 1 : 0, as: p.assists || 0,
+    };
   }
-  return { label, n: best ? valueOf(best) : '—', who: best ? whoOf(best) : '' };
+  return out;
 }
 
-function RivalTable({ rows }) {
-  const columns = [
-    { key: 'number', label: 'Dorsal', value: (r) => Number(r.number), render: (r) => `#${r.number}` },
-    { key: 'goals', label: 'Goles/Tiros', value: (r) => r.goals, render: (r) => `${r.goals}/${r.attempts}` },
-    { key: 'accPct', label: '% Acierto', value: (r) => (r.attempts ? r.goals / r.attempts : 0), render: (r) => pct(r.goals, r.attempts) },
-    { key: 'sevens', label: '7 m', value: (r) => r.sevenMade, render: (r) => `${r.sevenMade}/${r.sevenTotal}` },
-    { key: 'steals', label: 'Robos', value: (r) => r.steals, render: (r) => r.steals },
-    { key: 'turnovers', label: 'Pérd.', value: (r) => r.turnovers, render: (r) => r.turnovers },
-    { key: 'exclusions', label: 'Excl.', value: (r) => r.exclusions, render: (r) => r.exclusions },
-    { key: 'yellow', label: 'Amarilla', value: (r) => Number(r.yellow), render: (r) => (r.yellow ? 'Sí' : '—') },
-    { key: 'red', label: 'Roja', value: (r) => Number(r.red), render: (r) => (r.red ? 'Sí' : '—') },
-  ];
-  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(rows, columns, 'goals');
-  return (
-    <div className="stats-table-wrap">
-      <table className="stats-table">
-        <thead>
-          <tr>{columns.map((c) => <SortableTh key={c.key} label={c.label} columnKey={c.key} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />)}</tr>
-        </thead>
-        <tbody>
-          {sorted.map((r) => <tr key={r.number}>{columns.map((c) => <td key={c.key}>{c.render(r)}</td>)}</tr>)}
-          {sorted.length === 0 && <tr><td colSpan={columns.length}><p className="modal-hint">Todavía no hay acciones del rival con dorsal.</p></td></tr>}
-        </tbody>
-      </table>
-    </div>
-  );
+// Fila de estadísticas por dorsal rival («?» para lo anotado sin dorsal).
+function rivalStats({ rivalGoals, rivalMisses, teamActions, rivalExclusions, rivalYellowCards }) {
+  const out = {};
+  const row = (n) => {
+    const k = n == null || n === '' ? '?' : String(n);
+    if (!out[k]) out[k] = { ...EMPTY };
+    return out[k];
+  };
+  for (const g of rivalGoals) { const r = row(g.number); r.g += 1; r.t += 1; }
+  for (const m of rivalMisses) row(m.number).t += 1;
+  for (const a of teamActions) {
+    if (a.team !== 'rival') continue;
+    const r = row(a.number);
+    if (a.kind === 'steal') r.ro += 1; else r.pe += 1;
+  }
+  const counts = {};
+  for (const e of rivalExclusions) {
+    const r = row(e.number);
+    if (e.red) { r.rj = 1; continue; }
+    r.ex += 1;
+    counts[e.number] = (counts[e.number] || 0) + 1;
+    if (counts[e.number] >= 3) r.rj = 1;
+  }
+  for (const y of rivalYellowCards) row(y.number).am = 1;
+  return out;
+}
+
+// Zonas: por origen {t, g}, por cuadrante de portería {g, s} y fuera/palos.
+function zoneStats(shots, who) {
+  const zones = {};
+  const cells = {};
+  const outs = { top: 0, left: 0, right: 0, pl: 0, bar: 0, pr: 0 };
+  for (const e of shots) {
+    if (who && e.id !== who) continue;
+    if (e.zone) {
+      const q = zones[e.zone] || (zones[e.zone] = { t: 0, g: 0 });
+      q.t += 1;
+      if (e.kind === 'goal') q.g += 1;
+    }
+    const gz = e.goalZone;
+    if (gz && GOAL_ZONES.includes(gz)) {
+      const q = cells[gz] || (cells[gz] = { g: 0, s: 0 });
+      if (e.kind === 'goal') q.g += 1; else q.s += 1;
+    } else if (gz === OUT_ZONES[0]) outs.top += 1;
+    else if (gz === OUT_ZONES[1]) outs.left += 1;
+    else if (gz === OUT_ZONES[2]) outs.right += 1;
+    else if (gz === POST_ZONES[0]) outs.pl += 1;
+    else if (gz === POST_ZONES[1]) outs.bar += 1;
+    else if (gz === POST_ZONES[2]) outs.pr += 1;
+  }
+  return { zones, cells, outs };
 }
 
 export default function LiveStats({
-  state, team, shotEvents = [], saveEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
-  rivalYellowCards = [], teamActions = [],
+  state, team, shotEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
+  rivalYellowCards = [], teamActions = [], compact = false,
 }) {
   const [who, setWho] = useState('own'); // 'own' | 'rival'
   const [tab, setTab] = useState('players'); // 'players' | 'zones'
+  const [sort, setSort] = useState({ key: 'gt', dir: 'desc' });
+  const [metric, setMetric] = useState('goals'); // 'goals' | 'misses'
+  const [pick, setPick] = useState(''); // jugador o dorsal concreto en «Zonas»
+
   const players = useMemo(() => Object.values(state.players).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)), [state.players]);
+  const own = who === 'own';
+  const q = useMemo(
+    () => (own ? ownStats(state) : rivalStats({ rivalGoals, rivalMisses, teamActions, rivalExclusions, rivalYellowCards })),
+    [own, state, rivalGoals, rivalMisses, teamActions, rivalExclusions, rivalYellowCards]
+  );
+  const ids = own
+    ? players.map((p) => p.id)
+    : Object.keys(q).filter((k) => k !== '?').sort((a, b) => Number(a) - Number(b)).concat(q['?'] ? ['?'] : []);
+  const nameOf = (id) => (own ? `#${state.players[id]?.number ?? '?'} ${state.players[id]?.name ?? ''}`.trim() : id === '?' ? 'Sin dorsal' : `#${id}`);
+  const stat = (id) => q[id] || EMPTY;
+  const cols = COLS[who];
 
-  const ownRows = players.map((p) => ({ ...p, attempts: p.goals + p.shots, shotsFaced: (p.saves || 0) + state.score.rival }));
-  const ownLeaders = [
-    leader(players, 'Goles', (p) => p.goals, (p) => `#${p.number} ${p.name}`),
-    leader(players, 'Asistencias', (p) => p.assists || 0, (p) => `#${p.number} ${p.name}`),
-    leader(players.filter((p) => p.isGK), 'Paradas', (p) => p.saves || 0, (p) => `#${p.number} ${p.name}`),
-    leader(players, 'Robos', (p) => p.recoveries || 0, (p) => `#${p.number} ${p.name}`),
-    leader(players, 'Exclusiones', (p) => p.exclusionsCount || 0, (p) => `#${p.number} ${p.name}`),
-  ];
+  const raw = (id, k) => stat(id)[{ gt: 'g', gp: 'g', pt: 'sv', pp: 'sv' }[k] || k];
+  const sortVal = (id, k) => {
+    const s = stat(id);
+    if (k === 'gt') return s.g * 1000 + (s.t ? Math.round((s.g * 100) / s.t) : 0);
+    if (k === 'pt') return s.f ? s.sv * 1000 + Math.round((s.sv * 100) / s.f) : -1;
+    if (k === 'gp') return s.t ? Math.round((s.g * 100) / s.t) : -1;
+    if (k === 'pp') return s.f ? Math.round((s.sv * 100) / s.f) : -1;
+    if (k === 'n') return own ? (state.players[id]?.number ?? 0) : id === '?' ? 999 : Number(id);
+    return s[k];
+  };
+  const maxOf = {};
+  for (const [k] of cols) if (k !== 'n') maxOf[k] = Math.max(0, ...ids.map((id) => raw(id, k)));
+  const sorted = [...ids].sort((a, b) => {
+    const d = sortVal(a, sort.key) - sortVal(b, sort.key);
+    return (sort.dir === 'desc' ? -d : d) || sortVal(a, 'n') - sortVal(b, 'n');
+  });
+  const setSortKey = (k) => setSort((s) => ({ key: k, dir: s.key === k ? (s.dir === 'desc' ? 'asc' : 'desc') : (k === 'n' ? 'asc' : 'desc') }));
 
-  // Rival por dorsal: todo lo que se ha anotado con su número.
-  const rivalRows = useMemo(() => {
-    const byNumber = {};
-    const row = (n) => {
-      const k = String(n);
-      if (!byNumber[k]) byNumber[k] = { number: k, goals: 0, attempts: 0, sevenMade: 0, sevenTotal: 0, steals: 0, turnovers: 0, exclusions: 0, yellow: false, red: false };
-      return byNumber[k];
-    };
-    for (const g of rivalGoals) {
-      if (g.number == null || g.number === '') continue;
-      const r = row(g.number);
-      r.goals += 1; r.attempts += 1;
-      if (g.shotZone === '7 metros') { r.sevenMade += 1; r.sevenTotal += 1; }
-    }
-    for (const m of rivalMisses) {
-      if (m.number == null || m.number === '') continue;
-      const r = row(m.number);
-      r.attempts += 1;
-      if (m.shotZone === '7 metros') r.sevenTotal += 1;
-    }
-    for (const a of teamActions) {
-      if (a.team !== 'rival' || !a.number) continue;
-      const r = row(a.number);
-      if (a.kind === 'steal') r.steals += 1;
-      else r.turnovers += 1;
-    }
-    const counts = {};
-    for (const e of rivalExclusions) {
-      const r = row(e.number);
-      if (e.red) { r.red = true; continue; }
-      r.exclusions += 1;
-      counts[e.number] = (counts[e.number] || 0) + 1;
-      if (counts[e.number] >= 3) r.red = true;
-    }
-    for (const y of rivalYellowCards) row(y.number).yellow = true;
-    return Object.values(byNumber);
-  }, [rivalGoals, rivalMisses, teamActions, rivalExclusions, rivalYellowCards]);
-  const rivalLeaders = [
-    leader(rivalRows, 'Goles', (r) => r.goals, (r) => `#${r.number}`),
-    leader(rivalRows, 'Tiros', (r) => r.attempts, (r) => `#${r.number}`),
-    leader(rivalRows, 'Robos', (r) => r.steals, (r) => `#${r.number}`),
-    leader(rivalRows, 'Pérdidas', (r) => r.turnovers, (r) => `#${r.number}`),
-    leader(rivalRows, 'Exclusiones', (r) => r.exclusions, (r) => `#${r.number}`),
-  ];
+  const leaders = LEADS[who].map(([label, k]) => {
+    const best = Math.max(0, ...ids.map((id) => raw(id, k)));
+    const names = best === 0 ? '—' : ids.filter((id) => raw(id, k) === best).map(nameOf).join('\n');
+    return { label, n: best, who: names };
+  });
+
+  // Zonas: los tiros de cada equipo con su origen y su entrada.
+  const shots = useMemo(() => (own
+    ? shotEvents.map((e) => ({ id: e.playerId, kind: e.type, zone: e.shotZone, goalZone: e.goalZone }))
+    : [
+      ...rivalGoals.map((e) => ({ id: e.number == null ? '?' : String(e.number), kind: 'goal', zone: e.shotZone, goalZone: e.goalZone })),
+      ...rivalMisses.map((e) => ({ id: e.number == null ? '?' : String(e.number), kind: 'miss', zone: e.shotZone, goalZone: e.goalZone })),
+    ]), [own, shotEvents, rivalGoals, rivalMisses]);
+  const shooters = useMemo(() => {
+    const count = {};
+    for (const s of shots) count[s.id] = (count[s.id] || 0) + 1;
+    return count;
+  }, [shots]);
+  const pickIds = (own ? players.map((p) => p.id) : Object.keys(shooters).filter((k) => k !== '?').sort((a, b) => Number(a) - Number(b))).filter((id) => shooters[id] > 0);
+  const zs = zoneStats(shots, pick);
 
   const crest = (k) => {
     const name = k === 'own' ? state.ownTeamName : state.rivalName;
     const url = k === 'own' ? team?.crestUrl : state.rivalCrestUrl;
     return (
-      <button key={k} type="button" className={`ls-team ls-team--${k}${who === k ? ' ls-team--on' : ''}`} onClick={() => setWho(k)} aria-pressed={who === k} aria-label={name}>
+      <button key={k} type="button" className={`ls-team ls-team--${k}${who === k ? ' ls-team--on' : ''}`} onClick={() => { setWho(k); setPick(''); setSort({ key: 'gt', dir: 'desc' }); }} aria-pressed={who === k} aria-label={name}>
         <i>{url ? <img src={url} alt="" /> : teamInitials(name)}</i>
-        <span>{name}</span>
+        {!compact && <span>{name}</span>}
       </button>
     );
   };
 
+  const cellFor = (id, k) => {
+    const s = stat(id);
+    const v = raw(id, k);
+    let shown = v === 0 ? '·' : String(v);
+    if (k === 'gt') shown = s.t ? `${s.g}/${s.t}` : '·';
+    if (k === 'pt') shown = s.f ? `${s.sv}/${s.f}` : '·';
+    if (k === 'gp') shown = s.t ? `${Math.round((s.g * 100) / s.t)}%` : '·';
+    if (k === 'pp') shown = s.f ? `${Math.round((s.sv * 100) / s.f)}%` : '·';
+    const has = k === 'gt' || k === 'gp' ? s.t > 0 : k === 'pt' || k === 'pp' ? s.f > 0 : v > 0;
+    const lead = v > 0 && v === maxOf[k] && k !== 'gp' && k !== 'pp';
+    return { shown, cls: `ls-td${lead ? ' ls-td--l' : ''}${!has ? ' ls-td--z' : ''}` };
+  };
+  const grid = { gridTemplateColumns: `${own ? '128px' : '84px'} repeat(${cols.length - 1}, minmax(0, 1fr))` };
+
   return (
-    <div className="ls">
+    <div className={`ls${compact ? ' ls--compact' : ''}`}>
       <div className="ls-head">
         <div className="ls-teams">{crest('own')}{crest('rival')}</div>
         <div className="ls-seg" role="group" aria-label="Qué ver">
-          <button type="button" className={tab === 'players' ? 'on' : ''} onClick={() => setTab('players')}>Jugadores</button>
+          <button type="button" className={tab === 'players' ? 'on' : ''} onClick={() => setTab('players')}>{own ? 'Jugadores' : 'Dorsales'}</button>
           <button type="button" className={tab === 'zones' ? 'on' : ''} onClick={() => setTab('zones')}>Zonas</button>
         </div>
       </div>
 
-      {tab === 'players' && who === 'own' && (
+      {tab === 'players' && (
         <>
-          <Leaders items={ownLeaders} />
-          <PlayerStatsTable rows={ownRows} minutesTotalMs={state.clock.elapsedMs} showMinutes showActions defaultSortKey="goals" />
-          <LineupsGrid
-            title={state.clock.periodCount === 4 ? 'Titulares de cada cuarto' : 'Titulares de cada tiempo'}
-            lineups={state.lineups}
-            players={state.players}
-            periodCount={state.clock.periodCount}
-          />
+          <div className="ls-leads">
+            {leaders.map((l) => (
+              <div key={l.label} className="ls-lead">
+                <div className="ls-lead-l">{l.label}</div>
+                <div className="ls-lead-n">{l.n}</div>
+                <div className="ls-lead-w">{l.who}</div>
+              </div>
+            ))}
+          </div>
+          <div className="ls-tscroll">
+            <div className="ls-tin">
+              <div className="ls-tg ls-tgh" style={grid}>
+                {cols.map(([k, label]) => (
+                  <button key={k} type="button" className={`ls-th${k === 'n' ? ' ls-th--n' : ''}${sort.key === k ? ' ls-th--s' : ''}`} onClick={() => setSortKey(k)}>
+                    {label}{sort.key === k ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
+                  </button>
+                ))}
+              </div>
+              <div className="ls-tg" style={grid}>
+                {sorted.flatMap((id) => cols.map(([k]) => {
+                  if (k === 'n') return <span key={`${id}-n`} className="ls-td ls-td--n">{nameOf(id)}</span>;
+                  const c = cellFor(id, k);
+                  return <span key={`${id}-${k}`} className={c.cls}>{c.shown}</span>;
+                }))}
+              </div>
+              {sorted.length === 0 && <p className="ls-empty">Todavía no hay acciones del rival con dorsal.</p>}
+            </div>
+          </div>
         </>
       )}
-      {tab === 'players' && who === 'rival' && (
+
+      {tab === 'zones' && (
         <>
-          <Leaders items={rivalLeaders} />
-          <RivalTable rows={rivalRows} />
+          <div className="ls-seg ls-seg--full" role="group" aria-label="Qué mapa">
+            <button type="button" className={metric === 'goals' ? 'on' : ''} onClick={() => setMetric('goals')}>Goles (goles/tiros)</button>
+            <button type="button" className={metric === 'misses' ? 'on' : ''} onClick={() => setMetric('misses')}>Fallos</button>
+          </div>
+          <div className="ls-who">
+            <button type="button" className={`ls-chip${!pick ? ' ls-chip--sel' : ''}`} onClick={() => setPick('')}>Todos</button>
+            {pickIds.map((id) => (
+              <button key={id} type="button" className={`ls-chip${pick === id ? ' ls-chip--sel' : ''}`} onClick={() => setPick(id)}>
+                #{own ? state.players[id]?.number : id}
+              </button>
+            ))}
+          </div>
+          <StatsBoard zones={zs.zones} cells={zs.cells} outs={zs.outs} goalsView={metric === 'goals'} />
         </>
-      )}
-      {tab === 'zones' && (
-        <ActionStatsView
-          key={who}
-          team={who}
-          hideTeamSelect
-          shotEvents={shotEvents}
-          saveEvents={saveEvents}
-          rivalGoals={rivalGoals}
-          rivalMisses={rivalMisses}
-          players={players}
-          ownTeamName={state.ownTeamName}
-          rivalName={state.rivalName}
-          ownPrimaryColor={team?.primaryColor}
-          ownSecondaryColor={team?.secondaryColor}
-        />
-      )}
-      {tab === 'zones' && (
-        <p className="modal-hint">
-          Palos: {countBy(shotEvents, (e) => e.type === 'miss' && missKindOf(e.goalZone) === 'post')} nuestros · {countBy(rivalMisses, (e) => missKindOf(e.goalZone) === 'post')} del rival.
-        </p>
       )}
     </div>
   );
