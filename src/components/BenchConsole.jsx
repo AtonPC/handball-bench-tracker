@@ -18,7 +18,9 @@ import LineupModal from './LineupModal';
 import ShotPanel from './ShotPanel';
 import AssistToast from './AssistToast';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
-import { useBoardScale } from '../hooks/useIsPhone';
+import { useBoardScale, useIsTablet } from '../hooks/useIsPhone';
+import TabletConsole from './TabletConsole';
+import MultiSubstitutionModal from './MultiSubstitutionModal';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -79,6 +81,10 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [shotPanel, setShotPanel] = useState(null); // { side: 'own' | 'rival' }
   const [assistFor, setAssistFor] = useState(null); // { goalId, scorerId }
   const boardScale = useBoardScale();
+  const isTablet = useIsTablet();
+  const [showMultiSub, setShowMultiSub] = useState(false);
+  // Con la disposición de tablet no hay pestañas superiores ni vistas de móvil.
+  const phoneView = isTablet ? null : view;
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
@@ -214,8 +220,51 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     setSubstitution(null);
   }
 
+  const tabletBanner = !isRunning ? (
+    <div className="match-not-running-banner">
+          <span>
+            {state.clock.status === 'idle'
+              ? `⏸ PARTIDO NO INICIADO — pulsa ▶ (INICIAR ${periodShortLabel(1, state.clock.periodCount)}) arriba para poder anotar`
+              : betweenPeriods
+                ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — ${state.alevinRules && !state.lineups[state.clock.period + 1] ? `elige el equipo titular del ${nextShort} para poder iniciarlo` : `pulsa ▶ (INICIAR ${nextShort}) arriba para seguir`}`
+                : '⏸ PARTIDO EN PAUSA — pulsa ▶ arriba para poder seguir anotando'}
+          </span>
+          {betweenPeriods && (
+            <button type="button" className="banner-btn" onClick={() => setShowLineupModal(true)}>
+              {state.lineups[state.clock.period + 1] ? `EQUIPO TITULAR DEL ${nextShort} ✓ · VER / CAMBIAR` : `ELEGIR EQUIPO TITULAR DEL ${nextShort}`}
+            </button>
+          )}
+          {betweenPeriods && startersAdvice && (
+            <span className="banner-advice">
+              ⚠ {startersAdvice.level === 'warn'
+                ? `${startersAdvice.repeated.map((id) => '#' + (state.players[id]?.number ?? '?')).join(', ')} ya empezó el ${periodShortLabel(state.clock.period, state.clock.periodCount)}: con ${state.convocados} convocados no se debería repetir (es solo un aviso, puedes iniciar igualmente)`
+                : `Repites ${startersAdvice.repeated.length} del ${periodShortLabel(state.clock.period, state.clock.periodCount)}; con ${state.convocados} convocados hay que repetir como mínimo ${startersAdvice.needed}`}
+            </span>
+          )}
+        </div>
+
+  ) : null;
+
+  const tabletActions = {
+    submitShot: handleShotSubmit,
+    recovery: (id) => store.playerRecovery(id, 1),
+    exclusion: (id) => handleExclusionStart(id),
+    yellow: (id) => store.playerYellowCard(id),
+    rivalExclusion: (number) => store.rivalExclusion(Number(number)),
+    rivalYellow: (number) => {
+      if (rivalYellowCards.some((e) => e.number === Number(number))) {
+        alert(`El dorsal #${number} ya tiene tarjeta amarilla en este partido.`);
+        return;
+      }
+      store.rivalYellowCard(Number(number));
+    },
+    openSubstitution: () => setShowMultiSub(true),
+  };
+
   return (
     <div className="bench-console" style={teamColorStyle(team)}>
+      {!isTablet && (
+        <>
       <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} onNeedLineup={() => setShowLineupModal(true)} />
 
       {!isRunning && (
@@ -242,6 +291,10 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
+        </>
+      )}
+
+      {!isTablet && (
       <div className="console-tab-bar">
         {TABS.map((t) => (
           <button
@@ -255,8 +308,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           </button>
         ))}
       </div>
+      )}
 
-      {view === 'datos' && (
+      {phoneView === 'datos' && (
         <div className="console-mode-bar" role="group" aria-label="Forma de anotar">
           <span>Anotar:</span>
           {[['classic', 'Clásica'], ['reduced', 'Reducida']].map(([key, label]) => (
@@ -272,7 +326,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
-      {view === 'datos' && entryMode === 'reduced' && (
+      {phoneView === 'datos' && entryMode === 'reduced' && (
         <ReducedEntry
           state={state}
           isRunning={isRunning}
@@ -292,7 +346,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         />
       )}
 
-      {view === 'datos' && entryMode === 'classic' && (
+      {phoneView === 'datos' && entryMode === 'classic' && (
         <div className="player-panel">
           <div className="shot-launch-row">
             <button type="button" className="shot-launch-btn shot-launch-btn--own" disabled={!isRunning} onClick={() => setShotPanel({ side: 'own' })}>LANZAMIENTO</button>
@@ -342,13 +396,13 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
-      {view === 'jugadores' && (
+      {phoneView === 'jugadores' && (
         <div className="console-tab-content">
           <MatchQuickStats state={state} />
         </div>
       )}
 
-      {view === 'partido' && (
+      {phoneView === 'partido' && (
         <div className="console-tab-content">
           <MatchSummaryView
             statePlayers={state.players}
@@ -362,7 +416,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
-      {view === 'acciones' && (
+      {phoneView === 'acciones' && (
         <div className="console-tab-content">
           <ActionStatsView
             shotEvents={shotEvents}
@@ -395,7 +449,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         />
       )}
 
-      {view === 'cronologia' && (
+      {phoneView === 'cronologia' && (
         <div className="console-tab-content">
           <ConsoleChronology
             matchId={matchId}
@@ -410,7 +464,76 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </div>
       )}
 
-      {shotPanel && (
+      {isTablet && (
+        <TabletConsole
+          store={store}
+          team={team}
+          onBack={onBack}
+          onFinish={onFinish}
+          onNeedLineup={() => setShowLineupModal(true)}
+          banner={tabletBanner}
+          courtPlayers={courtPlayers}
+          benchPlayers={benchPlayers.filter((p) => !p.disqualified)}
+          shortcuts={rivalShortcuts}
+          statusOf={rivalStatusOf}
+          scale={boardScale}
+          isRunning={isRunning}
+          actions={tabletActions}
+          summaryNode={(
+            <MatchSummaryView
+              statePlayers={state.players}
+              shotEvents={shotEvents}
+              rivalGoals={rivalGoals}
+              rivalMisses={rivalMisses}
+              rivalExclusions={rivalExclusionsLive}
+              ownTeamName={state.ownTeamName}
+              rivalName={state.rivalName}
+            />
+          )}
+          chronologyNode={(
+            <ConsoleChronology
+              matchId={matchId}
+              state={state}
+              shotEvents={shotEvents}
+              saveEvents={saveEvents}
+              rivalGoals={rivalGoals}
+              rivalMisses={rivalMisses}
+              rivalExclusions={rivalExclusionsLive}
+              rivalYellowCards={rivalYellowCards}
+            />
+          )}
+          statsNode={(
+            <>
+              <MatchQuickStats state={state} />
+              <ActionStatsView
+                shotEvents={shotEvents}
+                saveEvents={saveEvents}
+                rivalGoals={rivalGoals}
+                rivalMisses={rivalMisses}
+                players={actionPlayers}
+                ownTeamName={state.ownTeamName}
+                rivalName={state.rivalName}
+                ownPrimaryColor={team?.primaryColor}
+                ownSecondaryColor={team?.secondaryColor}
+              />
+            </>
+          )}
+        />
+      )}
+
+      {showMultiSub && (
+        <MultiSubstitutionModal
+          courtPlayers={courtPlayers}
+          benchPlayers={benchPlayers}
+          onConfirm={(pairs) => {
+            setShowMultiSub(false);
+            store.substituteMany(pairs);
+          }}
+          onCancel={() => setShowMultiSub(false)}
+        />
+      )}
+
+      {shotPanel && !isTablet && (
         <ShotPanel
           side={shotPanel.side}
           scale={boardScale}

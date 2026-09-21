@@ -1,0 +1,122 @@
+import { useState } from 'react';
+import { ArrowLeftRight, Timer, Zap } from 'lucide-react';
+import MatchHeader from './MatchHeader';
+import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './ShotPanel';
+
+// Consola de TABLET / PC (2026-09-21, según el mockup aprobado): tres columnas
+// y todo a la vista, sin ventanas intermedias para lo más frecuente.
+//  - Izquierda: nuestros jugadores (en pista y banquillo) y el dorsal rival
+//    (accesos directos + teclado). Tocar a alguien lo deja SELECCIONADO: es el
+//    que lanza en el panel del centro y el destinatario de ROBO / EXCLUSIÓN /
+//    AMARILLA.
+//  - Centro: el panel LANZAMIENTO anclado (el mismo ShotPanel del móvil, sin
+//    ventana) o, con el conmutador de la derecha, las estadísticas completas.
+//    Debajo, las acciones sobre el seleccionado.
+//  - Derecha: la cabecera de siempre (reloj, marcador, controles), el aviso de
+//    partido no iniciado y las pestañas Resumen / Cronología.
+// No sabe nada de Firestore: BenchConsole le pasa los datos ya preparados y las
+// funciones (`actions`) que anotan.
+export default function TabletConsole({
+  store, team, onBack, onFinish, onNeedLineup, banner,
+  courtPlayers, benchPlayers, shortcuts, statusOf, scale, isRunning,
+  actions, summaryNode, chronologyNode, statsNode,
+}) {
+  const { state } = store;
+  const [side, setSide] = useState('own');
+  const [shooter, setShooter] = useState(null); // id (nuestro) o dorsal (rival)
+  const [draftKey, setDraftKey] = useState(0); // cambia al registrar: el panel vuelve a empezar
+  const [center, setCenter] = useState('launch'); // 'launch' | 'stats'
+  const [rightTab, setRightTab] = useState('resumen');
+  const [benchOpen, setBenchOpen] = useState(false);
+
+  const ownSelected = side === 'own' && shooter ? state.players[shooter] : null;
+  const rivalSelected = side === 'rival' && shooter ? shooter : null;
+  const rivalStatus = rivalSelected ? statusOf(rivalSelected) : null;
+
+  function pickOwn(id) {
+    setSide('own');
+    setShooter(id);
+  }
+  function pickRival(number) {
+    setSide('rival');
+    setShooter(number);
+  }
+  function submitShot(result) {
+    actions.submitShot(result);
+    setShooter(null);
+    setDraftKey((k) => k + 1);
+  }
+  const selectedLabel = ownSelected
+    ? `Nos · #${ownSelected.number} ${ownSelected.name}`
+    : rivalSelected ? `Rival · #${rivalSelected}` : 'Elige a alguien en la columna de la izquierda';
+
+  return (
+    <div className="tc-grid">
+      <aside className="tc-left">
+        <h3 className="tc-h">Nuestro equipo · en pista</h3>
+        <PlayerButtons players={courtPlayers} selected={side === 'own' ? shooter : null} onPick={pickOwn} wide />
+        <div className="tc-hrow">
+          <h3 className="tc-h">Banquillo</h3>
+          <button type="button" className="shp-link" onClick={() => setBenchOpen((v) => !v)}>{benchOpen ? 'Ocultar' : 'Ver'}</button>
+        </div>
+        {benchOpen && <PlayerButtons players={benchPlayers} selected={side === 'own' ? shooter : null} onPick={pickOwn} wide />}
+        <div className="tc-rival">
+          <h3 className="tc-h">Rival · dorsal</h3>
+          <div className="shp-dorsal-row shp-dorsal-row--4">
+            <DorsalChips shortcuts={shortcuts.slice(0, 6)} statusOf={statusOf} selected={side === 'rival' ? shooter : null} onPick={pickRival} />
+            <div className={`shp-dorsal-box shp-dorsal-box--span${rivalStatus?.red ? ' shp-dorsal-box--red' : rivalStatus?.excludedMs ? ' shp-dorsal-box--excl' : rivalStatus?.yellow ? ' shp-dorsal-box--yellow' : ''}`}>
+              <span className="shp-dorsal-box-n">{rivalSelected || '—'}</span>
+              <span className="shp-dorsal-box-s">{rivalStatus?.red ? 'roja' : rivalStatus?.excludedMs ? 'excluido' : rivalStatus?.yellow ? 'amarilla' : rivalSelected ? 'elegido' : 'dorsal'}</span>
+            </div>
+          </div>
+          <DorsalKeys onKey={(k) => { setSide('rival'); setShooter((v) => applyKey(side === 'rival' ? (v || '') : '', k) || null); }} />
+        </div>
+      </aside>
+
+      <main className="tc-center">
+        {center === 'launch' ? (
+          <>
+            <ShotPanel
+              key={draftKey}
+              docked
+              side={side}
+              scale={scale}
+              ownName={state.ownTeamName}
+              rivalName={state.rivalName}
+              courtPlayers={courtPlayers}
+              benchPlayers={benchPlayers}
+              shortcuts={shortcuts}
+              statusOf={statusOf}
+              shooter={shooter}
+              onShooterChange={setShooter}
+              onSubmit={submitShot}
+            />
+            <div className="tc-selected">{selectedLabel}</div>
+            <div className="tc-actions">
+              <button type="button" className="tc-act" disabled={!isRunning || !ownSelected} onClick={() => actions.recovery(ownSelected.id)}><Zap size={16} /> ROBO</button>
+              <button type="button" className="tc-act tc-act--excl" disabled={!isRunning || (!ownSelected && !rivalSelected)} onClick={() => (ownSelected ? actions.exclusion(ownSelected.id) : actions.rivalExclusion(rivalSelected))}><Timer size={16} /> EXCLUSIÓN 2&apos;</button>
+              <button type="button" className="tc-act tc-act--yellow" disabled={!isRunning || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.yellowCard)} onClick={() => (ownSelected ? actions.yellow(ownSelected.id) : actions.rivalYellow(rivalSelected))}>AMARILLA</button>
+              <button type="button" className="tc-act tc-act--dark" disabled={!state.canSubstitute} onClick={actions.openSubstitution}><ArrowLeftRight size={16} /> CAMBIO</button>
+            </div>
+          </>
+        ) : (
+          <div className="tc-stats">{statsNode}</div>
+        )}
+      </main>
+
+      <aside className="tc-right">
+        <div className="tc-seg" role="group" aria-label="Panel central">
+          <button type="button" className={center === 'launch' ? 'on' : ''} onClick={() => setCenter('launch')}>Lanzamiento</button>
+          <button type="button" className={center === 'stats' ? 'on' : ''} onClick={() => setCenter('stats')}>Estadísticas</button>
+        </div>
+        <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} onNeedLineup={onNeedLineup} />
+        {banner}
+        <div className="tc-tabs" role="tablist">
+          <button type="button" className={rightTab === 'resumen' ? 'on' : ''} onClick={() => setRightTab('resumen')}>Resumen</button>
+          <button type="button" className={rightTab === 'crono' ? 'on' : ''} onClick={() => setRightTab('crono')}>Cronología</button>
+        </div>
+        <div className="tc-tabbody">{rightTab === 'resumen' ? summaryNode : chronologyNode}</div>
+      </aside>
+    </div>
+  );
+}

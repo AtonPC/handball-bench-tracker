@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react';
 // Tamaño de la cancha y la portería del panel LANZAMIENTO según el dispositivo:
 // móvil en vertical (pequeño), pantallas bajas como una tablet apaisada de 10"
 // (mediano, para que quepa sin scroll) o grande.
+// true en tablet apaisada o PC (≥ 1000 px de ancho): la consola usa entonces la
+// disposición de tres columnas (TabletConsole) en vez de la de móvil.
+export function useIsTablet() {
+  const query = '(min-width: 1000px)';
+  const [yes, setYes] = useState(() => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false));
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mq = window.matchMedia(query);
+    const onChange = () => setYes(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return yes;
+}
+
 export function useBoardScale() {
   const read = () => {
     if (typeof window === 'undefined') return { k: 1, gk: 1 };

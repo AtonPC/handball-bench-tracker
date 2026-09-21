@@ -21,13 +21,13 @@ import { formatClock } from '../utils/time';
 // (BenchConsole) lo anota en el store.
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'C', '⌫'];
-function applyKey(value, key) {
+export function applyKey(value, key) {
   if (key === 'C') return '';
   if (key === '⌫') return value.slice(0, -1);
   return value.length < 2 ? value + key : value;
 }
 
-function DorsalKeys({ onKey }) {
+export function DorsalKeys({ onKey }) {
   return (
     <div className="shp-keys">
       {KEYS.map((k) => (
@@ -38,7 +38,7 @@ function DorsalKeys({ onKey }) {
 }
 
 // Accesos directos de dorsales rivales con la marca de sus sanciones.
-function DorsalChips({ shortcuts, statusOf, selected, onPick }) {
+export function DorsalChips({ shortcuts, statusOf, selected, onPick }) {
   return shortcuts.map((d) => {
     const st = statusOf(d.number);
     const cls = st.red ? ' shp-chip--red' : st.excludedMs ? ' shp-chip--excl' : st.yellow ? ' shp-chip--yellow' : '';
@@ -52,9 +52,9 @@ function DorsalChips({ shortcuts, statusOf, selected, onPick }) {
   });
 }
 
-function PlayerButtons({ players, selected, onPick, extra }) {
+export function PlayerButtons({ players, selected, onPick, extra, wide }) {
   return (
-    <div className="shp-players">
+    <div className={`shp-players${wide ? ' shp-players--wide' : ''}`}>
       {players.map((p) => {
         const off = p.excluded || p.disqualified;
         return (
@@ -76,9 +76,18 @@ function PlayerButtons({ players, selected, onPick, extra }) {
   );
 }
 
-export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayers, benchPlayers, shortcuts, statusOf, onSubmit, onCancel }) {
+// `docked` (tablet/PC): sin ventana ni cabecera, anclado en el centro de la
+// consola; el lanzador se elige fuera (columna izquierda) y llega por
+// `shooter` / `onShooterChange` (modo controlado).
+export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayers, benchPlayers, shortcuts, statusOf, onSubmit, onCancel, docked = false, shooter: shooterProp, onShooterChange }) {
   const own = side === 'own';
-  const [shooter, setShooter] = useState(null); // playerId (nuestro) o dorsal (rival)
+  const [innerShooter, setInnerShooter] = useState(null); // playerId (nuestro) o dorsal (rival)
+  const controlled = onShooterChange !== undefined;
+  const shooter = controlled ? shooterProp : innerShooter;
+  const setShooter = (v) => {
+    if (!controlled) setInnerShooter(v);
+    else onShooterChange(typeof v === 'function' ? v(shooterProp) : v);
+  };
   const [shotZone, setShotZone] = useState(null);
   const [goalZone, setGoalZone] = useState(null);
   const [counter, setCounter] = useState(false);
@@ -118,16 +127,15 @@ export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayer
   const title = own ? 'Lanzamiento · Nos' : 'Lanzamiento rival';
   const label = own ? `Lanzamiento de ${ownName || 'nuestro equipo'}` : `Lanzamiento de ${rivalName || 'el rival'}`;
 
-  return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <section className="shp" onClick={(e) => e.stopPropagation()} aria-label={label}>
-        <header className="shp-head">
+  const panel = (
+      <section className={`shp${docked ? ' shp--docked' : ''}`} onClick={(e) => e.stopPropagation()} aria-label={label}>
+        {!docked && (<header className="shp-head">
           <h2>{title}</h2>
           <button type="button" className="shp-close" onClick={onCancel} aria-label="Cerrar"><X size={20} /></button>
-        </header>
+        </header>)}
 
         <div className="shp-body">
-          {own ? (
+          {!docked && (own ? (
             <>
               <PlayerButtons players={courtPlayers} selected={shooter} onPick={setShooter} />
               {benchPlayers.length > 0 && (
@@ -146,7 +154,7 @@ export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayer
               </div>
               <DorsalKeys onKey={(k) => setShooter((v) => applyKey(v || '', k) || null)} />
             </>
-          )}
+          ))}
 
           <ShotBoard
             scale={scale}
@@ -208,6 +216,6 @@ export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayer
         </footer>
         {shooterPlayer && <span className="shp-sr" aria-live="polite">Lanza #{shooterPlayer.number} {shooterPlayer.name}</span>}
       </section>
-    </div>
   );
+  return docked ? panel : <div className="modal-backdrop" onClick={onCancel}>{panel}</div>;
 }
