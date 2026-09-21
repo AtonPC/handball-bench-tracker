@@ -54,7 +54,7 @@ export default function PlayerRow({ player, onOpenSubstitution, actions, matchRu
           <>
             <StatStepper icon="GOL" label="Goles" count={player.goals} onInc={actions.goalInc} onDec={actions.goalDec} disabled={disabled} />
             <StatStepper icon="FALLO" label="Lanzamientos fallados" count={player.shots} onInc={actions.shotInc} onDec={actions.shotDec} disabled={disabled} />
-            <StatStepper icon="RECUP" label="Recuperaciones" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
+            <StatStepper icon="ROBO" label="Robos" count={player.recoveries} onInc={actions.recoveryInc} onDec={actions.recoveryDec} disabled={disabled} />
           </>
         )}
       </div>

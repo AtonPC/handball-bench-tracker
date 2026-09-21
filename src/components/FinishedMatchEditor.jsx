@@ -259,7 +259,7 @@ export default function FinishedMatchEditor({ store, onBack }) {
                 <th>Goles</th>
                 <th>Fallos</th>
                 <th>Paradas</th>
-                <th>Recup.</th>
+                <th>Robos</th>
                 <th>Excl.</th>
                 <th>Amarilla</th>
                 <th>Roja</th>

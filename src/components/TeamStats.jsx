@@ -186,7 +186,7 @@ export default function TeamStats({ clubId, teamId, teamName, leagueId, onOpenMa
                   <span className="stats-summary-value">{pct(teamSaves, teamShotsFaced)}</span>
                 </div>
                 <div className="stats-summary-item">
-                  <span className="stats-summary-label">{isSingleMatch ? 'Recuperaciones' : 'Recuperaciones medias'}</span>
+                  <span className="stats-summary-label">{isSingleMatch ? 'Robos' : 'Robos medios'}</span>
                   <span className="stats-summary-value">{isSingleMatch ? teamRecoveries : avgRecoveries}</span>
                 </div>
                 <div className="stats-summary-item">
@@ -204,8 +204,8 @@ export default function TeamStats({ clubId, teamId, teamName, leagueId, onOpenMa
                   ))}
                 </div>
                 <div className="card">
-                  <h4>Máximos recuperadores</h4>
-                  {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
+                  <h4>Máximos ladrones de balón</h4>
+                  {topRecoverers.length === 0 && <p>Todavía nadie ha robado un balón.</p>}
                   {topRecoverers.map((p, i) => (
                     <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup. · {(p.recoveries / (p.matchesPlayed || 1)).toFixed(1)} media/partido</p>
                   ))}

@@ -132,7 +132,7 @@ export default function StatsView({ store, identity, teamId, team }) {
           <span className="stats-summary-value">{pct(teamSaves, teamShotsFaced)}</span>
         </div>
         <div className="stats-summary-item">
-          <span className="stats-summary-label">Recuperaciones</span>
+          <span className="stats-summary-label">Robos</span>
           <span className="stats-summary-value">{teamRecoveries}</span>
         </div>
         <div className="stats-summary-item">
@@ -156,8 +156,8 @@ export default function StatsView({ store, identity, teamId, team }) {
           {topScorers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.goals} gol{p.goals === 1 ? '' : 'es'} · {pct(p.goals, p.attempts)} acierto</p>)}
         </div>
         <div className="card">
-          <h4>Máximos recuperadores</h4>
-          {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
+          <h4>Máximos ladrones de balón</h4>
+          {topRecoverers.length === 0 && <p>Todavía nadie ha robado un balón.</p>}
           {topRecoverers.map((p, i) => <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup.</p>)}
         </div>
         <div className="card">

@@ -14,7 +14,7 @@ export const ACTION_KINDS = {
   ownGoal: { sub: 'shotEvents', side: 'own', label: 'Gol', fields: ['player', 'minute', 'shotZone', 'goalZone'] },
   ownMiss: { sub: 'shotEvents', side: 'own', label: 'Fallo', fields: ['player', 'minute', 'shotZone', 'goalZone'] },
   ownSave: { sub: 'saveEvents', side: 'own', label: 'Parada', fields: ['player', 'minute', 'rivalNumber', 'shotZone', 'goalZone'] },
-  ownRecovery: { sub: 'recoveryEvents', side: 'own', label: 'Recuperación', fields: ['player', 'minute'] },
+  ownRecovery: { sub: 'recoveryEvents', side: 'own', label: 'Robo', fields: ['player', 'minute'] },
   ownExclusion: { sub: 'exclusionEvents', side: 'own', label: 'Exclusión', fields: ['player', 'minute'] },
   ownYellow: { sub: 'yellowCardEvents', side: 'own', label: 'Tarjeta amarilla', fields: ['player', 'minute'] },
   rivalGoal: { sub: 'rivalGoals', side: 'rival', label: 'Gol rival', fields: ['number', 'minute', 'shotZone', 'goalZone', 'foulPlayer'] },

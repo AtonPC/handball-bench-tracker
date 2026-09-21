@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import BallIcon from './BallIcon';
 import { ArrowLeftRight, BarChart3, CalendarDays, GitCompare, History, Radio, Shield, Target, Users } from 'lucide-react';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchStore } from '../hooks/useMatchStore';
@@ -192,10 +193,12 @@ function LiveMatchSection({ clubId, teamId, team, logView, tier }) {
         <div className="follower-teams-row">
           <span className="follower-team-pill follower-team-pill--own">
             {leftCrest && <img src={leftCrest} alt="" className="team-crest" />}{leftName}
+            {state.possession === (state.isHome ? 'own' : 'rival') && <span className="follower-ball" title="Tiene la pelota"><BallIcon size={18} /></span>}
           </span>
           <ArrowLeftRight size={16} className="follower-swap-icon" />
           <span className="follower-team-pill follower-team-pill--rival">
             {rightCrest && <img src={rightCrest} alt="" className="team-crest" />}{rightName}
+            {state.possession === (state.isHome ? 'rival' : 'own') && <span className="follower-ball" title="Tiene la pelota"><BallIcon size={18} /></span>}
           </span>
         </div>
 
@@ -469,8 +472,8 @@ function AccumulatedSection({ clubId, teamId, tier }) {
           ))}
         </div>
         <div className="card">
-          <h4>Máximas recuperadoras</h4>
-          {topRecoverers.length === 0 && <p>Todavía nadie ha recuperado.</p>}
+          <h4>Máximas robadoras</h4>
+          {topRecoverers.length === 0 && <p>Todavía nadie ha robado un balón.</p>}
           {topRecoverers.map((p, i) => (
             <p key={p.id}>{i + 1}. #{p.number} {p.name} — {p.recoveries} recup.</p>
           ))}

@@ -18,7 +18,7 @@ function ratio(part, total) {
 // duración de todos los partidos finalizados si es el acumulado de
 // temporada. El staff ve el minutaje (en total y en %); un Seguidor no ve
 // ninguno de los dos — se decide con `showMinutes`, nunca a medias.
-function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
+function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes, showActions }) {
   const columns = [
     { key: 'number', label: '#', value: (p) => p.number ?? 0, render: (p) => p.number },
     {
@@ -51,7 +51,12 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
     { key: 'accPct', label: '% Acierto', value: (p) => ratio(p.goals, p.attempts), render: (p) => pct(p.goals, p.attempts) },
     { key: 'saves', label: 'Paradas/Tiros', value: (p) => (p.isGK ? p.saves || 0 : -1), render: (p) => (p.isGK ? `${p.saves || 0}/${p.shotsFaced}` : '—') },
     { key: 'savePct', label: '% Paradas', value: (p) => (p.isGK ? ratio(p.saves || 0, p.shotsFaced) : -1), render: (p) => (p.isGK ? pct(p.saves || 0, p.shotsFaced) : '—') },
-    { key: 'recoveries', label: 'Recup.', value: (p) => p.recoveries, render: (p) => p.recoveries },
+    { key: 'recoveries', label: 'Robos', value: (p) => p.recoveries, render: (p) => p.recoveries },
+    // Solo en directo: asistencias y pérdidas individuales (opcionales al anotar).
+    ...(showActions ? [
+      { key: 'assists', label: 'Asist.', value: (p) => p.assists || 0, render: (p) => p.assists || 0 },
+      { key: 'turnovers', label: 'Pérd.', value: (p) => p.turnovers || 0, render: (p) => p.turnovers || 0 },
+    ] : []),
     { key: 'exclusions', label: 'Excl.', value: (p) => p.exclusionsCount || 0, render: (p) => p.exclusionsCount || 0 },
     // Igual que `disqualified` debajo: en un partido es un booleano (Sí/—,
     // como mucho una por jugador); en el acumulado de temporada es cuántas
@@ -67,9 +72,9 @@ function buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes }) {
 // `rows` ya trae `attempts` y `shotsFaced` calculados (quién concede qué gol
 // rival no se sabe por portero, así que `shotsFaced` es del equipo, no 1:1
 // del portero si hubo más de uno en el partido/temporada).
-export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, showMinutes, emptyMessage }) {
-  const columns = buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes });
-  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(rows, columns, 'number');
+export default function PlayerStatsTable({ rows, minutesTotalMs, showMatches, showMinutes, showActions, defaultSortKey = 'number', emptyMessage }) {
+  const columns = buildPlayerStatsColumns({ minutesTotalMs, showMatches, showMinutes, showActions });
+  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(rows, columns, defaultSortKey);
 
   return (
     <div className="stats-table-wrap">

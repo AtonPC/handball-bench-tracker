@@ -13,6 +13,29 @@ import { periodLongLabel, periodShortLabel } from '../utils/periods';
 //    aviso. En el último periodo no hay «FIN»: se termina con FINALIZAR.
 //  - ↺ (solo tras terminar un periodo): volver a poner en marcha el que se acaba
 //    de terminar, por si fue un error.
+// Bolitas de tiempos muertos de un equipo (tablet y móvil): siempre hay una más que
+// las marcadas (mínimo 3). Pulsar la siguiente la marca y PARA el reloj si corría;
+// pulsar la última quita el tiempo muerto (solo el del periodo en curso).
+export function timeoutDots(store, teamKey, longLabel, onFlash) {
+  const { clock, timeouts } = store.state;
+  const sum = (map) => Object.values(map || {}).reduce((s, n) => s + (n || 0), 0);
+  const total = sum(timeouts[teamKey]);
+  const current = timeouts[teamKey]?.[clock.period] || 0;
+  return Array.from({ length: Math.max(3, total + 1) }, (_, i) => ({
+    on: i < total,
+    onClick: () => {
+      if (i === total) {
+        store.timeout(teamKey, 1);
+        onFlash?.(`Tiempo muerto · ${teamKey === 'own' ? 'Nos' : 'Rival'}`, `cuenta en ${longLabel(clock.period)}`);
+        if (clock.status === 'running') store.togglePause(); // el tiempo muerto para el reloj
+      } else if (i === total - 1 && current > 0) {
+        store.timeout(teamKey, -1);
+      }
+    },
+    label: `Tiempo muerto ${teamKey === 'own' ? 'nuestro' : 'del rival'} ${i + 1}${i < total ? ' (marcado; pulsa el último para quitarlo)' : ''}`,
+  }));
+}
+
 export function useClockControls(store, { onNeedLineup, onFinish }) {
   const { clock } = store.state;
   const { periodCount, periodEnded } = clock;

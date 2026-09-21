@@ -15,7 +15,7 @@ import { formatClock } from '../utils/time';
 // CAMBIO ni RECUPERACIÓN.
 const OWN_BUTTONS = [
   { key: 'shot', label: 'LANZAMIENTO', icon: Target },
-  { key: 'recovery', label: 'RECUP.', icon: Zap },
+  { key: 'recovery', label: 'ROBO', icon: Zap },
   { key: 'exclusion', label: "EXCL. 2'", icon: Timer },
   { key: 'yellow', label: 'AMARILLA', icon: RectangleVertical },
   { key: 'sub', label: 'CAMBIO', icon: Repeat },
@@ -31,7 +31,7 @@ const RIVAL_BUTTONS = [
 // cambio. Igual que en la fila clásica: la parada es solo de portero y la
 // recuperación solo de jugadores de campo.
 const PICKER_CONFIG = {
-  recovery: { title: 'RECUPERACIÓN — ¿quién?', filter: (p) => !p.isGK },
+  recovery: { title: 'ROBO — ¿quién?', filter: (p) => !p.isGK },
   exclusion: { title: "EXCLUSIÓN 2' — ¿quién?", filter: () => true },
   yellow: {
     title: 'AMARILLA — ¿quién?',

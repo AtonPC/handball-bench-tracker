@@ -48,7 +48,8 @@ export function useRivalExclusionsLive(matchId) {
 // el delegado sepa en directo que ya no puede seguir jugando.
 export function rivalExclusionCountsByNumber(rivalExclusions) {
   const counts = {};
-  for (const e of rivalExclusions) counts[e.number] = (counts[e.number] || 0) + 1;
+  // Una roja directa (`red`) no es una exclusión: no cuenta para el 1/3, 2/3...
+  for (const e of rivalExclusions) if (!e.red) counts[e.number] = (counts[e.number] || 0) + 1;
   return counts;
 }
 
@@ -59,8 +60,8 @@ export function rivalExclusionCountsByNumber(rivalExclusions) {
 export function summarizeRivalExclusions(liveRivalExclusions) {
   const byNumber = {};
   for (const e of liveRivalExclusions) {
-    const cur = byNumber[e.number] || { number: e.number, count: 0, activeRemainingMs: 0, lastEventId: null, lastMinute: -1 };
-    cur.count += 1;
+    const cur = byNumber[e.number] || { number: e.number, count: 0, red: false, activeRemainingMs: 0, lastEventId: null, lastMinute: -1 };
+    if (e.red) cur.red = true; else cur.count += 1;
     if (e.active && e.remainingMs > cur.activeRemainingMs) cur.activeRemainingMs = e.remainingMs;
     if (e.minute >= cur.lastMinute) {
       cur.lastMinute = e.minute;
@@ -69,6 +70,6 @@ export function summarizeRivalExclusions(liveRivalExclusions) {
     byNumber[e.number] = cur;
   }
   return Object.values(byNumber)
-    .map((x) => ({ ...x, disqualified: x.count >= 3 }))
+    .map((x) => ({ ...x, disqualified: x.red || x.count >= 3 }))
     .sort((a, b) => a.number - b.number);
 }

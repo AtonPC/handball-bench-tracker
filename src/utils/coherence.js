@@ -20,7 +20,7 @@ export function checkMatchCoherence({ players, score, shotEvents, saveEvents, re
       ['Goles', p.goals || 0, countWhere(shotEvents, (e) => e.playerId === p.id && e.type === 'goal')],
       ['Fallos', p.shots || 0, countWhere(shotEvents, (e) => e.playerId === p.id && e.type === 'miss')],
       ['Paradas', p.saves || 0, countWhere(saveEvents, (e) => e.playerId === p.id)],
-      ['Recuperaciones', p.recoveries || 0, countWhere(recoveryEvents, (e) => e.playerId === p.id)],
+      ['Robos', p.recoveries || 0, countWhere(recoveryEvents, (e) => e.playerId === p.id)],
     ];
     for (const [what, counter, records] of checks) {
       if (counter !== records) issues.push({ who, what, counter, records });

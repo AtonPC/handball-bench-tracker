@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeftRight, CircleSlash, Timer, Zap } from 'lucide-react';
+import { opp, useActionFlash } from '../hooks/useActionFlash';
 import TabletRight from './TabletRight';
 import { useTabletZoom } from '../hooks/useIsPhone';
-import { formatClock } from '../utils/time';
+import { sanctionTag as tagOf } from '../utils/playerTags';
 import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './ShotPanel';
 
 // Consola de TABLET / PC (2026-09-21, según el mockup aprobado): tres columnas
@@ -24,17 +25,6 @@ import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './S
 //  - Derecha: TabletRight (reloj, marcador, pasivos, Resumen / Cronología).
 // No sabe nada de Firestore: BenchConsole le pasa los datos ya preparados y las
 // funciones (`actions`) que anotan.
-const opp = (t) => (t === 'own' ? 'rival' : 'own');
-const teamWord = (t) => (t === 'own' ? 'Nos' : 'Rival');
-
-// Marca de sanción de un jugador nuestro, junto a su nombre.
-function tagOf(p) {
-  if (p.disqualified) return { text: 'R', kind: 'red' };
-  if (p.excluded) return { text: `${formatClock(p.exclusionRemainingMs || 0)}${p.yellowCard ? ' A' : ''}`, kind: 'excl' };
-  if (p.yellowCard) return { text: 'A', kind: 'yellow' };
-  return null;
-}
-
 export default function TabletConsole({
   store, team, onBack, onFinish, onNeedLineup,
   courtPlayers, benchPlayers, shortcuts, sanctioned = [], statusOf, scale, isRunning,
@@ -46,44 +36,15 @@ export default function TabletConsole({
   const [draftKey, setDraftKey] = useState(0); // cambia al registrar: el panel vuelve a empezar
   const [center, setCenter] = useState('launch'); // 'launch' | 'stats'
   const [rightTab, setRightTab] = useState('resumen');
-  const [done, setDone] = useState(null); // último registro: { text, detail, poss, assistable }
   const [swap, setSwap] = useState(null); // modo cambio: { outs: [ids], ins: [ids] }
+  const [progress, setProgress] = useState({ shooter: false, origin: false, goal: false, seven: false });
   const zoom = useTabletZoom();
 
   const ownSelected = side === 'own' && shooter ? state.players[shooter] : null;
   const rivalSelected = side === 'rival' && shooter ? shooter : null;
   const rivalStatus = rivalSelected ? statusOf(rivalSelected) : null;
 
-  // El mensaje se va solo (más despacio si hay que elegir asistente). La consola
-  // se repinta cada segundo (reloj): el temporizador solo depende del mensaje.
-  const dismissRef = useRef(null);
-  dismissRef.current = () => {
-    setDone(null);
-    if (assistFor) onAssist(null);
-  };
-  useEffect(() => {
-    if (!done) return undefined;
-    const t = setTimeout(() => dismissRef.current(), done.assistable ? 9000 : 3500);
-    return () => clearTimeout(t);
-  }, [done]);
-
-  function flash(text, detail, poss, assistable = false) {
-    if (assistFor) onAssist(null); // un asistente pendiente de antes ya no tiene aviso
-    setDone({ text, detail, poss, assistable });
-  }
-  const possLabel = (to) => (state.possession === to ? 'Posesión igual' : `Posesión → ${teamWord(to)}`);
-  const ownWho = (p) => (p ? `#${p.number} ${p.name}` : 'Nos (sin jugador)');
-  const whoText = (s, id, dorsal) => (s === 'own' ? ownWho(id ? state.players[id] : null) : dorsal ? `Rival #${dorsal}` : 'Rival (sin dorsal)');
-
-  async function undoLast() {
-    const r = await store.undo();
-    if (r && !r.ok && r.reason === 'clock') {
-      alert('No se puede deshacer esta acción porque el reloj ha cambiado desde entonces. Corrígela a mano.');
-      return;
-    }
-    if (assistFor) onAssist(null);
-    setDone(null);
-  }
+  const { done, setDone, flash, shotMessage, teamAction: registerTeamAction, sanction: registerSanction, passive: registerPassive, substitution, undoLast } = useActionFlash({ store, actions, courtPlayers, assistFor, onAssist });
 
   function pickOwn(id) {
     if (swap) {
@@ -100,14 +61,9 @@ export default function TabletConsole({
     setShooter(number);
   }
   function submitShot(r) {
-    const own = r.side === 'own';
-    const who = whoText(r.side, own ? r.shooter : null, own ? null : r.shooter);
-    const text = r.kind === 'goal' ? `Gol · ${who}` : r.kind === 'save' ? (own ? `Fallo parado · ${who}` : `Parada · tiro de ${who}`) : `Fallo · ${who}`;
-    const bits = [`${r.shotZone || 'sin zona'} → ${r.goalZone || 'sin destino'}`];
-    if (r.foul) bits.push(own ? `falta del rival #${r.foul}` : `falta de #${state.players[r.foul]?.number ?? '?'}`);
-    if (r.counter) bits.push('contraataque');
+    const m = shotMessage(r);
     actions.submitShot(r);
-    flash(text, bits.join(' · '), `Posesión → ${own ? 'Rival' : 'Nos'}`, own && r.kind === 'goal' && r.shotZone !== '7 metros');
+    flash(m.text, m.detail, m.poss, m.assistable);
     setShooter(null);
     setSide(opp(r.side)); // ataca el otro equipo
     setDraftKey((k) => k + 1);
@@ -115,30 +71,20 @@ export default function TabletConsole({
   // Robo o pérdida: valen con o sin jugador (o dorsal); la persona es opcional.
   const who = side === 'own' ? ownSelected?.id : rivalSelected;
   function teamAction(kind) {
-    const to = kind === 'steal' ? side : opp(side);
-    actions[kind](side, who);
-    flash(`${kind === 'steal' ? 'Robo' : 'Pérdida'} · ${whoText(side, who, rivalSelected)}`, '', possLabel(to));
-    setSide(to);
+    setSide(registerTeamAction(kind, side, who));
     setShooter(null);
   }
+  // Exclusión, amarilla o roja al seleccionado. Si con eso queda expulsado alguien que
+  // está en pista (3ª exclusión o roja), se entra en modo cambio con él ya marcado.
   function sanction(kind) {
     if (!ownSelected && !rivalSelected) return;
-    const detail = 'consta en la lista de sancionados';
-    const label = kind === 'exclusion' ? 'Exclusión' : 'Amarilla';
-    const text = `${label} · ${whoText(side, ownSelected?.id, rivalSelected)}`;
-    if (ownSelected) {
-      actions[kind](ownSelected.id);
-    } else {
-      const ok = actions[kind === 'exclusion' ? 'rivalExclusion' : 'rivalYellow'](rivalSelected);
-      if (ok === false) return; // ya tenía amarilla: no se ha registrado nada
-    }
-    flash(text, detail, 'Posesión igual');
+    const res = registerSanction(kind, side, ownSelected ? ownSelected.id : rivalSelected);
+    if (res === false) return; // ya tenía amarilla: no se ha registrado nada
+    if (typeof res === 'string') setSwap({ outs: [res], ins: [] });
     setShooter(null);
   }
   function passive(t) {
-    actions.passive(t);
-    flash(`Pasivo · ${teamWord(t)}`, 'pérdida del equipo entero', possLabel(opp(t)));
-    setSide(opp(t));
+    setSide(registerPassive(t));
     setShooter(null);
   }
   function toggleSwap() {
@@ -148,10 +94,7 @@ export default function TabletConsole({
   }
   function confirmSwap() {
     if (!swap || swap.outs.length === 0 || swap.outs.length !== swap.ins.length) return;
-    const pairs = swap.outs.map((outId, i) => ({ outId, inId: swap.ins[i] }));
-    const num = (id) => `#${state.players[id]?.number ?? '?'}`;
-    actions.substituteMany(pairs);
-    flash(`Cambio${pairs.length > 1 ? ` (${pairs.length})` : ''}`, `salen ${swap.outs.map(num).join(' ')} · entran ${swap.ins.map(num).join(' ')}`, 'Posesión igual');
+    substitution(swap.outs.map((outId, i) => ({ outId, inId: swap.ins[i] })));
     setSwap(null);
   }
 
@@ -221,6 +164,17 @@ export default function TabletConsole({
                   <button type="button" disabled={!swapReady} onClick={confirmSwap}>Confirmar</button>
                   <button type="button" className="g" onClick={() => setSwap(null)}>Cancelar</button>
                 </div>
+              ) : !done ? (
+                progress.seven && !progress.shooter ? (
+                  <div className="tc-warn">7 metros: elige primero quién lo lanza</div>
+                ) : (
+                  <div className="tc-steps">
+                    {[['Jugador', progress.shooter], ['Origen', progress.origin], ['Portería', progress.goal], ['Gol / Parada', false]].map(([label, ok], i, all) => {
+                      const now = all.findIndex(([, o]) => !o) === i;
+                      return <div key={label} className={`tc-step${ok ? ' tc-step--done' : now ? ' tc-step--now' : ''}`}><i>{ok ? '✓' : i + 1}</i>{label}</div>;
+                    })}
+                  </div>
+                )
               ) : done ? (
                 <div className="tc-done" role="status">
                   <div className="tc-done-l1">
@@ -260,6 +214,7 @@ export default function TabletConsole({
                 shooter={shooter}
                 onShooterChange={setShooter}
                 onSubmit={submitShot}
+                onProgress={setProgress}
               />
             </div>
             <div className="tc-selected">
@@ -274,6 +229,7 @@ export default function TabletConsole({
               <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('turnover')}><CircleSlash size={16} /> PÉRDIDA</button>
               <button type="button" className="tc-act tc-act--excl" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected)} onClick={() => sanction('exclusion')}><Timer size={16} /> EXCLUSIÓN 2&apos;</button>
               <button type="button" className="tc-act tc-act--yellow" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.yellowCard)} onClick={() => sanction('yellow')}>AMARILLA</button>
+              <button type="button" className="tc-act tc-act--red" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.disqualified) || !!rivalStatus?.red} onClick={() => sanction('red')}>ROJA</button>
               <button type="button" className={`tc-act ${swap ? 'tc-act--camon' : 'tc-act--dark'}`} disabled={!state.canSubstitute} onClick={toggleSwap} aria-pressed={!!swap}><ArrowLeftRight size={16} /> CAMBIO</button>
             </div>
           </>

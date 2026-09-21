@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ClipboardList, GitCompare, History, Target, Users } from 'lucide-react';
+import { ClipboardList, GitCompare, History, Smartphone, Target, Users } from 'lucide-react';
 import MatchHeader from './MatchHeader';
 import PlayerRow from './PlayerRow';
 import RivalPanel from './RivalPanel';
@@ -14,6 +14,7 @@ import MatchQuickStats from './MatchQuickStats';
 import MatchSummaryView from './MatchSummaryView';
 import TabletSummary from './TabletSummary';
 import ActionStatsView from './ActionStatsView';
+import LiveStats from './LiveStats';
 import ConsoleChronology from './ConsoleChronology';
 import LineupModal from './LineupModal';
 import ShotPanel from './ShotPanel';
@@ -21,6 +22,7 @@ import AssistToast from './AssistToast';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
 import { useBoardScale, useIsTablet } from '../hooks/useIsPhone';
 import TabletConsole from './TabletConsole';
+import PhoneConsole from './PhoneConsole';
 import { useRivalMisses } from '../hooks/useRivalMisses';
 import { useRivalYellowCards } from '../hooks/useRivalYellowCards';
 import { useRivalGoals } from '../hooks/useRivalGoals';
@@ -41,6 +43,7 @@ import { countRivalDorsals, rivalDorsalShortcuts, rivalDorsalStatus } from '../u
 // Seguidor) — ahora también se pueden consultar sin salir de la consola
 // en directo, sin duplicar ninguna lógica.
 const TABS = [
+  { key: 'consola', label: 'Consola', icon: Smartphone },
   { key: 'datos', label: 'Datos', icon: ClipboardList },
   { key: 'jugadores', label: 'Jugadores', icon: Users },
   { key: 'partido', label: 'Partido', icon: GitCompare },
@@ -70,7 +73,9 @@ function saveEntryMode(mode) {
 export default function BenchConsole({ store, onBack, onFinish, team }) {
   const { state, matchId } = store;
   const isRunning = state.clock.status === 'running';
-  const [view, setView] = useState('datos');
+  // En móvil la pantalla de siempre es la consola nueva (PhoneConsole); las pestañas
+  // clásicas quedan aparte para corregir datos.
+  const [view, setView] = useState('consola');
   const [entryMode, setEntryMode] = useState(readEntryMode);
   function changeEntryMode(mode) {
     setEntryMode(mode);
@@ -85,6 +90,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const isTablet = useIsTablet();
   // Con la disposición de tablet no hay pestañas superiores ni vistas de móvil.
   const phoneView = isTablet ? null : view;
+  const phoneHome = !isTablet && view === 'consola';
   const [showRivalGoalModal, setShowRivalGoalModal] = useState(false);
   const [showRivalMissModal, setShowRivalMissModal] = useState(false);
   const [showRivalExclusionModal, setShowRivalExclusionModal] = useState(false);
@@ -238,9 +244,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       : store.teamAction({ kind: 'steal', team, ...(team === 'own' ? { playerId: null } : { number: who }) })),
     turnover: (team, who) => store.teamAction({ kind: 'turnover', team, ...(team === 'own' ? { playerId: who } : { number: who }) }),
     passive: (team) => store.teamAction({ kind: 'passive', team }),
-    exclusion: (id) => handleExclusionStart(id),
+    // Devuelven true si el jugador expulsado (3ª exclusión o roja) está en pista y hay que sustituirlo.
+    exclusion: (id) => store.playerExclusion(id),
+    red: (id) => store.playerRedCard(id),
     yellow: (id) => store.playerYellowCard(id),
     rivalExclusion: (number) => store.rivalExclusion(Number(number)),
+    rivalRed: (number) => store.rivalRedCard(Number(number)),
     rivalYellow: (number) => {
       if (rivalYellowCards.some((e) => e.number === Number(number))) {
         alert(`El dorsal #${number} ya tiene tarjeta amarilla en este partido.`);
@@ -253,9 +262,28 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     substituteMany: (pairs) => store.substituteMany(pairs),
   };
 
+  const onAssist = (playerId) => {
+    if (playerId && assistFor) store.setGoalAssist(assistFor.goalId, playerId);
+    setAssistFor(null);
+  };
+  // Estadísticas completas (centro de la tablet y hoja de estadísticas del móvil).
+  const statsNode = (
+    <LiveStats
+      state={state}
+      team={team}
+      shotEvents={shotEvents}
+      saveEvents={saveEvents}
+      rivalGoals={rivalGoals}
+      rivalMisses={rivalMisses}
+      rivalExclusions={rivalExclusionsLive}
+      rivalYellowCards={rivalYellowCards}
+      teamActions={teamActions}
+    />
+  );
+
   return (
     <div className="bench-console" style={teamColorStyle(team)}>
-      {!isTablet && (
+      {!isTablet && !phoneHome && (
         <>
       <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} onNeedLineup={() => setShowLineupModal(true)} />
 
@@ -286,7 +314,29 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         </>
       )}
 
-      {!isTablet && (
+      {phoneHome && (
+        <PhoneConsole
+          store={store}
+          team={team}
+          onBack={onBack}
+          onFinish={onFinish}
+          onNeedLineup={() => setShowLineupModal(true)}
+          courtPlayers={courtPlayers}
+          benchPlayers={benchPlayers.filter((p) => !p.disqualified)}
+          shortcuts={rivalShortcuts}
+          sanctioned={rivalSanctioned}
+          statusOf={rivalStatusOf}
+          scale={boardScale}
+          isRunning={isRunning}
+          actions={tabletActions}
+          assistFor={assistFor}
+          onAssist={onAssist}
+          statsNode={statsNode}
+          onMore={setView}
+        />
+      )}
+
+      {!isTablet && !phoneHome && (
       <div className="console-tab-bar">
         {TABS.map((t) => (
           <button
@@ -472,10 +522,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           isRunning={isRunning}
           actions={tabletActions}
           assistFor={assistFor}
-          onAssist={(playerId) => {
-            if (playerId && assistFor) store.setGoalAssist(assistFor.goalId, playerId);
-            setAssistFor(null);
-          }}
+          onAssist={onAssist}
           summaryNode={(
             <TabletSummary
               statePlayers={state.players}
@@ -500,22 +547,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
               rivalYellowCards={rivalYellowCards}
             />
           )}
-          statsNode={(
-            <>
-              <MatchQuickStats state={state} />
-              <ActionStatsView
-                shotEvents={shotEvents}
-                saveEvents={saveEvents}
-                rivalGoals={rivalGoals}
-                rivalMisses={rivalMisses}
-                players={actionPlayers}
-                ownTeamName={state.ownTeamName}
-                rivalName={state.rivalName}
-                ownPrimaryColor={team?.primaryColor}
-                ownSecondaryColor={team?.secondaryColor}
-              />
-            </>
-          )}
+          statsNode={statsNode}
         />
       )}
 
@@ -534,7 +566,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
         />
       )}
 
-      {assistFor && !isTablet && (
+      {assistFor && !isTablet && !phoneHome && (
         <AssistToast
           scorer={state.players[assistFor.scorerId]}
           candidates={playingNow.filter((p) => p.id !== assistFor.scorerId).sort((a, b) => (a.number ?? 0) - (b.number ?? 0))}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Hand, ThumbsUp, X } from 'lucide-react';
 import ShotBoard from './ShotBoard';
 import { formatClock } from '../utils/time';
@@ -85,7 +85,9 @@ export function PlayerButtons({ players, selected, onPick, extra, wide, bench, t
 // `docked` (tablet/PC): sin ventana ni cabecera, anclado en el centro de la
 // consola; el lanzador se elige fuera (columna izquierda) y llega por
 // `shooter` / `onShooterChange` (modo controlado).
-export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayers, benchPlayers, shortcuts, statusOf, onSubmit, onCancel, docked = false, shooter: shooterProp, onShooterChange }) {
+// `onProgress({ shooter, origin, goal, seven })` (opcional, tablet): avisa de qué pasos del
+// lanzamiento están ya elegidos, para el indicador «1 Jugador · 2 Origen · 3 Portería · 4 Gol / Parada».
+export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayers, benchPlayers, shortcuts, statusOf, onSubmit, onCancel, docked = false, shooter: shooterProp, onShooterChange, onProgress }) {
   const own = side === 'own';
   const [innerShooter, setInnerShooter] = useState(null); // playerId (nuestro) o dorsal (rival)
   const controlled = onShooterChange !== undefined;
@@ -103,6 +105,11 @@ export default function ShotPanel({ side, scale, ownName, rivalName, courtPlayer
   const [foulBench, setFoulBench] = useState(false);
 
   const hasShooter = !!shooter;
+  const progressRef = useRef(onProgress);
+  progressRef.current = onProgress;
+  useEffect(() => {
+    progressRef.current?.({ shooter: hasShooter, origin: !!shotZone, goal: !!goalZone, seven: shotZone === '7 metros' });
+  }, [hasShooter, shotZone, goalZone]);
   const foulOpen = shotZone === '7 metros' && hasShooter && foul === undefined;
   const shooterPlayer = own && shooter ? [...courtPlayers, ...benchPlayers].find((p) => p.id === shooter) : null;
   const rivalStatus = !own && shooter ? statusOf(shooter) : null;

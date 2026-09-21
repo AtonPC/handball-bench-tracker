@@ -39,6 +39,9 @@ export default function ActionStatsView({
   // false (Seguidor Estándar): sin el desplegable de jugador — solo se puede
   // ver el equipo entero, nunca el mapa de un jugador concreto.
   showPlayerFilter = true,
+  // La consola en directo (LiveStats) elige el equipo fuera: `team` lo fija y
+  // `hideTeamSelect` quita los dos botones de aquí.
+  team: teamProp = null, hideTeamSelect = false,
 }) {
   // El cuadrito del botón de equipo es dos triángulos (un gradiente en
   // diagonal partido justo al 50%) con los colores reales del equipo. El
@@ -50,7 +53,8 @@ export default function ActionStatsView({
   const ownColor2 = ownSecondaryColor || ownColor1;
   const rivalColor1 = 'var(--rival)';
   const rivalColor2 = 'var(--rival)';
-  const [team, setTeam] = useState('own'); // 'own' | 'rival'
+  const [teamState, setTeam] = useState('own'); // 'own' | 'rival'
+  const team = teamProp || teamState;
   const [tipo, setTipo] = useState('goles'); // 'goles' | 'fallos' | 'paradas'
   const [playerId, setPlayerId] = useState(ANY);
   const [filterZone, setFilterZone] = useState(null); // { dim: 'origin'|'entry', zone: string } | null
@@ -128,6 +132,7 @@ export default function ActionStatsView({
 
   return (
     <div>
+      {!hideTeamSelect && (
       <div className="team-select-row">
         <button
           type="button"
@@ -146,6 +151,7 @@ export default function ActionStatsView({
           <span className="team-select-name">{rivalName}</span>
         </button>
       </div>
+      )}
 
       <div className="home-away-toggle" style={{ marginTop: 'var(--space-2)' }}>
         <button type="button" className={`btn btn-timeout${effectiveTipo === 'goles' ? ' admin-nav-tab--active' : ''}`} onClick={() => selectTipo('goles')}>

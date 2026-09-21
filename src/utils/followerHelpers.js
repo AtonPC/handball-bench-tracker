@@ -60,8 +60,8 @@ export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, 
   const rivalCounts = {};
   const sortedRivalExclusions = [...rivalExclusions].sort((a, b) => a.minute - b.minute);
   for (const e of sortedRivalExclusions) {
-    rivalCounts[e.number] = (rivalCounts[e.number] || 0) + 1;
-    entries.push({ id: `re-${e.id}`, minute: e.minute, createdAt: e.createdAt, type: 'exclusion', side: 'rival', number: e.number, disqualified: rivalCounts[e.number] >= 3 });
+    if (!e.red) rivalCounts[e.number] = (rivalCounts[e.number] || 0) + 1;
+    entries.push({ id: `re-${e.id}`, minute: e.minute, createdAt: e.createdAt, type: 'exclusion', side: 'rival', number: e.number, disqualified: !!e.red || rivalCounts[e.number] >= 3 });
   }
 
   // Marcador de camino: se recorre en orden cronológico real (más antiguo

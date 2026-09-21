@@ -69,9 +69,10 @@ export default function MatchSummaryView({
   const rivalShotsTotal = rivalGoals.length + rivalMisses.length;
   const rivalSavesEstimate = estimateRivalSaves(shotEvents);
 
+  const rivalExcl = rivalExclusions.filter((e) => !e.red);
   const rivalExclusionCounts = {};
-  for (const e of rivalExclusions) rivalExclusionCounts[e.number] = (rivalExclusionCounts[e.number] || 0) + 1;
-  const rivalRojas = Object.values(rivalExclusionCounts).filter((c) => c >= 3).length;
+  for (const e of rivalExcl) rivalExclusionCounts[e.number] = (rivalExclusionCounts[e.number] || 0) + 1;
+  const rivalRojas = new Set([...Object.keys(rivalExclusionCounts).filter((n) => rivalExclusionCounts[n] >= 3), ...rivalExclusions.filter((e) => e.red).map((e) => String(e.number))]).size;
 
   const own7m = madeTotal(fieldPlayerZoneStats(shotEvents).origin['7 metros']);
   const rival7m = madeTotal(rivalShotZoneStats(rivalGoals, rivalMisses).origin['7 metros']);
@@ -86,7 +87,7 @@ export default function MatchSummaryView({
       <CompareBar label="Goles/Tiros" ownMade={ownGoals} ownTotal={ownAttempts} rivalMade={rivalGoals.length} rivalTotal={rivalShotsTotal} />
       <CompareBar label="Paradas/Tiros" ownMade={ownSaves} ownTotal={ownShotsFaced} rivalMade={rivalSavesEstimate} rivalTotal={ownAttempts} approxRival />
       <CompareBar label="7 metros" ownMade={own7m.made} ownTotal={own7m.total} rivalMade={rival7m.made} rivalTotal={rival7m.total} />
-      <CompareBar label="Exclusiones" ownMade={ownExclusions} rivalMade={rivalExclusions.length} />
+      <CompareBar label="Exclusiones" ownMade={ownExclusions} rivalMade={rivalExcl.length} />
       <CompareBar label="Rojas" ownMade={ownRojas} rivalMade={rivalRojas} />
 
       <p className="modal-hint" style={{ marginTop: 'var(--space-2)' }}>

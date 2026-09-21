@@ -51,9 +51,11 @@ export default function TabletSummary({
   const ownYellow = countBy(players, (p) => p.yellowCard);
   const ownExcl = sum('exclusionsCount');
   const ownRed = countBy(players, (p) => p.disqualified);
+  // Roja rival: 3ª exclusión de un dorsal o roja directa (`red`, que no cuenta como exclusión).
+  const rivalExcl = rivalExclusions.filter((e) => !e.red);
   const rivalExclCounts = {};
-  for (const e of rivalExclusions) rivalExclCounts[e.number] = (rivalExclCounts[e.number] || 0) + 1;
-  const rivalRed = countBy(Object.values(rivalExclCounts), (c) => c >= 3);
+  for (const e of rivalExcl) rivalExclCounts[e.number] = (rivalExclCounts[e.number] || 0) + 1;
+  const rivalRed = new Set([...Object.keys(rivalExclCounts).filter((n) => rivalExclCounts[n] >= 3), ...rivalExclusions.filter((e) => e.red).map((e) => String(e.number))]).size;
 
   const rows = [
     { label: 'Efectividad de tiro', a: pct(ownGoals, ownAttempts), as: `${ownGoals}/${ownAttempts}`, b: pct(rivalGoals.length, rivalAttempts), bs: `${rivalGoals.length}/${rivalAttempts}` },
@@ -65,7 +67,7 @@ export default function TabletSummary({
     { label: 'Contraataque', a: `${ownCounterGoals}/${ownCounterAll}`, b: `${rivalCounterGoals}/${rivalCounterAll}` },
     { label: 'Posesiones', a: possessions.own, b: possessions.rival },
     { label: 'Amarillas', a: ownYellow, b: rivalYellowCards.length },
-    { label: 'Exclusiones', a: ownExcl, b: rivalExclusions.length },
+    { label: 'Exclusiones', a: ownExcl, b: rivalExcl.length },
     { label: 'Rojas', a: ownRed, b: rivalRed },
   ];
 

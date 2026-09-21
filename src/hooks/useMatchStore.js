@@ -782,7 +782,7 @@ export function useMatchStore(matchId, enabled) {
       if (delta > 0) {
         const minute = Math.floor(liveElapsedMs / 60000) + 1;
         const ref = doc(collection(db, 'matches', matchId, 'recoveryEvents'));
-        recordEvent('Recuperación', possessionUpdate(match, 'own'), { [playerId]: { recoveries: players[playerId].recoveries + 1 } }, {
+        recordEvent('Robo', possessionUpdate(match, 'own'), { [playerId]: { recoveries: players[playerId].recoveries + 1 } }, {
           create: { ref, data: { playerId, minute, period: match.period, createdAt: Date.now() } },
         });
         return;
@@ -790,7 +790,7 @@ export function useMatchStore(matchId, enabled) {
       if ((players[playerId]?.recoveries || 0) <= 0) return;
       runExclusive(async () => {
         const recoveryDoc = await latestDetailDoc('recoveryEvents', [['playerId', playerId]]);
-        recordEvent('Recuperación (-1)', {}, { [playerId]: { recoveries: players[playerId].recoveries - 1 } }, {
+        recordEvent('Robo (-1)', {}, { [playerId]: { recoveries: players[playerId].recoveries - 1 } }, {
           deletes: recoveryDoc ? [recoveryDoc] : [],
         });
       });
@@ -900,6 +900,44 @@ export function useMatchStore(matchId, enabled) {
       return willDisqualify;
     },
     [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Roja DIRECTA (2026-09-21), sin haber llegado a 3 exclusiones: el jugador queda
+  // expulsado y sale de la pista (el cambio se hace aparte). Deja un documento en
+  // exclusionEvents con `disqualified` y `direct` para la cronología. Devuelve true
+  // si estaba en pista (hay que sustituirlo).
+  const playerRedCard = useCallback(
+    (playerId) => {
+      if (!match || match.status !== 'running') return false;
+      const p = players[playerId];
+      if (!p || p.disqualified) return false;
+      const nowMs = Date.now();
+      const accumulatedMs = p.onCourtSinceMs ? p.accumulatedMs + (nowMs - p.onCourtSinceMs) : p.accumulatedMs;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'exclusionEvents'));
+      recordEvent('Roja directa', {}, {
+        [playerId]: { excluded: false, exclusionEndsAtMs: null, disqualified: true, accumulatedMs, onCourtSinceMs: null },
+      }, {
+        create: { ref, data: { playerId, minute, period: match.period, disqualified: true, direct: true, createdAt: nowMs } },
+      });
+      return match.courtSlots.includes(playerId);
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Roja directa a un dorsal rival: un documento en rivalExclusions con `red` (sin
+  // tiempo y sin contar como exclusión; ver summarizeRivalExclusions).
+  const rivalRedCard = useCallback(
+    (number) => {
+      if (!match || match.status !== 'running') return;
+      const nowMs = Date.now();
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'rivalExclusions'));
+      recordEvent(`Roja rival #${number}`, {}, {}, {
+        create: { ref, data: { number, minute, period: match.period, createdAt: nowMs, endsAtMs: null, red: true } },
+      });
+    },
+    [match, matchId, liveElapsedMs, recordEvent]
   );
 
   // Cancela una exclusión en curso (toque accidental): el jugador vuelve a
@@ -1217,6 +1255,8 @@ export function useMatchStore(matchId, enabled) {
     teamAction,
     playerSave,
     playerExclusion,
+    playerRedCard,
+    rivalRedCard,
     cancelExclusion,
     playerYellowCard,
     cancelYellowCard,

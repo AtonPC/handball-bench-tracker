@@ -25,7 +25,7 @@ function eventLabel(entry) {
   return {
     goal: 'Gol',
     save: 'Parada',
-    recovery: 'Recuperación',
+    recovery: 'Robo',
     exclusion: entry.disqualified ? 'Roja' : 'Exclusión',
     yellowCard: 'Tarjeta amarilla',
     sevenMeter: '7 metros provocados',

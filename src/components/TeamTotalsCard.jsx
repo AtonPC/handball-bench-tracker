@@ -14,7 +14,7 @@ export default function TeamTotalsCard({ rows, rivalGoalsConceded = 0, title = '
     ['Goles en contra', t.conceded],
     ['Paradas/Tiros', `${t.saves}/${t.shotsFaced}`],
     ['% Paradas', pct(t.savePct)],
-    ['Recuperaciones', t.recoveries],
+    ['Robos', t.recoveries],
     ['Exclusiones', t.exclusions],
     ['Amarillas', t.yellow],
     ['Rojas', t.red],
