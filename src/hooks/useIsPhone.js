@@ -19,6 +19,22 @@ export function useIsTablet() {
   return yes;
 }
 
+// La consola de tablet está pensada para 1280×800 (mockup). En pantallas más bajas
+// —un portátil de 1366×768 con la barra del navegador deja ~600 px— se reduce
+// TODO proporcionalmente (CSS `zoom`) para que siga cabiendo sin scroll. Nunca
+// agranda (máx. 1) ni baja de 0,6 (a partir de ahí sería ilegible).
+const TABLET_DESIGN_HEIGHT = 800;
+export function useTabletZoom() {
+  const read = () => (typeof window === 'undefined' ? 1 : Math.max(0.6, Math.min(1, window.innerHeight / TABLET_DESIGN_HEIGHT)));
+  const [zoom, setZoom] = useState(read);
+  useEffect(() => {
+    const onResize = () => setZoom(read());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return zoom;
+}
+
 export function useBoardScale() {
   const read = () => {
     if (typeof window === 'undefined') return { k: 1, gk: 1 };

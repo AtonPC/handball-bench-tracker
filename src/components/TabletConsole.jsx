@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeftRight, Timer, Zap } from 'lucide-react';
 import TabletRight from './TabletRight';
+import { useTabletZoom } from '../hooks/useIsPhone';
 import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './ShotPanel';
 
 // Consola de TABLET / PC (2026-09-21, según el mockup aprobado): tres columnas
@@ -28,6 +29,7 @@ export default function TabletConsole({
   const [center, setCenter] = useState('launch'); // 'launch' | 'stats'
   const [rightTab, setRightTab] = useState('resumen');
   const [benchOpen, setBenchOpen] = useState(false);
+  const zoom = useTabletZoom();
 
   const ownSelected = side === 'own' && shooter ? state.players[shooter] : null;
   const rivalSelected = side === 'rival' && shooter ? shooter : null;
@@ -51,7 +53,7 @@ export default function TabletConsole({
     : rivalSelected ? `Rival · #${rivalSelected}` : 'Elige a alguien en la columna de la izquierda';
 
   return (
-    <div className="tc-grid">
+    <div className="tc-grid" style={zoom < 1 ? { zoom } : undefined}>
       <aside className="tc-left">
         <h3 className="tc-h">Nuestro equipo · en pista</h3>
         <PlayerButtons players={courtPlayers} selected={side === 'own' ? shooter : null} onPick={pickOwn} wide />
