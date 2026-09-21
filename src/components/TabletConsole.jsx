@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeftRight, Timer, Zap } from 'lucide-react';
-import MatchHeader from './MatchHeader';
+import TabletRight from './TabletRight';
 import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './ShotPanel';
 
 // Consola de TABLET / PC (2026-09-21, según el mockup aprobado): tres columnas
@@ -17,7 +17,7 @@ import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './S
 // No sabe nada de Firestore: BenchConsole le pasa los datos ya preparados y las
 // funciones (`actions`) que anotan.
 export default function TabletConsole({
-  store, team, onBack, onFinish, onNeedLineup, banner,
+  store, team, onBack, onFinish, onNeedLineup,
   courtPlayers, benchPlayers, shortcuts, statusOf, scale, isRunning,
   actions, summaryNode, chronologyNode, statsNode,
 }) {
@@ -76,6 +76,8 @@ export default function TabletConsole({
       <main className="tc-center">
         {center === 'launch' ? (
           <>
+            <div className="tc-launch">
+            {!isRunning && <div className="tc-locked"><span>{state.clock.status === 'idle' ? 'Partido no iniciado: pulsa ▶ para poder anotar' : 'Reloj parado: pulsa ▶ para seguir anotando'}</span></div>}
             <ShotPanel
               key={draftKey}
               docked
@@ -91,6 +93,7 @@ export default function TabletConsole({
               onShooterChange={setShooter}
               onSubmit={submitShot}
             />
+            </div>
             <div className="tc-selected">{selectedLabel}</div>
             <div className="tc-actions">
               <button type="button" className="tc-act" disabled={!isRunning || !ownSelected} onClick={() => actions.recovery(ownSelected.id)}><Zap size={16} /> ROBO</button>
@@ -104,19 +107,19 @@ export default function TabletConsole({
         )}
       </main>
 
-      <aside className="tc-right">
-        <div className="tc-seg" role="group" aria-label="Panel central">
-          <button type="button" className={center === 'launch' ? 'on' : ''} onClick={() => setCenter('launch')}>Lanzamiento</button>
-          <button type="button" className={center === 'stats' ? 'on' : ''} onClick={() => setCenter('stats')}>Estadísticas</button>
-        </div>
-        <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} onNeedLineup={onNeedLineup} />
-        {banner}
-        <div className="tc-tabs" role="tablist">
-          <button type="button" className={rightTab === 'resumen' ? 'on' : ''} onClick={() => setRightTab('resumen')}>Resumen</button>
-          <button type="button" className={rightTab === 'crono' ? 'on' : ''} onClick={() => setRightTab('crono')}>Cronología</button>
-        </div>
-        <div className="tc-tabbody">{rightTab === 'resumen' ? summaryNode : chronologyNode}</div>
-      </aside>
+      <TabletRight
+        store={store}
+        team={team}
+        onBack={onBack}
+        onFinish={onFinish}
+        onNeedLineup={onNeedLineup}
+        center={center}
+        onCenter={setCenter}
+        rightTab={rightTab}
+        onRightTab={setRightTab}
+        summaryNode={summaryNode}
+        chronologyNode={chronologyNode}
+      />
     </div>
   );
 }

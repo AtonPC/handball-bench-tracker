@@ -138,6 +138,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // store (mismos datos que los diálogos clásicos, más contraataque y falta).
   function handleShotSubmit(r) {
     setShotPanel(null);
+    // La pelota pasa al otro equipo (se corrige tocando el escudo).
+    store.setPossession(r.side === 'own' ? 'rival' : 'own');
     if (r.side === 'own') {
       const detail = { shotZone: r.shotZone, goalZone: r.goalZone, counter: r.counter };
       let shotId = null;
@@ -219,31 +221,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     }
     setSubstitution(null);
   }
-
-  const tabletBanner = !isRunning ? (
-    <div className="match-not-running-banner">
-          <span>
-            {state.clock.status === 'idle'
-              ? `⏸ PARTIDO NO INICIADO — pulsa ▶ (INICIAR ${periodShortLabel(1, state.clock.periodCount)}) arriba para poder anotar`
-              : betweenPeriods
-                ? `⏸ FIN DEL ${periodLongLabel(state.clock.period, state.clock.periodCount).toUpperCase()} — ${state.alevinRules && !state.lineups[state.clock.period + 1] ? `elige el equipo titular del ${nextShort} para poder iniciarlo` : `pulsa ▶ (INICIAR ${nextShort}) arriba para seguir`}`
-                : '⏸ PARTIDO EN PAUSA — pulsa ▶ arriba para poder seguir anotando'}
-          </span>
-          {betweenPeriods && (
-            <button type="button" className="banner-btn" onClick={() => setShowLineupModal(true)}>
-              {state.lineups[state.clock.period + 1] ? `EQUIPO TITULAR DEL ${nextShort} ✓ · VER / CAMBIAR` : `ELEGIR EQUIPO TITULAR DEL ${nextShort}`}
-            </button>
-          )}
-          {betweenPeriods && startersAdvice && (
-            <span className="banner-advice">
-              ⚠ {startersAdvice.level === 'warn'
-                ? `${startersAdvice.repeated.map((id) => '#' + (state.players[id]?.number ?? '?')).join(', ')} ya empezó el ${periodShortLabel(state.clock.period, state.clock.periodCount)}: con ${state.convocados} convocados no se debería repetir (es solo un aviso, puedes iniciar igualmente)`
-                : `Repites ${startersAdvice.repeated.length} del ${periodShortLabel(state.clock.period, state.clock.periodCount)}; con ${state.convocados} convocados hay que repetir como mínimo ${startersAdvice.needed}`}
-            </span>
-          )}
-        </div>
-
-  ) : null;
 
   const tabletActions = {
     submitShot: handleShotSubmit,
@@ -471,7 +448,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           onBack={onBack}
           onFinish={onFinish}
           onNeedLineup={() => setShowLineupModal(true)}
-          banner={tabletBanner}
           courtPlayers={courtPlayers}
           benchPlayers={benchPlayers.filter((p) => !p.disqualified)}
           shortcuts={rivalShortcuts}

@@ -1003,6 +1003,43 @@ export function useMatchStore(matchId, enabled) {
     [match, players, recordEvent]
   );
 
+  // Corregir el reloj con el partido PARADO (2026-09-21): a veces no se nota que
+  // el cronómetro estaba parado y hay que darle el tiempo que falta (o quitar
+  // el que sobra). Suma `deltaMs` (puede ser negativo) al tiempo del partido,
+  // sin pasar del inicio del periodo, y el mismo tiempo a quienes están en
+  // pista y no cumplen sanción (como si hubieran estado jugando ese rato).
+  // No entra en el log de deshacer (igual que el resto de controles del reloj);
+  // se corrige con otro ajuste.
+  const adjustClock = useCallback(
+    async (deltaMs) => {
+      if (!match || match.status !== 'paused' || !deltaMs) return;
+      const floor = match.periodStartAccumulatedMs || 0;
+      const nextAccumulated = Math.max(floor, match.accumulatedMs + deltaMs);
+      const applied = nextAccumulated - match.accumulatedMs;
+      if (applied === 0) return;
+      const batch = writeBatch(db);
+      batch.update(matchRef, { accumulatedMs: nextAccumulated });
+      for (const id of match.courtSlots) {
+        const p = players[id];
+        if (!p || p.excluded || p.disqualified) continue;
+        batch.update(playerRef(id), { accumulatedMs: Math.max(0, p.accumulatedMs + applied) });
+      }
+      await batch.commit();
+    },
+    [match, players, matchRef, playerRef]
+  );
+
+  // Posesión (pelota sobre el escudo): un cambio manual, sin log de deshacer.
+  const setPossession = useCallback(
+    async (team) => {
+      if (!match || (match.possession || null) === team) return;
+      const batch = writeBatch(db);
+      batch.update(matchRef, { possession: team });
+      await batch.commit();
+    },
+    [match, matchRef]
+  );
+
   // --- Deshacer ---
   // Deshace el ÚLTIMO evento: devuelve cada campo que cambió a su valor
   // anterior, borra los documentos de detalle que creó y recrea los que
@@ -1066,6 +1103,8 @@ export function useMatchStore(matchId, enabled) {
       canSubstitute: canSubstituteNow(match),
       // Equipo titular de cada periodo y avisos de Alevín (ver utils/lineups.js).
       alevinRules: !!match?.alevinRules,
+      // Quién tiene la pelota ahora ('own' | 'rival' | null): se toca en el escudo.
+      possession: match?.possession || null,
       // Dorsales rivales conocidos antes del partido (opcional): accesos directos del LANZAMIENTO.
       rivalDorsals: match?.rivalDorsals || [],
       lineups: lineupsOf(match),
@@ -1121,6 +1160,8 @@ export function useMatchStore(matchId, enabled) {
     rivalYellowCard,
     cancelRivalYellowCard,
     timeout,
+    adjustClock,
+    setPossession,
     playerGoal,
     playerGoalWithDetail,
     setGoalAssist,
