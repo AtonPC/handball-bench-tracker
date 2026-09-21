@@ -3,10 +3,11 @@ import { ChevronRight, Settings, Trash2 } from 'lucide-react';
 import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 import { teamInitials } from '../utils/teamColors';
+import { parseRivalDorsals } from '../utils/rivalDorsals';
 import { PERIOD_FORMATS, periodCountOf, periodFormatOf, periodLongLabel } from '../utils/periods';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
-const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodFormat: 'halves', periodDurationMinutes: PERIOD_FORMATS.halves.minutes, alevinRules: false, jornada: '', rivalCrestUrl: '' };
+const emptyForm = { rivalName: '', isHome: true, venue: '', scheduledAt: '', periodFormat: 'halves', periodDurationMinutes: PERIOD_FORMATS.halves.minutes, alevinRules: false, jornada: '', rivalCrestUrl: '', rivalDorsalsText: '' };
 
 function formatMatchDateTime(ms) {
   if (!ms) return 'Sin fecha';
@@ -154,6 +155,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       periodDurationMinutes: m.periodDurationMs ? m.periodDurationMs / 60000 : PERIOD_FORMATS[periodFormatOf(m)].minutes,
       jornada: m.jornada ?? '',
       rivalCrestUrl: m.rivalCrestUrl || '',
+      rivalDorsalsText: (m.rivalDorsals || []).join(', '),
     });
     setCallUpIds(m.callUpPlayerIds || []);
     setStartingIds(m.startingLineupIds || []);
@@ -181,6 +183,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       ownTeamName,
       jornada: form.jornada === '' ? null : Number(form.jornada),
       rivalCrestUrl: form.rivalCrestUrl.trim(),
+      rivalDorsals: parseRivalDorsals(form.rivalDorsalsText),
       callUpPlayerIds: callUpIds,
       startingLineupIds: startingIds,
       startingGoalkeeperId: startingGoalkeeperId || null,
@@ -282,6 +285,12 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
             placeholder="URL del escudo rival (opcional)"
             value={form.rivalCrestUrl}
             onChange={(e) => setForm({ ...form, rivalCrestUrl: e.target.value })}
+          />
+          <input
+            className="player-form-input"
+            placeholder="Dorsales rivales que conoces, separados por comas (opcional): 3, 7, 11"
+            value={form.rivalDorsalsText}
+            onChange={(e) => setForm({ ...form, rivalDorsalsText: e.target.value })}
           />
           <div className="home-away-toggle">
             {Object.entries(PERIOD_FORMATS).map(([key, fmt]) => (

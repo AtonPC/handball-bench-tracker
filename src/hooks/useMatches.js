@@ -27,7 +27,7 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount, alevinRules }) => {
+  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, rivalDorsals, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount, alevinRules }) => {
     const count = periodCount === 4 ? 4 : 2;
     const zeroTimeouts = Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 0]));
     const ref = await addDoc(matchesCol, {
@@ -40,6 +40,8 @@ export function useMatches(clubId, teamId) {
       ownTeamName,
       jornada: jornada || null,
       rivalCrestUrl: rivalCrestUrl || '',
+      // Dorsales rivales que se conocen de antemano (opcional): accesos directos del LANZAMIENTO.
+      rivalDorsals: rivalDorsals || [],
       callUpPlayerIds,
       startingLineupIds: startingLineupIds || [],
       startingGoalkeeperId: startingGoalkeeperId || null,

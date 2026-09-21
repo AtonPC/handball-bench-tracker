@@ -194,7 +194,15 @@ export function useMatchStore(matchId, enabled) {
       clock: touchesTime ? { status: match.status, runningSinceMs: match.runningSinceMs ?? null, period: match.period } : null,
     };
     batch.set(doc(eventsCol), { label, createdAt: Date.now(), period: match.period, undo, createdRefPaths, deletedDocs, ...(extra?.eventFields || {}) });
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (err) {
+      // Firestore aplica el cambio en local al momento y lo REVIERTE si el servidor lo
+      // rechaza (permisos, reglas sin desplegar...): sin este aviso parece que la
+      // acción «se deshace sola». Sin conexión el commit no falla, solo espera.
+      console.error(`No se pudo guardar «${label}»`, err);
+      alert(`No se ha podido guardar «${label}»: ${err.code === 'permission-denied' ? 'sin permiso (¿reglas de Firestore sin actualizar?)' : err.message}`);
+    }
   }, [match, players, matchRef, playerRef, eventsCol]);
 
   // Un "−1" primero busca en Firestore el detalle que va a restar (el último

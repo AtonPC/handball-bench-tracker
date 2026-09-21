@@ -4167,3 +4167,8 @@
 .tsum-v small { font-size: 10px; font-weight: 700; color: var(--text-dim); }
 .tsum-v--own b { color: var(--own); }
 .tsum-v--rival b { color: var(--rival); }
+
+/* Zona rival de la tablet: Sancionados y más usados (2026-09-21) */
+.tc-h2 { margin: 2px 0 0; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+.tc-sanc { display: flex; flex-wrap: wrap; gap: 6px; }
+.tc-note { margin: 0; font-size: 11px; color: var(--text-dim); line-height: 1.3; }

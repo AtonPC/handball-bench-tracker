@@ -136,6 +136,12 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     limit: 6,
   });
   const rivalStatusOf = (number) => rivalDorsalStatus(number, rivalExclusionSummary, rivalYellowCards);
+  // Dorsales rivales con sanción (roja, excluido ahora o amarilla), para la zona «Sancionados».
+  const rivalSanctioned = [...new Set([...rivalExclusionSummary.map((e) => String(e.number)), ...rivalYellowCards.map((y) => String(y.number))])]
+    .map((number) => ({ number, count: 0, st: rivalStatusOf(number) }))
+    .filter((d) => d.st.red || d.st.excludedMs || d.st.yellow)
+    .sort((a, b) => Number(b.st.red) - Number(a.st.red) || Number(!!b.st.excludedMs) - Number(!!a.st.excludedMs) || Number(a.number) - Number(b.number))
+    .map(({ number, count }) => ({ number, count }));
 
   // Resultado del panel LANZAMIENTO → se anota con las funciones de siempre del
   // store (mismos datos que los diálogos clásicos, más contraataque y falta).
@@ -460,6 +466,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           courtPlayers={courtPlayers}
           benchPlayers={benchPlayers.filter((p) => !p.disqualified)}
           shortcuts={rivalShortcuts}
+          sanctioned={rivalSanctioned}
           statusOf={rivalStatusOf}
           scale={boardScale}
           isRunning={isRunning}

@@ -19,7 +19,7 @@ import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './S
 // funciones (`actions`) que anotan.
 export default function TabletConsole({
   store, team, onBack, onFinish, onNeedLineup,
-  courtPlayers, benchPlayers, shortcuts, statusOf, scale, isRunning,
+  courtPlayers, benchPlayers, shortcuts, sanctioned = [], statusOf, scale, isRunning,
   actions, summaryNode, chronologyNode, statsNode,
 }) {
   const { state } = store;
@@ -71,6 +71,16 @@ export default function TabletConsole({
         {benchOpen && <PlayerButtons players={benchPlayers} selected={side === 'own' ? shooter : null} onPick={pickOwn} wide />}
         <div className="tc-rival">
           <h3 className="tc-h">Rival · dorsal</h3>
+          {sanctioned.length > 0 && (
+            <>
+              <h4 className="tc-h2">Sancionados</h4>
+              <div className="tc-sanc">
+                <DorsalChips shortcuts={sanctioned} statusOf={statusOf} selected={side === 'rival' ? shooter : null} onPick={pickRival} />
+              </div>
+            </>
+          )}
+          <h4 className="tc-h2">Dorsal · más usados</h4>
+          {shortcuts.length === 0 && <p className="tc-note">Se irán añadiendo según los uses. Puedes dar la lista al crear el partido.</p>}
           <div className="shp-dorsal-row shp-dorsal-row--4">
             <DorsalChips shortcuts={shortcuts.slice(0, 6)} statusOf={statusOf} selected={side === 'rival' ? shooter : null} onPick={pickRival} />
             <div className={`shp-dorsal-box shp-dorsal-box--span${rivalStatus?.red ? ' shp-dorsal-box--red' : rivalStatus?.excludedMs ? ' shp-dorsal-box--excl' : rivalStatus?.yellow ? ' shp-dorsal-box--yellow' : ''}`}>
