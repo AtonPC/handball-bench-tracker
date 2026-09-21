@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { GOAL_ZONES, OUT_ZONES, SHOT_ZONES } from '../shotZones';
+import { GOAL_ZONES, OUT_ZONES, POST_ZONES, SHOT_ZONES } from '../shotZones';
 import {
   ACTION_KINDS, buildActionList, describeAction, planAdd, planDelete, planEdit, validateActionValues,
 } from '../utils/actionEditing';
@@ -15,9 +15,9 @@ function ActionForm({ kind, initial, players, isAdd, onSubmit, onCancel }) {
   const set = (field, value) => setValues((v) => ({ ...v, [field]: value }));
   const fields = ACTION_KINDS[kind].fields;
   const isShotKind = kind === 'ownGoal' || kind === 'ownMiss';
-  // Un fallo puede irse fuera (3 zonas más), un gol o una parada no.
+  // Un fallo puede irse fuera (3 zonas más) o dar en un palo/el larguero (3 más); un gol o una parada no.
   const effectiveMiss = kind === 'ownMiss' ? values.type !== 'goal' : kind === 'ownGoal' ? values.type === 'miss' : kind === 'rivalMiss';
-  const goalZones = effectiveMiss ? [...GOAL_ZONES, ...OUT_ZONES] : GOAL_ZONES;
+  const goalZones = effectiveMiss ? [...GOAL_ZONES, ...OUT_ZONES, ...POST_ZONES] : GOAL_ZONES;
   const goalkeepersFirst = [...players].sort((a, b) => Number(!!b.isGK) - Number(!!a.isGK) || (a.number ?? 0) - (b.number ?? 0));
 
   return (

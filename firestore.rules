@@ -309,6 +309,20 @@ service cloud.firestore {
         );
       }
 
+      // Asistencia propia (2026-09-21): opcional, enlazada a un gol propio
+      // (shotEventId). Mismos permisos que recoveryEvents.
+      match /assistEvents/{assistEventId} {
+        allow read: if canViewTeamData(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId
+        );
+        allow write: if canManageTeamCapability(
+          get(/databases/$(database)/documents/matches/$(matchId)).data.clubId,
+          get(/databases/$(database)/documents/matches/$(matchId)).data.teamId,
+          'benchConsole'
+        );
+      }
+
       // Exclusión propia con minuto (disqualified=true en la 3ª = expulsión).
       match /exclusionEvents/{exclusionEventId} {
         allow read: if canViewTeamData(

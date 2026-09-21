@@ -23,7 +23,7 @@ import { useShotEvents } from '../hooks/useShotEvents';
 import { useSaveEvents } from '../hooks/useSaveEvents';
 import { teamColorStyle } from '../utils/teamColors';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
-import { OUT_ZONES } from '../shotZones';
+import { missKindOf } from '../shotZones';
 import { lineupAdvice, orderLineup, validateLineup } from '../utils/lineups';
 
 // Menú horizontal de la consola (2026-09-16, mockup "Consola Luminosa"):
@@ -122,7 +122,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // se pregunta cuál.
   function handleRivalMissConfirm(detail) {
     setShowRivalMissModal(false);
-    const saved = detail.goalZone && !OUT_ZONES.includes(detail.goalZone);
+    const saved = missKindOf(detail.goalZone) === 'saved';
     if (!saved) {
       store.registerRivalShot({ ...detail, saverId: null });
     } else if (soleGoalkeeper) {

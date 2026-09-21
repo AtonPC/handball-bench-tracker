@@ -72,7 +72,10 @@ export function effectsOf(kind, data) {
   switch (kind) {
     case 'ownGoal': addDelta(eff, data.playerId, 'goals', 1); eff.score.own += 1; break;
     case 'ownMiss': addDelta(eff, data.playerId, 'shots', 1); break;
-    case 'ownSave': addDelta(eff, data.playerId, 'saves', 1); break;
+    case 'ownSave':
+      addDelta(eff, data.playerId, 'saves', 1);
+      if (data.foulPlayerId) addDelta(eff, data.foulPlayerId, 'sevenMetersCommitted', 1);
+      break;
     case 'ownRecovery': addDelta(eff, data.playerId, 'recoveries', 1); break;
     case 'ownExclusion':
       addDelta(eff, data.playerId, 'exclusionsCount', 1);
@@ -84,7 +87,11 @@ export function effectsOf(kind, data) {
       // Gol rival de 7m: la falta la cometió un jugador nuestro.
       if (data.foulPlayerId) addDelta(eff, data.foulPlayerId, 'sevenMetersCommitted', 1);
       break;
-    default: break; // fallos, exclusiones, 7m y amarillas rivales: sin contador
+    case 'rivalMiss':
+      // 7m rival fallado sin parada nuestra: la falta también la cometió uno de los nuestros.
+      if (data.foulPlayerId) addDelta(eff, data.foulPlayerId, 'sevenMetersCommitted', 1);
+      break;
+    default: break; // exclusiones, 7m y amarillas rivales: sin contador
   }
   return eff;
 }
@@ -119,7 +126,7 @@ export function planDelete(action, ctx = {}) {
   plan.deletes.push({ sub: ACTION_KINDS[action.kind].sub, id: action.id });
   plan.effects = negate(effectsOf(action.kind, action.data));
   if (action.kind === 'ownSave' && action.pairedMissId) plan.deletes.push({ sub: 'rivalMisses', id: action.pairedMissId });
-  if (action.kind === 'ownGoal') {
+  if (action.kind === 'ownGoal' || action.kind === 'ownMiss') {
     for (const sm of ctx.sevenMeters || []) if (sm.shotEventId === action.id) plan.deletes.push({ sub: 'rivalSevenMeters', id: sm.id });
   }
   return plan;

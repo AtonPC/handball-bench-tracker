@@ -5,7 +5,7 @@ import EventIcon from './EventIcon';
 // ticker del marcador en directo) y en la lista completa, solo cambia el
 // contenedor alrededor.
 function eventIconType(entry) {
-  if (entry.type === 'miss') return entry.missKind === 'saved' ? 'miss-saved' : 'miss-out';
+  if (entry.type === 'miss') return entry.missKind === 'saved' ? 'miss-saved' : 'miss-out'; // el palo usa el icono de fuera
   if (entry.type === 'exclusion') return entry.disqualified ? 'card-red' : 'twoFingers';
   if (entry.type === 'yellowCard') return 'card-yellow';
   if (entry.type === 'save') return 'save';
@@ -19,6 +19,7 @@ function eventLabel(entry) {
   if (entry.type === 'miss') {
     if (entry.missKind === 'saved') return 'Fallo — parada rival';
     if (entry.missKind === 'out') return 'Fallo — fuera';
+    if (entry.missKind === 'post') return 'Fallo — palo';
     return 'Fallo';
   }
   return {

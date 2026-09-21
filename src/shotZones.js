@@ -33,6 +33,21 @@ export const GOAL_ZONES = [
 // encima del larguero, o a un lado u otro de los postes.
 export const OUT_ZONES = ['Fuera arriba', 'Fuera izquierda', 'Fuera derecha'];
 
+// Palos y larguero (2026-09-21): un tiro que da en la madera no es una parada
+// del portero ni se fue "fuera": es un fallo con su propia estadística ("tiros
+// al palo"). Se guarda como `goalZone` igual que las de "Fuera".
+export const POST_ZONES = ['Palo izquierdo', 'Larguero', 'Palo derecho'];
+
+// Por qué no fue gol un fallo, según la zona de portería que trae:
+//  'out' (fuera) · 'post' (palo/larguero) · 'saved' (una de las 9: lo paró el
+//  portero) · null (no se marcó zona).
+export function missKindOf(goalZone) {
+  if (!goalZone) return null;
+  if (OUT_ZONES.includes(goalZone)) return 'out';
+  if (POST_ZONES.includes(goalZone)) return 'post';
+  return 'saved';
+}
+
 // Aviso opcional antes de registrar (2026-09-16): las dos zonas siguen
 // siendo opcionales — si no se marca NINGUNA de las dos es un "no ha dado
 // tiempo" legítimo, sin aviso. Pero si se marcó una y no la otra, un

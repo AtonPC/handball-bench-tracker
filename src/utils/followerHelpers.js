@@ -1,6 +1,4 @@
-import { OUT_ZONES } from '../shotZones';
-
-const OUT_ZONE_SET = new Set(OUT_ZONES);
+import { missKindOf } from '../shotZones';
 
 // La plantilla (colección "players") no tiene un campo "name" — solo
 // displayName (o firstName/lastName) —, a diferencia de los jugadores ya
@@ -35,11 +33,11 @@ export function buildChronology({ ownGoals, ownMisses, ownSaves, ownRecoveries, 
   for (const g of ownGoals) entries.push({ id: `og-${g.id}`, minute: g.minute, createdAt: g.createdAt, type: 'goal', side: 'own', playerId: g.playerId });
   // missKind distingue de un vistazo por qué no fue gol: 'out' si la
   // entrada fue una de las 3 zonas de "Fuera" (se fue fuera de verdad),
-  // 'saved' si fue una de las 9 de portería (entonces paró el portero
+  // 'post' si dio en un palo o el larguero, 'saved' si fue una de las 9 de portería (entonces paró el portero
   // rival — un fallo nuestro dentro del marco ES una parada suya, aunque
   // nosotros no lo anotemos como tal), null si no se eligió zona.
   for (const m of ownMisses) {
-    const missKind = !m.goalZone ? null : OUT_ZONE_SET.has(m.goalZone) ? 'out' : 'saved';
+    const missKind = missKindOf(m.goalZone);
     entries.push({ id: `om-${m.id}`, minute: m.minute, createdAt: m.createdAt, type: 'miss', side: 'own', playerId: m.playerId, missKind });
   }
   for (const s of ownSaves || []) entries.push({ id: `os-${s.id}`, minute: s.minute, createdAt: s.createdAt, type: 'save', side: 'own', playerId: s.playerId });

@@ -1,4 +1,4 @@
-import { OUT_ZONES } from '../shotZones';
+import { missKindOf } from '../shotZones';
 import { fieldPlayerZoneStats, rivalShotZoneStats } from '../utils/zoneStats';
 
 function pct(made, total) {
@@ -12,9 +12,8 @@ function pct(made, total) {
 // anota nuestras estadísticas), así que esto es una aproximación a partir
 // de datos que ya tenemos, no un recuento exacto — se marca como tal en
 // el propio texto de la fila.
-const OUT_ZONE_SET = new Set(OUT_ZONES);
 function estimateRivalSaves(shotEvents) {
-  return shotEvents.filter((e) => e.type === 'miss' && e.goalZone && !OUT_ZONE_SET.has(e.goalZone)).length;
+  return shotEvents.filter((e) => e.type === 'miss' && missKindOf(e.goalZone) === 'saved').length;
 }
 
 // "Goles/Tiros" de fieldPlayerZoneStats/rivalShotZoneStats para una zona

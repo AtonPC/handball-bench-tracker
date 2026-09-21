@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ShotZoneDiagram from './ShotZoneDiagram';
-import { OUT_ZONES, missingZoneWarning } from '../shotZones';
+import { missKindOf, missingZoneWarning } from '../shotZones';
 
 // Teclado en DOS filas de 6 (1-6 / 7-9 0 C ⌫) con el dorsal a la izquierda, en
 // vez de 4 filas de 3 con el dorsal encima: así el dorsal, el teclado y el
@@ -61,7 +61,7 @@ export default function RivalShotModal({ kind = 'goal', playerName, saverName, o
   // Fallo nadie se lleve una parada (o se quede sin ella) sin saberlo.
   let effect = null;
   if (kind === 'miss') {
-    const saved = goalZone && !OUT_ZONES.includes(goalZone);
+    const saved = missKindOf(goalZone) === 'saved';
     if (saved) {
       effect = saverName
         ? `Lo paró ${saverName}: se le anota una parada y cuenta como fallo del rival.`

@@ -430,7 +430,7 @@ export function useMatchStore(matchId, enabled) {
   // un solo Deshacer lo revierte, y un "−1" del gol rival también le quita
   // el 7m al jugador (ver rivalGoal).
   const rivalGoalWithDetail = useCallback(
-    ({ number, shotZone, goalZone, foulPlayerId }) => {
+    ({ number, shotZone, goalZone, foulPlayerId, counter }) => {
       if (!match || match.status !== 'running') return;
       const next = Math.max(0, match.score.rival + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
@@ -448,10 +448,12 @@ export function useMatchStore(matchId, enabled) {
               shotZone: shotZone || null,
               goalZone: goalZone || null,
               foulPlayerId: foulPlayer ? foulPlayerId : null,
+              counter: !!counter,
               createdAt: Date.now(),
             },
           },
         });
+      return ref.id;
     },
     [match, players, matchId, liveElapsedMs, recordEvent]
   );
@@ -478,31 +480,39 @@ export function useMatchStore(matchId, enabled) {
   // rival, y por eso zoneStats.rivalShotZoneStats() no suma saveEvents aparte.
   // El dorsal (`number`) es opcional: si no da tiempo a verlo no bloquea.
   const registerRivalShot = useCallback(
-    ({ number, shotZone, goalZone, saverId }) => {
-      if (!match || match.status !== 'running') return;
+    ({ number, shotZone, goalZone, saverId, counter, foulPlayerId }) => {
+      if (!match || match.status !== 'running') return null;
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const period = match.period;
       const createdAt = Date.now();
       const rivalNumber = number ? Number(number) : null;
       const zones = { shotZone: shotZone || null, goalZone: goalZone || null };
       const missRef = doc(collection(db, 'matches', matchId, 'rivalMisses'));
+      // Un 7m rival fallado o parado también lleva la falta de uno de los
+      // nuestros (opcional), igual que un gol rival de 7m.
+      const foulPlayer = foulPlayerId ? players[foulPlayerId] : null;
+      const foulFields = { foulPlayerId: foulPlayer ? foulPlayerId : null, counter: !!counter };
+      const playerUpdates = {};
+      if (foulPlayer) playerUpdates[foulPlayerId] = { sevenMetersCommitted: (foulPlayer.sevenMetersCommitted || 0) + 1 };
 
       if (!saverId) {
-        recordEvent(`Fallo rival${rivalNumber ? ` #${rivalNumber}` : ''}`, {}, {}, {
-          create: { ref: missRef, data: { number: rivalNumber, minute, period, ...zones, createdAt } },
+        recordEvent(`Fallo rival${rivalNumber ? ` #${rivalNumber}` : ''}`, {}, playerUpdates, {
+          create: { ref: missRef, data: { number: rivalNumber, minute, period, ...zones, ...foulFields, createdAt } },
         });
-        return;
+        return missRef.id;
       }
 
       const saver = players[saverId];
-      if (!saver) return;
+      if (!saver) return null;
       const saveRef = doc(collection(db, 'matches', matchId, 'saveEvents'));
-      recordEvent('Parada', {}, { [saverId]: { saves: (saver.saves || 0) + 1 } }, {
+      playerUpdates[saverId] = { ...(playerUpdates[saverId] || {}), saves: (saver.saves || 0) + 1 };
+      recordEvent('Parada', {}, playerUpdates, {
         creates: [
-          { ref: saveRef, data: { playerId: saverId, minute, period, ...zones, rivalNumber, pairId: saveRef.id, createdAt } },
-          { ref: missRef, data: { number: rivalNumber, minute, period, ...zones, pairId: saveRef.id, createdAt } },
+          { ref: saveRef, data: { playerId: saverId, minute, period, ...zones, ...foulFields, rivalNumber, pairId: saveRef.id, createdAt } },
+          { ref: missRef, data: { number: rivalNumber, minute, period, ...zones, ...foulFields, pairId: saveRef.id, createdAt } },
         ],
       });
+      return missRef.id;
     },
     [match, players, matchId, liveElapsedMs, recordEvent]
   );
@@ -524,6 +534,10 @@ export function useMatchStore(matchId, enabled) {
         const gk = players[saveDoc.data.playerId];
         if (gk && (gk.saves || 0) > 0) playerUpdates[saveDoc.data.playerId] = { saves: gk.saves - 1 };
       }
+      // Un 7m rival fallado o parado llevaba la falta de uno de los nuestros.
+      const foulId = missDoc.data.foulPlayerId;
+      const foulPlayer = foulId ? players[foulId] : null;
+      if (foulPlayer) playerUpdates[foulId] = { ...(playerUpdates[foulId] || {}), sevenMetersCommitted: Math.max(0, (foulPlayer.sevenMetersCommitted || 0) - 1) };
       recordEvent('Fallo rival (-1)', {}, playerUpdates, { deletes });
     });
   }, [match, players, recordEvent, runExclusive, latestDetailDoc, findPairedDoc]);
@@ -650,9 +664,16 @@ export function useMatchStore(matchId, enabled) {
           const sevenMeter = await latestDetailDoc('rivalSevenMeters', [['shotEventId', goalDoc.id]]);
           if (sevenMeter) deletes.push(sevenMeter);
         }
-        recordEvent('Gol (-1)', { 'score.own': Math.max(0, match.score.own - 1) }, {
-          [playerId]: { goals: players[playerId].goals - 1 },
-        }, { deletes });
+        const playerUpdates = { [playerId]: { goals: players[playerId].goals - 1 } };
+        // Si ese gol llevaba asistencia, se quita también (y se le resta al
+        // jugador que la dio).
+        const assistDoc = goalDoc ? await latestDetailDoc('assistEvents', [['shotEventId', goalDoc.id]]) : null;
+        if (assistDoc) {
+          deletes.push(assistDoc);
+          const assister = players[assistDoc.data.playerId];
+          if (assister) playerUpdates[assistDoc.data.playerId] = { assists: Math.max(0, (assister.assists || 0) - 1) };
+        }
+        recordEvent('Gol (-1)', { 'score.own': Math.max(0, match.score.own - 1) }, playerUpdates, { deletes });
       });
     },
     [match, players, recordEvent, runExclusive, latestDetailDoc]
@@ -668,9 +689,12 @@ export function useMatchStore(matchId, enabled) {
       if ((players[playerId]?.shots || 0) <= 0) return;
       runExclusive(async () => {
         const missDoc = await latestDetailDoc('shotEvents', [['playerId', playerId], ['type', 'miss']]);
-        recordEvent('Lanzamiento (-1)', {}, { [playerId]: { shots: players[playerId].shots - 1 } }, {
-          deletes: missDoc ? [missDoc] : [],
-        });
+        const deletes = missDoc ? [missDoc] : [];
+        if (missDoc?.data.shotZone === '7 metros') {
+          const sevenMeter = await latestDetailDoc('rivalSevenMeters', [['shotEventId', missDoc.id]]);
+          if (sevenMeter) deletes.push(sevenMeter);
+        }
+        recordEvent('Lanzamiento (-1)', {}, { [playerId]: { shots: players[playerId].shots - 1 } }, { deletes });
       });
     },
     [match, players, recordEvent, runExclusive, latestDetailDoc]
@@ -679,7 +703,7 @@ export function useMatchStore(matchId, enabled) {
   // Gol/Fallo con zona (lanzamiento y, si es gol, entrada a portería), igual
   // que el gol rival: se guarda como documento propio en matches/{id}/shotEvents.
   const playerGoalWithDetail = useCallback(
-    (playerId, { shotZone, goalZone }) => {
+    (playerId, { shotZone, goalZone, counter }) => {
       if (!match || match.status !== 'running') return null;
       const nextGoals = Math.max(0, players[playerId].goals + 1);
       const nextScore = Math.max(0, match.score.own + 1);
@@ -688,7 +712,7 @@ export function useMatchStore(matchId, enabled) {
       recordEvent('Gol', { 'score.own': nextScore }, { [playerId]: { goals: nextGoals } }, {
         create: {
           ref,
-          data: { playerId, type: 'goal', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
+          data: { playerId, type: 'goal', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, counter: !!counter, createdAt: Date.now() },
         },
       });
       // Se devuelve el id del gol para poder enlazarle el 7m rival, si lo hay.
@@ -698,16 +722,36 @@ export function useMatchStore(matchId, enabled) {
   );
 
   const playerShotWithDetail = useCallback(
-    (playerId, { shotZone, goalZone }) => {
-      if (!match || match.status !== 'running') return;
+    (playerId, { shotZone, goalZone, counter }) => {
+      if (!match || match.status !== 'running') return null;
       const next = Math.max(0, players[playerId].shots + 1);
       const minute = Math.floor(liveElapsedMs / 60000) + 1;
       const ref = doc(collection(db, 'matches', matchId, 'shotEvents'));
       recordEvent('Fallo', {}, { [playerId]: { shots: next } }, {
         create: {
           ref,
-          data: { playerId, type: 'miss', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, createdAt: Date.now() },
+          data: { playerId, type: 'miss', minute, period: match.period, shotZone: shotZone || null, goalZone: goalZone || null, counter: !!counter, createdAt: Date.now() },
         },
+      });
+      // Se devuelve el id del fallo para poder enlazarle el 7m rival, si lo hay.
+      return ref.id;
+    },
+    [match, players, matchId, liveElapsedMs, recordEvent]
+  );
+
+  // Asistencia (2026-09-21): opcional y DESPUÉS del gol — se elige en el aviso
+  // que sale al marcar. Documento propio en matches/{id}/assistEvents enlazado
+  // al gol (shotEventId) y contador `assists` del jugador; un solo Deshacer
+  // lo revierte, y el "−1" del gol la quita también (ver playerGoal).
+  const setGoalAssist = useCallback(
+    (shotEventId, assistPlayerId) => {
+      if (!match || match.status !== 'running' || !shotEventId) return;
+      const assister = players[assistPlayerId];
+      if (!assister) return;
+      const minute = Math.floor(liveElapsedMs / 60000) + 1;
+      const ref = doc(collection(db, 'matches', matchId, 'assistEvents'));
+      recordEvent('Asistencia', {}, { [assistPlayerId]: { assists: (assister.assists || 0) + 1 } }, {
+        create: { ref, data: { playerId: assistPlayerId, shotEventId, minute, period: match.period, createdAt: Date.now() } },
       });
     },
     [match, players, matchId, liveElapsedMs, recordEvent]
@@ -758,7 +802,11 @@ export function useMatchStore(matchId, enabled) {
           const missDoc = await findPairedDoc('rivalMisses', saveDoc);
           if (missDoc) deletes.push(missDoc);
         }
-        recordEvent('Parada (-1)', {}, { [playerId]: { saves: players[playerId].saves - 1 } }, { deletes });
+        const playerUpdates = { [playerId]: { saves: players[playerId].saves - 1 } };
+        const foulId = saveDoc?.data.foulPlayerId;
+        const foulPlayer = foulId ? players[foulId] : null;
+        if (foulPlayer) playerUpdates[foulId] = { ...(playerUpdates[foulId] || {}), sevenMetersCommitted: Math.max(0, (foulPlayer.sevenMetersCommitted || 0) - 1) };
+        recordEvent('Parada (-1)', {}, playerUpdates, { deletes });
       });
     },
     [match, players, recordEvent, runExclusive, latestDetailDoc, findPairedDoc]
@@ -1073,6 +1121,7 @@ export function useMatchStore(matchId, enabled) {
     timeout,
     playerGoal,
     playerGoalWithDetail,
+    setGoalAssist,
     playerShot,
     playerShotWithDetail,
     playerRecovery,
