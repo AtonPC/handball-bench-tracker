@@ -4084,7 +4084,11 @@
 .tc-left, .tc-right { min-height: 0; overflow-y: auto; background: var(--panel); }
 .tc-left { border-right: 1px solid var(--border); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tc-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-.tc-center { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 16px; }
+/* container-type (2026-09-22): la fila del lanzamiento decide su propia disposición
+   según el ANCHO REAL de esta columna (ver @container más abajo), no el de toda la
+   ventana — con la izquierda y la derecha ya responsive, el ancho de la ventana no dice
+   cuánto le queda al centro; medirlo aquí evita activar la fila de más (o de menos). */
+.tc-center { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 16px; container-type: inline-size; }
 .tc-h { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tc-hrow { display: flex; align-items: center; justify-content: space-between; }
 .tc-rival { margin-top: auto; border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -4098,15 +4102,21 @@
 .shp-players--wide .shp-player-name { font-size: 12px; color: var(--text); }
 .shp-dorsal-row--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .shp-dorsal-box.shp-dorsal-box--span { grid-column: span 2; }
-.tc-selected { width: 100%; height: 44px; border: 2px solid var(--border); border-radius: 12px; background: var(--panel-alt); display: flex; align-items: center; padding: 0 14px; font-weight: 800; font-size: 15px; }
-/* 2026-09-22: ROBO/PÉRDIDA/AMARILLA/EXCLUSIÓN/ROJA/CAMBIO, en columna, a la izquierda
-   del lanzamiento (ver .tc-launchrow/.tc-launchcol más abajo). */
-.tc-actions { display: flex; flex-direction: column; gap: 6px; }
-.tc-act { height: 46px; width: 100%; border: 1px solid var(--text); border-radius: 10px; background: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; padding: 0 6px; }
+.tc-selected { width: 100%; height: 44px; border: 2px solid var(--border); border-radius: 12px; background: var(--panel-alt); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 14px; font-weight: 800; font-size: 15px; }
+/* ROBO/PÉRDIDA/EXCLUSIÓN 2'/AMARILLA/ROJA/CAMBIO: por defecto, la fila compacta de
+   siempre (como la demo) — 6 iguales, sin los dorsales sancionados debajo (no caben sin
+   que la página entera necesite scroll). Con sitio de sobra (ver @container más abajo)
+   pasan a una columna a la izquierda del lanzamiento, con CAMBIO arriba del todo
+   (separado del selector Nos/Rival — el cambio es siempre de nuestro equipo, nunca del
+   rival, así que no debe parecer ligado a cuál de los dos está elegido) y los dorsales
+   rivales sancionados justo debajo de AMARILLA/EXCLUSIÓN 2'/ROJA. */
+.tc-actions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.tc-act { height: 46px; width: 100%; border: 1px solid var(--text); border-radius: 10px; background: #fff; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 0 4px; }
 .tc-act:disabled { opacity: 0.35; cursor: default; }
-.tc-act--excl { box-shadow: inset -5px 0 0 var(--text); }
-.tc-act--yellow { border-color: var(--card-yellow); box-shadow: inset -5px 0 0 var(--card-yellow); }
+.tc-act--excl { box-shadow: inset 0 -5px 0 var(--text); }
+.tc-act--yellow { border-color: var(--card-yellow); box-shadow: inset 0 -5px 0 var(--card-yellow); }
 .tc-act--dark { background: var(--text); color: #fff; }
+.tc-sanclist { display: none; }
 .tc-seg { display: flex; margin: 8px 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; flex: none; }
 .tc-seg button { flex: 1; height: 40px; border: 0; background: #fff; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
 .tc-seg .on { background: var(--text); color: #fff; }
@@ -4168,35 +4178,37 @@
 .tc-dot--on i { background: var(--warning); }
 .tc-launch { position: relative; width: 100%; display: flex; justify-content: center; }
 .tc-locked { position: absolute; inset: 0; z-index: 10; background: rgba(238, 241, 245, 0.78); display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; font-weight: 800; font-size: 15px; color: var(--text); border-radius: 12px; }
-/* 2026-09-22, a petición del usuario: ROBO/PÉRDIDA/AMARILLA/EXCLUSIÓN/ROJA/CAMBIO pasan
-   a una columna vertical a la IZQUIERDA del lanzamiento (antes, a la derecha y en fila).
-   Debajo de AMARILLA/EXCLUSIÓN/ROJA van los dorsales rivales con esa sanción — antes
-   vivían en «Sancionados», en la columna de jugadores (tc-left), que se quita de allí
-   para agrandar el teclado del dorsal rival (ver más abajo).
-   Con sitio de sobra (≥1500px) va en fila, columna fija a la izquierda; si no, sigue
-   como hasta ahora: la columna arriba del todo y el lanzamiento debajo, los dos al
-   ancho del tablero (nunca en fila si no cabe con holgura, para no arriesgar scroll). */
 .tc-launchrow { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.tc-launchcol { width: 100%; display: flex; flex-direction: column; gap: 6px; }
 .tc-launchmain { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-@media (min-width: 1500px) {
-  .tc-launchrow { max-width: 960px; flex-direction: row; align-items: flex-start; justify-content: center; }
-  .tc-launchcol { width: 170px; flex: none; }
-  .tc-launchmain { width: 600px; flex: none; }
-}
 /* PARADA/GOL, un poco más grandes en tablet (ancho ya fijado por la portería; solo alto). */
 .tc-launchmain .shp-final-btn { height: 62px; font-size: 15px; }
-.tc-lcol-top { display: flex; gap: 6px; }
-.tc-lcol-top .tc-side { flex: 1; }
-.tc-lcol-top .tc-side button { flex: 1; height: 46px; font-size: 13px; }
-.tc-lcol-top .tc-act { flex: 1; }
-/* Dorsales rivales con esa sanción, debajo de AMARILLA/EXCLUSIÓN 2'/ROJA: se puede
-   tocar uno para seleccionarlo, igual que los de "Dorsal · más usados". */
-.tc-sanclist { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 2px; padding-left: 2px; }
+/* Dorsales rivales con esa sanción, debajo de AMARILLA/EXCLUSIÓN 2'/ROJA en la columna
+   ancha (ver @container): se puede tocar uno para seleccionarlo, como un acceso directo. */
 .tc-sanpill { height: 26px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-alt); font-weight: 800; font-size: 11px; font-family: var(--font-mono); cursor: pointer; }
 .tc-sanpill--yellow { border-color: var(--card-yellow); background: var(--card-yellow-dim); }
 .tc-sanpill--excl { border-color: var(--danger); background: var(--danger-dim); color: #8a2117; }
 .tc-sanpill--red { border-color: #7a1d14; background: #7a1d14; color: #fff; }
+
+/* 2026-09-22, a partir de 800px de ancho REAL en la columna central (no de ventana: con
+   la izquierda y la derecha ya responsive, el ancho de la ventana no dice cuánto le
+   queda al centro) — la fila compacta de acciones pasa a ser una columna angosta a la
+   izquierda del lanzamiento, con espacio para los dorsales rivales sancionados. Por
+   debajo de eso, se queda tal cual la demo aprobada: la fila de 6 debajo del lanzamiento,
+   sin los dorsales sancionados (no caben sin que la página entera necesite scroll). */
+@container (min-width: 800px) {
+  .tc-launchrow { max-width: 960px; flex-direction: row; align-items: flex-start; justify-content: center; }
+  .tc-launchmain { width: 600px; flex: none; }
+  .tc-actions { display: flex; flex-direction: column; gap: 6px; width: 170px; flex: none; }
+  .tc-act { font-size: 12px; padding: 0 6px; }
+  .tc-act--excl { box-shadow: inset -5px 0 0 var(--text); order: 3; }
+  .tc-act--yellow { box-shadow: inset -5px 0 0 var(--card-yellow); order: 1; }
+  .tc-act--red { box-shadow: inset -5px 0 0 #7a1d14; order: 5; }
+  .tc-act--dark, .tc-act--camon { order: -1; }
+  .tc-sanclist { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 2px; padding-left: 2px; }
+  .tc-sanclist--yellow { order: 2; }
+  .tc-sanclist--excl { order: 4; }
+  .tc-sanclist--red { order: 6; }
+}
 
 /* Columna derecha de tablet: Pasivo y Resumen como en el mockup (2026-09-21) */
 .tc-selected-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4258,7 +4270,7 @@
 .shp-players--bench .shp-player-tag { margin-left: 0; height: 12px; line-height: 12px; }
 
 /* Tablet: ROJA, indicador de pasos del lanzamiento (2026-09-21) */
-.tc-act--red { border-color: #7a1d14; box-shadow: inset -5px 0 0 #7a1d14; }
+.tc-act--red { border-color: #7a1d14; box-shadow: inset 0 -5px 0 #7a1d14; }
 .tc-steps { display: flex; gap: 6px; width: 100%; }
 .tc-step { flex: 1; height: 34px; border-radius: 9px; display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 12px; font-weight: 800; background: var(--border); color: var(--text-dim); white-space: nowrap; }
 .tc-step i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: var(--text-dim); display: grid; place-items: center; font-size: 11px; flex: none; }

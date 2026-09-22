@@ -208,44 +208,6 @@ export default function TabletConsole({
               ) : null}
             </div>
             <div className="tc-launchrow">
-              {/* A la izquierda del lanzamiento (o arriba del todo si no hay sitio en
-                  fila, ver CSS): equipo + CAMBIO, y las acciones sobre el seleccionado.
-                  Debajo de AMARILLA / EXCLUSIÓN 2' / ROJA salen los dorsales rivales que
-                  ya tienen esa sanción (antes vivían en "Sancionados", en la columna de
-                  jugadores) — tocar uno los selecciona, igual que los más usados. */}
-              <div className="tc-launchcol">
-                <div className="tc-lcol-top">
-                  <span className="tc-side" role="group" aria-label="Equipo">
-                    <button type="button" className={side === 'own' ? 'on' : ''} onClick={() => changeSide('own')}>{ownShort}</button>
-                    <button type="button" className={side === 'rival' ? 'on' : ''} onClick={() => changeSide('rival')}>{rivalShort}</button>
-                  </span>
-                  <button type="button" className={`tc-act ${swap ? 'tc-act--camon' : 'tc-act--dark'}`} disabled={!state.canSubstitute} onClick={toggleSwap} aria-pressed={!!swap}><ArrowLeftRight size={16} /> CAMBIO</button>
-                </div>
-                <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('steal')}><Zap size={16} /> ROBO</button>
-                <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('turnover')}><CircleSlash size={16} /> PÉRDIDA</button>
-                <button type="button" className="tc-act tc-act--yellow" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.yellowCard)} onClick={() => sanction('yellow')}>AMARILLA</button>
-                {rivalYellowList.length > 0 && (
-                  <div className="tc-sanclist">
-                    {rivalYellowList.map((n) => <button key={n} type="button" className="tc-sanpill tc-sanpill--yellow" onClick={() => pickRival(n)}>#{n}</button>)}
-                  </div>
-                )}
-                <button type="button" className="tc-act tc-act--excl" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected)} onClick={() => sanction('exclusion')}><Timer size={16} /> EXCLUSIÓN 2&apos;</button>
-                {rivalExclList.length > 0 && (
-                  <div className="tc-sanclist">
-                    {rivalExclList.map((e) => (
-                      <button key={e.number} type="button" className="tc-sanpill tc-sanpill--excl" onClick={() => pickRival(e.number)}>
-                        #{e.number} {e.activeRemainingMs > 0 ? `${formatClock(e.activeRemainingMs)} · ` : ''}{e.count}/3
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <button type="button" className="tc-act tc-act--red" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.disqualified) || !!rivalStatus?.red} onClick={() => sanction('red')}>ROJA</button>
-                {rivalRedList.length > 0 && (
-                  <div className="tc-sanclist">
-                    {rivalRedList.map((e) => <button key={e.number} type="button" className="tc-sanpill tc-sanpill--red" onClick={() => pickRival(e.number)}>#{e.number}</button>)}
-                  </div>
-                )}
-              </div>
               <div className="tc-launchmain">
                 <div className="tc-launch">
                   {!isRunning && <div className="tc-locked"><span>{state.clock.status === 'idle' ? 'Partido no iniciado: pulsa ▶ para poder anotar' : 'Reloj parado: pulsa ▶ para seguir anotando'}</span></div>}
@@ -268,7 +230,46 @@ export default function TabletConsole({
                 </div>
                 <div className="tc-selected">
                   <span className="tc-selected-l">{selectedLabel}</span>
+                  {/* El cambio es siempre de nuestro equipo (nunca del rival): este
+                      selector no decide a quién afecta CAMBIO, solo quién lanza/a
+                      quién se aplican ROBO, PÉRDIDA, AMARILLA, EXCLUSIÓN y ROJA. */}
+                  <span className="tc-side" role="group" aria-label="Equipo">
+                    <button type="button" className={side === 'own' ? 'on' : ''} onClick={() => changeSide('own')}>{ownShort}</button>
+                    <button type="button" className={side === 'rival' ? 'on' : ''} onClick={() => changeSide('rival')}>{rivalShort}</button>
+                  </span>
                 </div>
+              </div>
+              {/* Fila compacta de 6 debajo del lanzamiento, como la demo aprobada; con
+                  sitio de sobra en la columna central pasa a una columna estrecha a la
+                  izquierda, con CAMBIO arriba y los dorsales rivales sancionados debajo
+                  de AMARILLA / EXCLUSIÓN 2' / ROJA (antes vivían en "Sancionados", en la
+                  columna de jugadores) — ver el @container de .tc-actions en App.css. */}
+              <div className="tc-actions">
+                <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('steal')}><Zap size={16} /> ROBO</button>
+                <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('turnover')}><CircleSlash size={16} /> PÉRDIDA</button>
+                <button type="button" className="tc-act tc-act--excl" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected)} onClick={() => sanction('exclusion')}><Timer size={16} /> EXCLUSIÓN 2&apos;</button>
+                {rivalExclList.length > 0 && (
+                  <div className="tc-sanclist tc-sanclist--excl">
+                    {rivalExclList.map((e) => (
+                      <button key={e.number} type="button" className="tc-sanpill tc-sanpill--excl" onClick={() => pickRival(e.number)}>
+                        #{e.number} {e.activeRemainingMs > 0 ? `${formatClock(e.activeRemainingMs)} · ` : ''}{e.count}/3
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="tc-act tc-act--yellow" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.yellowCard)} onClick={() => sanction('yellow')}>AMARILLA</button>
+                {rivalYellowList.length > 0 && (
+                  <div className="tc-sanclist tc-sanclist--yellow">
+                    {rivalYellowList.map((n) => <button key={n} type="button" className="tc-sanpill tc-sanpill--yellow" onClick={() => pickRival(n)}>#{n}</button>)}
+                  </div>
+                )}
+                <button type="button" className="tc-act tc-act--red" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.disqualified) || !!rivalStatus?.red} onClick={() => sanction('red')}>ROJA</button>
+                {rivalRedList.length > 0 && (
+                  <div className="tc-sanclist tc-sanclist--red">
+                    {rivalRedList.map((e) => <button key={e.number} type="button" className="tc-sanpill tc-sanpill--red" onClick={() => pickRival(e.number)}>#{e.number}</button>)}
+                  </div>
+                )}
+                <button type="button" className={`tc-act ${swap ? 'tc-act--camon' : 'tc-act--dark'}`} disabled={!state.canSubstitute} onClick={toggleSwap} aria-pressed={!!swap}><ArrowLeftRight size={16} /> CAMBIO</button>
               </div>
             </div>
           </>
