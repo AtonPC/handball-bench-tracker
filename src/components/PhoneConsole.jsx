@@ -7,7 +7,7 @@ import { useActionFlash } from '../hooks/useActionFlash';
 import { useRecentEvents } from '../hooks/useRecentEvents';
 import { sanctionTag } from '../utils/playerTags';
 import { periodClockDisplay } from '../utils/time';
-import { teamInitials } from '../utils/teamColors';
+import { shortTeamName, teamInitials } from '../utils/teamColors';
 
 // Consola de MÓVIL (2026-09-21, mockup «Consola móvil con lanzamiento» aprobado): una
 // sola pantalla con lo esencial y HOJAS que suben desde abajo para lo demás, en vez
@@ -90,6 +90,10 @@ export default function PhoneConsole({
     rival: { name: rivalName, crest: rivalCrestUrl, score: score.rival, cls: 'rival', init: teamInitials(rivalName) },
   };
   const ownSanctioned = [...courtPlayers, ...benchPlayers].filter((p) => sanctionTag(p));
+  const ownShort = shortTeamName(ownTeamName, 5);
+  const rivalShort = shortTeamName(rivalName, 5);
+  const ownTag = shortTeamName(ownTeamName, 6);
+  const rivalTag = shortTeamName(rivalName, 6);
 
   function open(next) {
     setBenchOpen(false);
@@ -236,7 +240,7 @@ export default function PhoneConsole({
 
   const quickRow = (t) => (
     <div className="ph-qk" key={t}>
-      <span>{t === 'own' ? 'Nos' : 'Rival'}</span>
+      <span>{t === 'own' ? ownShort : rivalShort}</span>
       <button type="button" disabled={!isRunning} onClick={() => open({ kind: 'pick', action: 'steal', team: t, step: 1 })}>Robo</button>
       <button type="button" disabled={!isRunning} onClick={() => open({ kind: 'pick', action: 'turnover', team: t, step: 1 })}>Pérdida</button>
       <button type="button" disabled={!isRunning} onClick={() => open({ kind: 'pick', action: 'sanction', team: t, step: 1 })}>Sanción</button>
@@ -303,11 +307,11 @@ export default function PhoneConsole({
       {quickRow('rival')}
 
       <div className="ph-sr">
-        <span>Sanción</span><em className="ph-tt ph-tt--riv">Rival</em>
+        <span>Sanción</span><em className="ph-tt ph-tt--riv">{rivalTag}</em>
         {sanctioned.length > 0 ? <DorsalChips shortcuts={sanctioned} statusOf={statusOf} selected={null} onPick={() => {}} /> : <small>nadie</small>}
       </div>
       <div className="ph-sr">
-        <span>Sanción</span><em className="ph-tt">Nos</em>
+        <span>Sanción</span><em className="ph-tt">{ownTag}</em>
         {ownSanctioned.length > 0 ? ownSanctioned.map((p) => {
           const tag = sanctionTag(p);
           return <span key={p.id} className={`ph-schip ph-schip--${tag.kind}`}>{p.number}<small>{tag.text}</small></span>;
@@ -329,7 +333,7 @@ export default function PhoneConsole({
         ))}
       </div>
 
-      {sheet?.kind === 'pick' && <Sheet title={`${ACTION_TITLE[sheet.action]} · ${sheet.team === 'own' ? 'Nos' : 'Rival'}`} onClose={close}>{renderPick()}</Sheet>}
+      {sheet?.kind === 'pick' && <Sheet title={`${ACTION_TITLE[sheet.action]} · ${shortTeamName(sheet.team === 'own' ? ownTeamName : rivalName, 14)}`} onClose={close}>{renderPick()}</Sheet>}
       {sheet?.kind === 'swap' && <Sheet title="Cambio" onClose={close}>{renderSwap()}</Sheet>}
       {sheet?.kind === 'stats' && <Sheet title="Estadísticas" onClose={close} full>{statsNode}</Sheet>}
 

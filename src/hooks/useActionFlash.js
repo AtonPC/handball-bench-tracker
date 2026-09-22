@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { shortTeamName } from '../utils/teamColors';
 
 // Mensaje «Registrado» de la consola (tablet y móvil, 2026-09-21): tras cada
 // acción anotada se enseña qué se ha registrado, cómo queda la posesión y un
@@ -7,7 +8,6 @@ import { useEffect, useRef, useState } from 'react';
 // La consola se repinta cada segundo (reloj): el temporizador solo depende del
 // mensaje, nunca de la identidad de las funciones.
 export const opp = (t) => (t === 'own' ? 'rival' : 'own');
-export const teamWord = (t) => (t === 'own' ? 'Nos' : 'Rival');
 
 export function useActionFlash({ store, actions, courtPlayers = [], assistFor, onAssist }) {
   const { state } = store;
@@ -28,9 +28,11 @@ export function useActionFlash({ store, actions, courtPlayers = [], assistFor, o
     if (assistFor) onAssist(null); // un asistente pendiente de antes ya no tiene aviso
     setDone({ text, detail, poss, assistable });
   }
-  const possLabel = (to) => (state.possession === to ? 'Posesión igual' : `Posesión → ${teamWord(to)}`);
-  const ownWho = (p) => (p ? `#${p.number} ${p.name}` : 'Nos (sin jugador)');
-  const whoText = (side, id, dorsal) => (side === 'own' ? ownWho(id ? state.players[id] : null) : dorsal ? `Rival #${dorsal}` : 'Rival (sin dorsal)');
+  // El nombre real del equipo (o sus iniciales si no cabe) — nunca "Nos"/"Rival" a secas.
+  const teamName = (t) => shortTeamName(t === 'own' ? state.ownTeamName : state.rivalName, 20);
+  const possLabel = (to) => (state.possession === to ? 'Posesión igual' : `Posesión → ${teamName(to)}`);
+  const ownWho = (p) => (p ? `#${p.number} ${p.name}` : `${teamName('own')} (sin jugador)`);
+  const whoText = (side, id, dorsal) => (side === 'own' ? ownWho(id ? state.players[id] : null) : dorsal ? `${teamName('rival')} #${dorsal}` : `${teamName('rival')} (sin dorsal)`);
 
   // Texto del mensaje de un lanzamiento (resultado del ShotPanel).
   function shotMessage(r) {
@@ -40,7 +42,7 @@ export function useActionFlash({ store, actions, courtPlayers = [], assistFor, o
     const bits = [`${r.shotZone || 'sin zona'} → ${r.goalZone || 'sin destino'}`];
     if (r.foul) bits.push(own ? `falta del rival #${r.foul}` : `falta de #${state.players[r.foul]?.number ?? '?'}`);
     if (r.counter) bits.push('contraataque');
-    return { text, detail: bits.join(' · '), poss: `Posesión → ${own ? 'Rival' : 'Nos'}`, assistable: own && r.kind === 'goal' && r.shotZone !== '7 metros' };
+    return { text, detail: bits.join(' · '), poss: `Posesión → ${teamName(own ? 'rival' : 'own')}`, assistable: own && r.kind === 'goal' && r.shotZone !== '7 metros' };
   }
 
   // ROBO / PÉRDIDA de un equipo, con o sin jugador (id nuestro o dorsal rival).
@@ -70,7 +72,7 @@ export function useActionFlash({ store, actions, courtPlayers = [], assistFor, o
   // Pasivo: pérdida del equipo entero. Devuelve quién se queda la pelota.
   function passive(team) {
     actions.passive(team);
-    flash(`Pasivo · ${teamWord(team)}`, 'pérdida del equipo entero', possLabel(opp(team)));
+    flash(`Pasivo · ${teamName(team)}`, 'pérdida del equipo entero', possLabel(opp(team)));
     return opp(team);
   }
   // Cambio múltiple ya confirmado: [{ outId, inId }].

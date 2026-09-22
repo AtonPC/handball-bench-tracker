@@ -4,6 +4,7 @@ import { opp, useActionFlash } from '../hooks/useActionFlash';
 import TabletRight from './TabletRight';
 import { useTabletZoom } from '../hooks/useIsPhone';
 import { sanctionTag as tagOf } from '../utils/playerTags';
+import { shortTeamName } from '../utils/teamColors';
 import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './ShotPanel';
 
 // Consola de TABLET / PC (2026-09-21, según el mockup aprobado): tres columnas
@@ -98,9 +99,11 @@ export default function TabletConsole({
     setSwap(null);
   }
 
+  const ownShort = shortTeamName(state.ownTeamName, 10);
+  const rivalShort = shortTeamName(state.rivalName, 10);
   const selectedLabel = ownSelected
-    ? `Nos · #${ownSelected.number} ${ownSelected.name}`
-    : rivalSelected ? `Rival · #${rivalSelected}` : side === 'own' ? 'Nos · sin jugador' : 'Rival · sin dorsal';
+    ? `${ownShort} · #${ownSelected.number} ${ownSelected.name}`
+    : rivalSelected ? `${rivalShort} · #${rivalSelected}` : side === 'own' ? `${ownShort} · sin jugador` : `${rivalShort} · sin dorsal`;
   function changeSide(next) {
     if (next === side) return;
     setSide(next);
@@ -123,7 +126,7 @@ export default function TabletConsole({
   return (
     <div className="tc-grid" style={zoom < 1 ? { zoom } : undefined}>
       <aside className="tc-left">
-        <h3 className="tc-h">Nuestro equipo · en pista</h3>
+        <h3 className="tc-h">{shortTeamName(state.ownTeamName, 22)} · en pista</h3>
         <PlayerButtons players={courtPlayers} selected={!swap && side === 'own' ? shooter : null} onPick={pickOwn} wide marks={marks} tagOf={tagOf} canPick={canPick} />
         {benchPlayers.length > 0 && (
           <>
@@ -132,7 +135,7 @@ export default function TabletConsole({
           </>
         )}
         <div className="tc-rival">
-          <h3 className="tc-h">Rival · dorsal</h3>
+          <h3 className="tc-h">{rivalShort} · dorsal</h3>
           {sanctioned.length > 0 && (
             <>
               <h4 className="tc-h2">Sancionados</h4>
@@ -220,8 +223,8 @@ export default function TabletConsole({
             <div className="tc-selected">
               <span className="tc-selected-l">{selectedLabel}</span>
               <span className="tc-side" role="group" aria-label="Equipo">
-                <button type="button" className={side === 'own' ? 'on' : ''} onClick={() => changeSide('own')}>Nos</button>
-                <button type="button" className={side === 'rival' ? 'on' : ''} onClick={() => changeSide('rival')}>Rival</button>
+                <button type="button" className={side === 'own' ? 'on' : ''} onClick={() => changeSide('own')}>{ownShort}</button>
+                <button type="button" className={side === 'rival' ? 'on' : ''} onClick={() => changeSide('rival')}>{rivalShort}</button>
               </span>
             </div>
             <div className="tc-actions">
