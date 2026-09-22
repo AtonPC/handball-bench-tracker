@@ -30,7 +30,7 @@ import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './S
 // funciones (`actions`) que anotan.
 export default function TabletConsole({
   store, team, onBack, onFinish, onNeedLineup,
-  courtPlayers, benchPlayers, shortcuts, statusOf, isRunning, zoom,
+  courtPlayers, benchPlayers, shortcuts, statusOf, isRunning,
   rivalExclusionSummary = [], rivalYellowCards = [],
   actions, assistFor, onAssist, summaryNode, statsNode,
 }) {
@@ -45,6 +45,16 @@ export default function TabletConsole({
   // crecen para ocupar lo que deja libre esa columna (2026-09-22, según el dibujo del
   // usuario); si no, la fila compacta de siempre, a tamaño fijo (ver useIsPhone.js).
   const launch = useLaunchLayout();
+  // 2026-09-22: `.tc-grid` llevaba un `zoom` (CSS no estándar) para encoger la consola
+  // entera en pantallas más bajas de lo previsto y que cupiera sin scroll (useTabletZoom,
+  // useIsPhone.js) — se quita: en una tablet real, con la Cronología (muchos sucesos) o
+  // cualquier otro contenido más alto de lo normal dentro de `.tc-center`, el `zoom`
+  // rompía el contenido de golpe (las columnas izquierda/derecha desaparecían y los
+  // botones quedaban descuadrados), sin aparecer ninguna barra de scroll — un problema
+  // conocido de `zoom` con contenedores `overflow:auto` en ciertos navegadores, no
+  // reproducible en el navegador de pruebas. Ahora cada columna se queda a tamaño real
+  // (1:1) siempre; en una pantalla más baja de la cuenta, cada una scrollea por su
+  // cuenta (ya tenían `overflow-y:auto` + `min-height:0`) en vez de encogerse entera.
 
   const ownSelected = side === 'own' && shooter ? state.players[shooter] : null;
   const rivalSelected = side === 'rival' && shooter ? shooter : null;
@@ -142,7 +152,7 @@ export default function TabletConsole({
   const hasSanc = rivalYellowList.length > 0 || rivalExclList.length > 0 || rivalRedList.length > 0;
 
   return (
-    <div className="tc-grid" style={zoom < 1 ? { zoom } : undefined}>
+    <div className="tc-grid">
       <aside className="tc-left">
         <h3 className="tc-h">{ownHeader} · en pista</h3>
         <PlayerButtons players={courtPlayers} selected={!swap && side === 'own' ? shooter : null} onPick={pickOwn} wide marks={marks} tagOf={tagOf} canPick={canPick} />

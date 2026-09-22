@@ -19,37 +19,16 @@ export function useIsTablet() {
   return yes;
 }
 
-// La consola de tablet está pensada para 1280×800 (mockup). En pantallas más bajas
-// —un portátil de 1366×768 con la barra del navegador deja ~600 px— se reduce
-// TODO proporcionalmente (CSS `zoom`) para que siga cabiendo sin scroll. Nunca
-// agranda (máx. 1) ni baja de 0,6 (a partir de ahí sería ilegible).
-// 830, no 800: con la portería y la cancha a tamaño completo (ver BenchConsole,
-// 2026-09-22) el centro necesita un pelín más alto que 800 para caber justo;
-// de lo contrario a exactamente 800px de alto quedaba un scroll interno de
-// sobra en esa columna.
-// 2026-09-22 (más tarde): en una tablet real, hacía falta scroll para ver el teclado y,
-// AL hacer ese scroll, los botones cambiaban de sitio solos — esto medía
-// `window.innerHeight`, que en el navegador del móvil/tablet CRECE cuando la barra de
-// direcciones se oculta (típico al hacer scroll). `.bench-console` ya usa `100svh` (la
-// altura PEQUEÑA, la de con la barra visible — no cambia con el scroll) para su propio
-// alto; medir aquí en cambio `window.innerHeight` (que sí cambia) rehacía el zoom a
-// media pantalla, agrandando de golpe un contenido que ya no cabía en esa altura fija —
-// de ahí el "salto". Ahora se mide el alto YA RENDERIZADO de `.bench-console` (con
-// `ref`, igual que `useLaunchLayout` mide `.tc-center`): ese alto es estable, no depende
-// de si la barra del navegador está visible o no.
-const TABLET_DESIGN_HEIGHT = 830;
-export function useTabletZoom(ref) {
-  const read = () => (ref?.current ? ref.current.clientHeight : typeof window === 'undefined' ? TABLET_DESIGN_HEIGHT : window.innerHeight);
-  const clamp = (h) => Math.max(0.6, Math.min(1, h / TABLET_DESIGN_HEIGHT));
-  const [zoom, setZoom] = useState(() => clamp(read()));
-  useEffect(() => {
-    const onResize = () => setZoom(clamp(read()));
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return zoom;
-}
+// 2026-09-22: hubo aquí un `useTabletZoom()` que encogía TODA la consola de tablet con
+// un `zoom` de CSS (no estándar) en pantallas más bajas de 830px, para que cupiera sin
+// scroll. Se quita el mismo día: en una tablet real, con la Cronología (u otro contenido
+// más alto de lo normal) dentro de `.tc-center`, el `zoom` rompía el layout de golpe —
+// las columnas izquierda/derecha desaparecían y los botones quedaban descuadrados, sin
+// ninguna barra de scroll — un problema conocido de `zoom` con contenedores
+// `overflow:auto` en ciertos navegadores, que no se pudo reproducir en el navegador de
+// pruebas. Ahora cada columna se queda siempre a tamaño real (1:1); en una pantalla más
+// baja de la cuenta, cada una scrollea por su cuenta (`overflow-y:auto` + `min-height:0`,
+// ya lo tenían) en vez de encogerse entera.
 
 // Disposición del panel LANZAMIENTO en tablet/PC (2026-09-22, según el dibujo del
 // usuario): con sitio de sobra, los botones (ROBO/PÉRDIDA/AMARILLA/EXCLUSIÓN/ROJA/
@@ -62,8 +41,8 @@ export function useTabletZoom(ref) {
 // veces, con la columna sin activarse aun con sitio de sobra a la vista: el ancho de
 // ventana no es de fiar (zoom del navegador, barras del sistema...). Se probó a MEDIR
 // el ancho real de .tc-center con ResizeObserver, pero tampoco disparaba su callback
-// en las pruebas — en vez de eso, se mide directamente con clientWidth (igual que
-// useTabletZoom más arriba, que sí funciona) cada vez que la ventana cambia de tamaño.
+// en las pruebas — en vez de eso, se mide directamente con clientWidth cada vez que la
+// ventana cambia de tamaño (el mismo patrón, sin ResizeObserver, que sí funciona).
 // Estos números tienen que ser iguales a los de App.css (el padding de .tc-center,
 // el ancho de .tc-launchcol, el separador .tc-launchdivider entre los botones y el
 // lanzamiento, y el gap de .tc-launchrow--wide, que con el separador de por medio se

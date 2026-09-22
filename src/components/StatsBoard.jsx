@@ -15,9 +15,8 @@ function heat(v, max, goals) {
 }
 
 // `compact` (móvil): usa el tamaño reducido de useBoardScale, igual que el resto de la
-// consola de móvil. En tablet siempre a tamaño completo (el ajuste a la pantalla ya lo
-// hace el `zoom` de toda la columna, ver useTabletZoom) — sin esto se aplicaban los dos
-// ajustes a la vez y salía más pequeño que la demo.
+// consola de móvil. En tablet siempre a tamaño completo (1:1) — si no cabe entera, es
+// `.tc-center` quien scrollea, no el tablero quien se encoge.
 export default function StatsBoard({ zones, cells, outs, goalsView, compact = false }) {
   const phoneScale = useBoardScale();
   const { k, gk } = compact ? phoneScale : { k: 1, gk: 1 };
