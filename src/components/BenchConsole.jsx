@@ -76,6 +76,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   // En móvil la pantalla de siempre es la consola nueva (PhoneConsole); las pestañas
   // clásicas quedan aparte para corregir datos.
   const [view, setView] = useState('consola');
+  // Tamaño de la portería y la cancha: en tablet siempre completo (ver arriba); en móvil,
+  // el de siempre según el alto de pantalla.
+  const TABLET_BOARD_SCALE = { k: 1, gk: 1 };
   const [entryMode, setEntryMode] = useState(readEntryMode);
   function changeEntryMode(mode) {
     setEntryMode(mode);
@@ -519,7 +522,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           shortcuts={rivalShortcuts}
           sanctioned={rivalSanctioned}
           statusOf={rivalStatusOf}
-          scale={boardScale}
+          scale={TABLET_BOARD_SCALE}
           isRunning={isRunning}
           actions={tabletActions}
           assistFor={assistFor}

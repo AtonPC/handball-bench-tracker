@@ -23,7 +23,11 @@ export function useIsTablet() {
 // —un portátil de 1366×768 con la barra del navegador deja ~600 px— se reduce
 // TODO proporcionalmente (CSS `zoom`) para que siga cabiendo sin scroll. Nunca
 // agranda (máx. 1) ni baja de 0,6 (a partir de ahí sería ilegible).
-const TABLET_DESIGN_HEIGHT = 800;
+// 830, no 800: con la portería y la cancha a tamaño completo (ver BenchConsole,
+// 2026-09-22) el centro necesita un pelín más alto que 800 para caber justo;
+// de lo contrario a exactamente 800px de alto quedaba un scroll interno de
+// sobra en esa columna.
+const TABLET_DESIGN_HEIGHT = 830;
 export function useTabletZoom() {
   const read = () => (typeof window === 'undefined' ? 1 : Math.max(0.6, Math.min(1, window.innerHeight / TABLET_DESIGN_HEIGHT)));
   const [zoom, setZoom] = useState(read);

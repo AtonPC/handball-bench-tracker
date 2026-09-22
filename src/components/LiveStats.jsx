@@ -237,7 +237,7 @@ export default function LiveStats({
               </button>
             ))}
           </div>
-          <StatsBoard zones={zs.zones} cells={zs.cells} outs={zs.outs} goalsView={metric === 'goals'} />
+          <StatsBoard zones={zs.zones} cells={zs.cells} outs={zs.outs} goalsView={metric === 'goals'} compact={compact} />
         </>
       )}
     </div>

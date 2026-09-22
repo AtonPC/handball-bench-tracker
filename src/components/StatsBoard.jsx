@@ -14,9 +14,13 @@ function heat(v, max, goals) {
   return goals ? `rgba(22,121,75,${a.toFixed(2)})` : `rgba(192,57,43,${a.toFixed(2)})`;
 }
 
-export default function StatsBoard({ zones, cells, outs, goalsView }) {
-  const scale = useBoardScale();
-  const { k, gk } = scale;
+// `compact` (móvil): usa el tamaño reducido de useBoardScale, igual que el resto de la
+// consola de móvil. En tablet siempre a tamaño completo (el ajuste a la pantalla ya lo
+// hace el `zoom` de toda la columna, ver useTabletZoom) — sin esto se aplicaban los dos
+// ajustes a la vez y salía más pequeño que la demo.
+export default function StatsBoard({ zones, cells, outs, goalsView, compact = false }) {
+  const phoneScale = useBoardScale();
+  const { k, gk } = compact ? phoneScale : { k: 1, gk: 1 };
   const zval = (name) => {
     const q = zones[name];
     return q ? (goalsView ? q.g : q.t - q.g) : 0;
