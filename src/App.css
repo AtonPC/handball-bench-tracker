@@ -4191,16 +4191,30 @@
    él (--k/--gk calculados en useLaunchLayout, según cuánto sobre; nunca por debajo del
    tamaño de siempre). align-items:stretch (por defecto) hace que la columna ocupe el
    mismo alto que el lanzamiento, para poder empujar los sancionados al fondo. */
-.tc-launchrow--wide { max-width: none; width: 100%; flex-direction: row; justify-content: center; gap: 14px; }
+/* align-items: stretch (no el "center" que hereda .tc-launchrow) — si no, con la
+   columna de botones más corta que el lanzamiento, el navegador los centraba en
+   vertical el uno respecto al otro y CAMBIO quedaba por debajo del principio de la
+   portería en vez de a la misma altura. */
+.tc-launchrow--wide { max-width: none; width: 100%; flex-direction: row; align-items: stretch; justify-content: center; gap: 14px; }
 .tc-launchcol { width: 150px; flex: none; display: flex; flex-direction: column; }
 .tc-lcol-buttons { display: flex; flex-direction: column; gap: 6px; }
 .tc-lcol-buttons .tc-act { font-size: 12px; padding: 0 6px; }
 .tc-lcol-buttons .tc-act--excl { box-shadow: inset -5px 0 0 var(--text); }
 .tc-lcol-buttons .tc-act--yellow { box-shadow: inset -5px 0 0 var(--card-yellow); }
 .tc-lcol-buttons .tc-act--red { box-shadow: inset -5px 0 0 #7a1d14; }
-.tc-lcol-sanc { display: flex; gap: 6px; margin-top: auto; padding-top: 10px; }
+/* Amonestados del rival: el bloque entero (cabecera + las dos columnas) se empuja al
+   fondo de la columna de botones (que con align-items:stretch ocupa todo el alto del
+   lanzamiento), buscando quedar a la altura de su información en la columna de
+   jugadores. */
+.tc-lcol-sancwrap { margin-top: auto; padding-top: 10px; }
+.tc-lcol-sancwrap .tc-h2 { margin-bottom: 4px; }
+.tc-lcol-sanc { display: flex; gap: 6px; }
 .tc-lcol-sancol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .tc-launchrow--wide .tc-launchmain { width: auto; flex: 1 1 auto; min-width: 0; }
+/* Disposición compacta (sin sitio de sobra): los amonestados del rival, en una sola
+   fila debajo de los 6 botones — antes se perdían de vista del todo en esta vista. */
+.tc-sancrow { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.tc-sancrow-l { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin-right: 2px; }
 /* Dorsales rivales con esa sanción: se puede tocar uno para seleccionarlo, como un
    acceso directo. */
 .tc-sanpill { height: 26px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-alt); font-weight: 800; font-size: 11px; font-family: var(--font-mono); cursor: pointer; white-space: nowrap; }

@@ -140,6 +140,7 @@ export default function TabletConsole({
   const rivalYellowList = [...new Set(rivalYellowCards.map((y) => String(y.number)))];
   const rivalExclList = rivalExclusionSummary.filter((e) => !e.disqualified && e.count > 0);
   const rivalRedList = rivalExclusionSummary.filter((e) => e.disqualified);
+  const hasSanc = rivalYellowList.length > 0 || rivalExclList.length > 0 || rivalRedList.length > 0;
 
   return (
     <div className="tc-grid" style={zoom < 1 ? { zoom } : undefined}>
@@ -225,18 +226,21 @@ export default function TabletConsole({
                   {/* Dorsales rivales sancionados, en dos columnas (amarilla y roja) debajo
                       de los botones — antes vivían en "Sancionados", en la columna de
                       jugadores (ver tc-left más arriba). */}
-                  {(rivalYellowList.length > 0 || rivalExclList.length > 0 || rivalRedList.length > 0) && (
-                    <div className="tc-lcol-sanc">
-                      <div className="tc-lcol-sancol tc-lcol-sancol--yellow">
-                        {rivalYellowList.map((n) => <button key={n} type="button" className="tc-sanpill tc-sanpill--yellow" onClick={() => pickRival(n)}>#{n}</button>)}
-                      </div>
-                      <div className="tc-lcol-sancol tc-lcol-sancol--red">
-                        {rivalExclList.map((e) => (
-                          <button key={`e${e.number}`} type="button" className="tc-sanpill tc-sanpill--excl" onClick={() => pickRival(e.number)}>
-                            #{e.number} {e.activeRemainingMs > 0 ? `${formatClock(e.activeRemainingMs)} · ` : ''}{e.count}/3
-                          </button>
-                        ))}
-                        {rivalRedList.map((e) => <button key={`r${e.number}`} type="button" className="tc-sanpill tc-sanpill--red" onClick={() => pickRival(e.number)}>#{e.number}</button>)}
+                  {hasSanc && (
+                    <div className="tc-lcol-sancwrap">
+                      <h4 className="tc-h2">Amonestados {rivalHeader}</h4>
+                      <div className="tc-lcol-sanc">
+                        <div className="tc-lcol-sancol tc-lcol-sancol--yellow">
+                          {rivalYellowList.map((n) => <button key={n} type="button" className="tc-sanpill tc-sanpill--yellow" onClick={() => pickRival(n)}>#{n}</button>)}
+                        </div>
+                        <div className="tc-lcol-sancol tc-lcol-sancol--red">
+                          {rivalExclList.map((e) => (
+                            <button key={`e${e.number}`} type="button" className="tc-sanpill tc-sanpill--excl" onClick={() => pickRival(e.number)}>
+                              #{e.number} {e.activeRemainingMs > 0 ? `${formatClock(e.activeRemainingMs)} · ` : ''}{e.count}/3
+                            </button>
+                          ))}
+                          {rivalRedList.map((e) => <button key={`r${e.number}`} type="button" className="tc-sanpill tc-sanpill--red" onClick={() => pickRival(e.number)}>#{e.number}</button>)}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -300,9 +304,9 @@ export default function TabletConsole({
                     </span>
                   </div>
                 </div>
-                {/* Fila compacta de 6, igual que la demo aprobada — sin los dorsales
-                    sancionados debajo (no caben sin que la página entera necesite
-                    scroll; solo salen en la disposición ancha, arriba). */}
+                {/* Fila compacta de 6, igual que la demo aprobada. Debajo, una fila (no
+                    dos columnas: aquí no sobra ancho) con los dorsales rivales
+                    sancionados — sin ella se perdían de vista en esta disposición. */}
                 <div className="tc-actions">
                   <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('steal')}><Zap size={16} /> ROBO</button>
                   <button type="button" className="tc-act" disabled={!isRunning || !!swap} onClick={() => teamAction('turnover')}><CircleSlash size={16} /> PÉRDIDA</button>
@@ -311,6 +315,18 @@ export default function TabletConsole({
                   <button type="button" className="tc-act tc-act--red" disabled={!isRunning || !!swap || (!ownSelected && !rivalSelected) || (ownSelected && ownSelected.disqualified) || !!rivalStatus?.red} onClick={() => sanction('red')}>ROJA</button>
                   <button type="button" className={`tc-act ${swap ? 'tc-act--camon' : 'tc-act--dark'}`} disabled={!state.canSubstitute} onClick={toggleSwap} aria-pressed={!!swap}><ArrowLeftRight size={16} /> CAMBIO</button>
                 </div>
+                {hasSanc && (
+                  <div className="tc-sancrow">
+                    <span className="tc-sancrow-l">Amonestados {rivalHeader}</span>
+                    {rivalYellowList.map((n) => <button key={`y${n}`} type="button" className="tc-sanpill tc-sanpill--yellow" onClick={() => pickRival(n)}>#{n}</button>)}
+                    {rivalExclList.map((e) => (
+                      <button key={`e${e.number}`} type="button" className="tc-sanpill tc-sanpill--excl" onClick={() => pickRival(e.number)}>
+                        #{e.number} {e.activeRemainingMs > 0 ? `${formatClock(e.activeRemainingMs)} · ` : ''}{e.count}/3
+                      </button>
+                    ))}
+                    {rivalRedList.map((e) => <button key={`r${e.number}`} type="button" className="tc-sanpill tc-sanpill--red" onClick={() => pickRival(e.number)}>#{e.number}</button>)}
+                  </div>
+                )}
               </div>
             )}
           </>
