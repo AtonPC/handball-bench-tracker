@@ -4067,14 +4067,17 @@
 
 /* ---------- Consola de tablet / PC: tres columnas (TabletConsole), 2026-09-21 ---------- */
 /* 2026-09-22: columna izquierda más ancha que en la demo (262px) — el teclado del
-   dorsal rival se quedaba con números pequeños para el dedo; se la quita al centro. */
-.tc-grid { display: grid; grid-template-columns: 330px minmax(0, 1fr) 386px; flex: 1; min-height: 0; background: var(--bg); }
+   dorsal rival se quedaba con números pequeños para el dedo; se la quita al centro.
+   Con clamp() crece un poco más en pantallas anchas de sobra (el usuario probó en su
+   tablet y le sobraba sitio a la derecha), pero nunca baja de 330px — ese es el mínimo
+   ya comprobado sin scroll con el centro a 1280×800, la combinación más ajustada. */
+.tc-grid { display: grid; grid-template-columns: clamp(330px, 26vw, 410px) minmax(0, 1fr) 386px; flex: 1; min-height: 0; background: var(--bg); }
 /* Teclado y accesos del dorsal rival, más grandes que el resto de teclados iguales
    (los del móvil o los de la falta de 7 m) — aquí sí sobra ancho para agrandarlos. */
-.tc-rival .shp-keys button { height: 46px; font-size: 20px; }
-.tc-rival .shp-chip, .tc-rival .shp-dorsal-box { height: 54px; }
-.tc-rival .shp-chip-n, .tc-rival .shp-dorsal-box-n { font-size: 24px; }
-.tc-rival .shp-chip-s, .tc-rival .shp-dorsal-box-s { font-size: 10px; }
+.tc-rival .shp-keys button { height: 54px; font-size: 23px; }
+.tc-rival .shp-chip, .tc-rival .shp-dorsal-box { height: 60px; }
+.tc-rival .shp-chip-n, .tc-rival .shp-dorsal-box-n { font-size: 27px; }
+.tc-rival .shp-chip-s, .tc-rival .shp-dorsal-box-s { font-size: 11px; }
 .tc-left, .tc-right { min-height: 0; overflow-y: auto; background: var(--panel); }
 .tc-left { border-right: 1px solid var(--border); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tc-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
