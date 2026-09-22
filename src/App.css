@@ -3962,10 +3962,14 @@
   position: absolute; left: calc(75px * var(--k)); top: 0; width: calc(450px * var(--k)); height: calc(100px * var(--k)); background: var(--accent);
   border-radius: 0 0 calc(180px * var(--k)) calc(180px * var(--k)) / 0 0 calc(100px * var(--k)) calc(100px * var(--k));
 }
+/* La línea de 9 m dibujada va centrada en el hueco entre LD/C/LI y LD9/C9/LI9
+   (k=1.85 a 1.91 en utils/shotBoard.js, BOARD_ZONES) — si esos límites cambian
+   ahí, hay que recalcular estos cuatro números también (k=1.88, el centro del
+   hueco: RX·k=338.4, RY·k=188, ancho 2·(A+RX·k)=766.8, left=CX−A−RX·k=−83.4). */
 .sb-nine {
-  position: absolute; left: calc(-15px * var(--k)); top: 0; width: calc(630px * var(--k)); height: calc(150px * var(--k)); box-sizing: border-box;
+  position: absolute; left: calc(-83.4px * var(--k)); top: 0; width: calc(766.8px * var(--k)); height: calc(188px * var(--k)); box-sizing: border-box;
   border: 2px dashed #7f93b0; border-top: 0; pointer-events: none;
-  border-radius: 0 0 calc(270px * var(--k)) calc(270px * var(--k)) / 0 0 calc(150px * var(--k)) calc(150px * var(--k));
+  border-radius: 0 0 calc(338.4px * var(--k)) calc(338.4px * var(--k)) / 0 0 calc(188px * var(--k)) calc(188px * var(--k));
 }
 .sb-zone { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; padding: 0; cursor: pointer; background: rgba(29, 95, 174, 0.12); }
 .sb-zone--w { background: rgba(14, 116, 144, 0.22); }

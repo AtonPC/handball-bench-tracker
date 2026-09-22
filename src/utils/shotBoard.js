@@ -38,8 +38,9 @@ export const BOARD_ZONES = [
   { zone: 'Extremo derecho', code: 'ED', t: 'w', u: [0, 0.42], k: [1.03, 3], lu: 0.1, lk: 1.6 },
   // 2026-09-22: LD/C/LI (lo que más se toca) ganan terreno a LD9/C9/LI9 — antes eran casi
   // un cuarto del espacio de esa franja, ahora está sobre el 40/60 que pidió el usuario.
-  // Rompe la correspondencia exacta con la línea de 9 m dibujada (sigue en k=1.5): es
-  // a propósito, prioriza el tamaño del botón sobre el ajuste centimétrico a la línea.
+  // La línea de 9 m dibujada (App.css, .sb-nine) se movió con ellas: sigue centrada en
+  // el hueco entre el final de la zona cercana y el principio de la lejana (k=1.88,
+  // el punto medio entre 1.85 y 1.91) — si cambian estos números, cambia también ahí.
   { zone: 'Lateral derecho', code: 'LD', t: 'n', u: [0.46, 0.8], k: [1.03, 1.85], lu: 0.54, lk: 1.44 },
   { zone: 'Lateral derecho 9m', code: 'LD 9', t: 'f', u: [0.46, 0.8], k: [1.91, 3], lu: 0.6, lk: 2.26 },
   { zone: 'Central', code: 'C', t: 'n', u: [0.84, 2.16], k: [1.03, 1.85], lu: 0.9, lk: 1.44 },
