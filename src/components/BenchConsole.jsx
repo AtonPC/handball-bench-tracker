@@ -275,6 +275,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
     <LiveStats
       state={state}
       team={team}
+      matchId={matchId}
       shotEvents={shotEvents}
       saveEvents={saveEvents}
       rivalGoals={rivalGoals}
@@ -539,18 +540,6 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
               rivalYellowCards={rivalYellowCards}
               teamActions={teamActions}
               possessions={state.possessions}
-            />
-          )}
-          chronologyNode={(
-            <ConsoleChronology
-              matchId={matchId}
-              state={state}
-              shotEvents={shotEvents}
-              saveEvents={saveEvents}
-              rivalGoals={rivalGoals}
-              rivalMisses={rivalMisses}
-              rivalExclusions={rivalExclusionsLive}
-              rivalYellowCards={rivalYellowCards}
             />
           )}
           statsNode={statsNode}

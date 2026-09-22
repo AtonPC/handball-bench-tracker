@@ -1,18 +1,22 @@
 import { useMemo, useState } from 'react';
 import StatsBoard from './StatsBoard';
+import ConsoleChronology from './ConsoleChronology';
 import { GOAL_ZONES, OUT_ZONES, POST_ZONES } from '../shotZones';
 import { teamInitials } from '../utils/teamColors';
 
 // Estadísticas completas del partido en directo (mockup aprobado, 2026-09-21): centro de
 // la consola de tablet y hoja «Estadísticas» del móvil.
 //  - Arriba, el escudo de cada equipo (el elegido, encendido) y el selector
-//    Jugadores | Zonas.
+//    Jugadores | Zonas | Cronología.
 //  - Jugadores: cinco tarjetas de líderes (categoría, número y «#dorsal Nombre») y una
 //    tabla compacta — Jugador, G/T, %, P/T, P%, Rob, Pér, Exc, Am, Roj, Asi (del rival:
 //    Dorsal, G/T, %, Rob, Pér, Exc, Am, Roj). El máximo de cada columna va resaltado, los
 //    ceros en gris y las cabeceras ordenan (primer toque de mayor a menor, segundo al revés).
 //  - Zonas: «Goles» (goles/tiros por zona, en verde) o «Fallos» (en rojo), filtrable por
 //    jugador o dorsal, sobre la portería y la cancha (StatsBoard).
+//  - Cronología (2026-09-22, antes vivía en la columna derecha de la consola de tablet —
+//    ahí no cabía sin desbordar la columna entera, sin su propia barra de scroll): no
+//    depende del selector de equipo (Jugadores y Zonas sí) — es la misma para los dos.
 const EMPTY = { g: 0, t: 0, sv: 0, f: 0, ro: 0, pe: 0, ex: 0, am: 0, rj: 0, as: 0 };
 
 const COLS = {
@@ -94,11 +98,11 @@ function zoneStats(shots, who) {
 }
 
 export default function LiveStats({
-  state, team, shotEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
+  state, team, matchId, shotEvents = [], saveEvents = [], rivalGoals = [], rivalMisses = [], rivalExclusions = [],
   rivalYellowCards = [], teamActions = [], compact = false,
 }) {
   const [who, setWho] = useState('own'); // 'own' | 'rival'
-  const [tab, setTab] = useState('players'); // 'players' | 'zones'
+  const [tab, setTab] = useState('players'); // 'players' | 'zones' | 'crono'
   const [sort, setSort] = useState({ key: 'gt', dir: 'desc' });
   const [metric, setMetric] = useState('goals'); // 'goals' | 'misses'
   const [pick, setPick] = useState(''); // jugador o dorsal concreto en «Zonas»
@@ -183,10 +187,13 @@ export default function LiveStats({
   return (
     <div className={`ls${compact ? ' ls--compact' : ''}`}>
       <div className="ls-head">
-        <div className="ls-teams">{crest('own')}{crest('rival')}</div>
+        {/* La cronología no depende de qué equipo esté elegido (es la misma para los
+            dos) — el selector de equipo no pinta nada ahí, así que se oculta. */}
+        {tab !== 'crono' && <div className="ls-teams">{crest('own')}{crest('rival')}</div>}
         <div className="ls-seg" role="group" aria-label="Qué ver">
           <button type="button" className={tab === 'players' ? 'on' : ''} onClick={() => setTab('players')}>{own ? 'Jugadores' : 'Dorsales'}</button>
           <button type="button" className={tab === 'zones' ? 'on' : ''} onClick={() => setTab('zones')}>Zonas</button>
+          <button type="button" className={tab === 'crono' ? 'on' : ''} onClick={() => setTab('crono')}>Cronología</button>
         </div>
       </div>
 
@@ -239,6 +246,19 @@ export default function LiveStats({
           </div>
           <StatsBoard zones={zs.zones} cells={zs.cells} outs={zs.outs} goalsView={metric === 'goals'} compact={compact} />
         </>
+      )}
+
+      {tab === 'crono' && (
+        <ConsoleChronology
+          matchId={matchId}
+          state={state}
+          shotEvents={shotEvents}
+          saveEvents={saveEvents}
+          rivalGoals={rivalGoals}
+          rivalMisses={rivalMisses}
+          rivalExclusions={rivalExclusions}
+          rivalYellowCards={rivalYellowCards}
+        />
       )}
     </div>
   );

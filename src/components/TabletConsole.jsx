@@ -24,21 +24,21 @@ import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './S
 //  - CAMBIO no abre ninguna ventana: entra en «modo cambio» sobre la propia
 //    columna izquierda (se tocan los que salen y los que entran, tantos como se
 //    quiera) y se confirma en el aviso de arriba.
-//  - Derecha: TabletRight (reloj, marcador, pasivos, Resumen / Cronología).
+//  - Derecha: TabletRight (reloj, marcador, pasivos, Resumen). La Cronología vive
+//    dentro de Estadísticas (ver LiveStats), no aquí (2026-09-22).
 // No sabe nada de Firestore: BenchConsole le pasa los datos ya preparados y las
 // funciones (`actions`) que anotan.
 export default function TabletConsole({
   store, team, onBack, onFinish, onNeedLineup,
   courtPlayers, benchPlayers, shortcuts, statusOf, isRunning, zoom,
   rivalExclusionSummary = [], rivalYellowCards = [],
-  actions, assistFor, onAssist, summaryNode, chronologyNode, statsNode,
+  actions, assistFor, onAssist, summaryNode, statsNode,
 }) {
   const { state } = store;
   const [side, setSide] = useState('own');
   const [shooter, setShooter] = useState(null); // id (nuestro) o dorsal (rival)
   const [draftKey, setDraftKey] = useState(0); // cambia al registrar: el panel vuelve a empezar
   const [center, setCenter] = useState('launch'); // 'launch' | 'stats'
-  const [rightTab, setRightTab] = useState('resumen');
   const [swap, setSwap] = useState(null); // modo cambio: { outs: [ids], ins: [ids] }
   const [progress, setProgress] = useState({ shooter: false, origin: false, goal: false, seven: false });
   // Con sitio de sobra, los botones se agrupan a la izquierda y la portería/cancha
@@ -348,10 +348,7 @@ export default function TabletConsole({
         isRunning={isRunning}
         onPassive={passive}
         onFlash={(text, detail) => flash(text, detail, 'Posesión igual')}
-        rightTab={rightTab}
-        onRightTab={setRightTab}
         summaryNode={summaryNode}
-        chronologyNode={chronologyNode}
       />
     </div>
   );

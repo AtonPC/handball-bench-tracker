@@ -4136,7 +4136,6 @@
 /* ---------- Columna derecha de la consola de tablet (TabletRight): todo sin scroll ---------- */
 .tc-right { overflow: hidden; padding: 0 12px 8px; gap: 8px; }
 .tc-right .tc-seg { margin: 8px 0 0; }
-.tc-right .tc-tabs { margin: 0; }
 .tc-right .tc-tabbody { flex: 1; overflow-y: auto; padding: 8px 0 0; }
 .tc-toprow { display: flex; gap: 6px; flex: none; }
 .tc-mini { flex: 1; height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #fff; font-weight: 800; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 0; }

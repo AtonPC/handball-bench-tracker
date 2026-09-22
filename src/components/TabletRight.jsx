@@ -9,15 +9,20 @@ import BallIcon from './BallIcon';
 // Pasivo a nosotros / al rival: evento de equipo (cuenta como pérdida del que lo sufre).
 // Todo cabe sin scroll: conmutador Lanzamiento | Estadísticas, atajos
 // (Partidos · Deshacer · Finalizar), cuadro del reloj, marcador con la pelota de
-// posesión sobre el escudo, bolitas de tiempos muertos y, debajo, las pestañas
-// Resumen / Cronología, que son lo único que scrollea (dentro de su hueco).
+// posesión sobre el escudo, bolitas de tiempos muertos y, debajo, el Resumen, que es
+// lo único que scrollea (dentro de su hueco).
 //  - Reloj: con el partido PARADO, tocar la hora abre −1 min / +1 min / −10 s /
 //    +10 s para corregirlo (a veces no se nota que estaba parado).
 //  - Bolitas de tiempo muerto: pulsar la siguiente la marca y PARA el reloj; pulsar
 //    la última quita el tiempo muerto (solo el del periodo en curso).
 //  - Pelota: se toca el escudo del equipo que la tiene.
+// 2026-09-22: la Cronología vivía aquí, en una pestaña junto a Resumen — en una tablet
+// real, sin su propia barra de scroll, se desbordaba y se hacía una columna infinita en
+// vez de quedarse dentro de su hueco (a diferencia del PC, donde no se notaba tanto). Se
+// muda dentro de Estadísticas (LiveStats), que ya tiene su propio scroll acotado
+// (.tc-center, con overflow-y:auto y min-height:0) — por ahora aquí solo queda Resumen.
 export default function TabletRight({
-  store, team, onBack, onFinish, onNeedLineup, center, onCenter, rightTab, onRightTab, summaryNode, chronologyNode, isRunning, onPassive, onFlash,
+  store, team, onBack, onFinish, onNeedLineup, center, onCenter, summaryNode, isRunning, onPassive, onFlash,
 }) {
   const { clock, score, possession, ownTeamName, rivalName, rivalCrestUrl, isHome, alevinRules, lineups } = store.state;
   const ctl = useClockControls(store, { onNeedLineup, onFinish });
@@ -154,11 +159,8 @@ export default function TabletRight({
         <button type="button" disabled={!isRunning || (!!possession && possession !== 'rival')} title="Solo cuando el rival tiene la pelota" onClick={() => onPassive('rival')}>Pasivo al rival</button>
       </div>
 
-      <div className="tc-tabs" role="tablist">
-        <button type="button" className={rightTab === 'resumen' ? 'on' : ''} onClick={() => onRightTab('resumen')}>Resumen</button>
-        <button type="button" className={rightTab === 'crono' ? 'on' : ''} onClick={() => onRightTab('crono')}>Cronología</button>
-      </div>
-      <div className="tc-tabbody">{rightTab === 'resumen' ? summaryNode : chronologyNode}</div>
+      <h3 className="tc-h">Resumen</h3>
+      <div className="tc-tabbody">{summaryNode}</div>
     </aside>
   );
 }
