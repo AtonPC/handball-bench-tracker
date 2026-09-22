@@ -18,6 +18,9 @@ firebase-debug.log
 firestore-debug.log
 .env
 
+# Arnés de pruebas visuales (TabletConsole con datos ficticios, sin Firebase)
+.harness
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

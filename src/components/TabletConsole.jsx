@@ -168,10 +168,12 @@ export default function TabletConsole({
         </div>
       </aside>
 
+      <div className="tc-divider" aria-hidden="true" />
+
       <main className="tc-center" ref={launch.ref}>
         {center === 'launch' ? (
           <>
-            <div className="tc-top">
+            <div className={`tc-top${launch.wide ? ' tc-top--wide' : ''}`}>
               {swap ? (
                 <div className="tc-swapb">
                   <span>{swapText}</span>
