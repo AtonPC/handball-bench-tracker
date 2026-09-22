@@ -168,7 +168,7 @@ export default function TabletConsole({
         </div>
       </aside>
 
-      <main className="tc-center">
+      <main className="tc-center" ref={launch.ref}>
         {center === 'launch' ? (
           <>
             <div className="tc-top">

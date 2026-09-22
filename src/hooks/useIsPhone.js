@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Escalas de dibujo según el dispositivo (mismo punto de corte de móvil que App.css: 599px).
 // Tamaño de la cancha y la portería del panel LANZAMIENTO según el dispositivo:
@@ -45,30 +45,32 @@ export function useTabletZoom() {
 // dorsales rivales sancionados debajo en dos columnas (amarilla y roja); la portería y
 // la cancha CRECEN para ocupar el ancho que deja libre esa columna. Sin sitio de sobra,
 // se queda tal cual la demo: fila compacta de 6 debajo del lanzamiento, a tamaño fijo.
-// Es un cálculo analítico (mismos números que el ancho de columnas en App.css), no
-// mide el DOM — más simple y ya es el patrón de useTabletZoom más arriba — pero hay
-// que mantener estas constantes iguales a las de App.css si cambia el ancho de algo.
-const TC_LEFT_MIN = 330, TC_LEFT_VW = 0.26, TC_LEFT_MAX = 410, TC_RIGHT_W = 386;
-const TC_CENTER_PAD = 32, TC_GREEN_W = 150, TC_GAP = 14, TC_SAFETY = 20;
-const TC_WIDE_MIN_CENTER = 800; // por debajo, ni cabe la columna con holgura
+// 2026-09-22 (más tarde el mismo día): esto era antes un cálculo a partir del ancho de
+// VENTANA (con las mismas constantes que .tc-left/.tc-right en App.css) — falló DOS
+// veces, con la columna sin activarse aun con sitio de sobra a la vista: el ancho de
+// ventana no es de fiar (zoom del navegador, barras del sistema...). Se probó a MEDIR
+// el ancho real de .tc-center con ResizeObserver, pero tampoco disparaba su callback
+// en las pruebas — en vez de eso, se mide directamente con clientWidth (igual que
+// useTabletZoom más arriba, que sí funciona) cada vez que la ventana cambia de tamaño.
+// Estos dos números tienen que ser iguales a los de App.css (el padding de .tc-center,
+// y .tc-launchcol y el gap de .tc-launchrow--wide) — es la única suposición que queda,
+// y es exacta (no un margen de sobra "por si acaso": eso fue justo lo que sobreestimaba
+// antes cuánto hacía falta).
+const TC_PAD = 32, TC_GREEN_W = 140, TC_GAP = 10;
 const BOARD_BASE_W = 600, BOARD_MAX_K = 1.2;
 export function useLaunchLayout() {
-  const read = () => {
-    if (typeof window === 'undefined') return { wide: false, k: 1, gk: 1 };
-    const left = Math.max(TC_LEFT_MIN, Math.min(TC_LEFT_MAX, window.innerWidth * TC_LEFT_VW));
-    const center = window.innerWidth - left - TC_RIGHT_W;
-    if (center < TC_WIDE_MIN_CENTER) return { wide: false, k: 1, gk: 1 };
-    const avail = center - TC_CENTER_PAD - TC_GREEN_W - TC_GAP - TC_SAFETY;
-    const k = Math.max(1, Math.min(BOARD_MAX_K, avail / BOARD_BASE_W));
-    return { wide: true, k, gk: k };
-  };
-  const [layout, setLayout] = useState(read);
+  const ref = useRef(null);
+  const [width, setWidth] = useState(0);
   useEffect(() => {
-    const onResize = () => setLayout(read());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const measure = () => setWidth(ref.current ? ref.current.clientWidth : 0);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, []);
-  return layout;
+  const avail = width - TC_PAD - TC_GREEN_W - TC_GAP;
+  const wide = avail >= BOARD_BASE_W;
+  const k = wide ? Math.max(1, Math.min(BOARD_MAX_K, avail / BOARD_BASE_W)) : 1;
+  return { ref, wide, k, gk: k };
 }
 
 export function useBoardScale() {

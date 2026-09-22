@@ -4195,8 +4195,11 @@
    columna de botones más corta que el lanzamiento, el navegador los centraba en
    vertical el uno respecto al otro y CAMBIO quedaba por debajo del principio de la
    portería en vez de a la misma altura. */
-.tc-launchrow--wide { max-width: none; width: 100%; flex-direction: row; align-items: stretch; justify-content: center; gap: 14px; }
-.tc-launchcol { width: 150px; flex: none; display: flex; flex-direction: column; }
+/* 140px y 10px: iguales a TC_GREEN_W/TC_GAP en useLaunchLayout() (useIsPhone.js) — si
+   cambian aquí, hay que cambiarlos también allí, o el cálculo de cuándo cabe deja de
+   ser exacto. */
+.tc-launchrow--wide { max-width: none; width: 100%; flex-direction: row; align-items: stretch; justify-content: center; gap: 10px; }
+.tc-launchcol { width: 140px; flex: none; display: flex; flex-direction: column; }
 .tc-lcol-buttons { display: flex; flex-direction: column; gap: 6px; }
 .tc-lcol-buttons .tc-act { font-size: 12px; padding: 0 6px; }
 .tc-lcol-buttons .tc-act--excl { box-shadow: inset -5px 0 0 var(--text); }
