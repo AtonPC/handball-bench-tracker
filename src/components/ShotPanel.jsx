@@ -69,7 +69,7 @@ export function PlayerButtons({ players, selected, onPick, extra, wide, bench, t
             className={`shp-player${p.isGK ? ' shp-player--gk' : ''}${selected === p.id ? ' shp-player--sel' : ''}${off ? ' shp-player--off' : ''}${tag ? ` shp-player--${tag.kind}` : ''}${mark ? ` shp-player--${mark}` : ''}`}
             disabled={canPick ? !canPick(p) : off}
             onClick={() => onPick(p.id)}
-            aria-label={`Dorsal ${p.number} ${p.name}${tag ? (tag.kind === 'yellow' ? ' con amarilla' : tag.kind === 'red' ? ' expulsado' : ' excluido') : ''}`}
+            aria-label={`Dorsal ${p.number} ${p.name}${tag ? (tag.kind === 'yellow' ? ' con amarilla' : tag.kind === 'red' ? ' expulsado' : tag.kind === 'exclcount' ? ' con exclusiones previas' : ' excluido') : ''}`}
           >
             <span className="shp-player-n">{p.number}</span>
             <span className="shp-player-name">{(p.name || '').split(' ')[0]}</span>

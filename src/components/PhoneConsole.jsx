@@ -39,7 +39,7 @@ function PlayerGrid({ players, marks, onPick, canPick }) {
             className={`ph-pk${p.isGK ? ' ph-pk--gk' : ''}${mark ? ` ph-pk--${mark}` : ''}${tag ? ` ph-pk--${tag.kind}` : ''}`}
             disabled={!canPick(p)}
             onClick={() => onPick(p.id)}
-            aria-label={`Dorsal ${p.number} ${p.name}${tag ? (tag.kind === 'yellow' ? ' con amarilla' : tag.kind === 'red' ? ' expulsado' : ' excluido') : ''}`}
+            aria-label={`Dorsal ${p.number} ${p.name}${tag ? (tag.kind === 'yellow' ? ' con amarilla' : tag.kind === 'red' ? ' expulsado' : tag.kind === 'exclcount' ? ' con exclusiones previas' : ' excluido') : ''}`}
           >
             <b>{p.number}</b>
             <span>{(p.name || '').split(' ')[0]}</span>

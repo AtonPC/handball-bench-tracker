@@ -520,7 +520,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           courtPlayers={courtPlayers}
           benchPlayers={benchPlayers.filter((p) => !p.disqualified)}
           shortcuts={rivalShortcuts}
-          sanctioned={rivalSanctioned}
+          rivalExclusionSummary={rivalExclusionSummary}
+          rivalYellowCards={rivalYellowCards}
           statusOf={rivalStatusOf}
           scale={TABLET_BOARD_SCALE}
           isRunning={isRunning}
