@@ -4084,11 +4084,7 @@
 .tc-left, .tc-right { min-height: 0; overflow-y: auto; background: var(--panel); }
 .tc-left { border-right: 1px solid var(--border); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tc-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-/* container-type (2026-09-22): la fila del lanzamiento decide su propia disposición
-   según el ANCHO REAL de esta columna (ver @container más abajo), no el de toda la
-   ventana — con la izquierda y la derecha ya responsive, el ancho de la ventana no dice
-   cuánto le queda al centro; medirlo aquí evita activar la fila de más (o de menos). */
-.tc-center { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 16px; container-type: inline-size; }
+.tc-center { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 16px; }
 .tc-h { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tc-hrow { display: flex; align-items: center; justify-content: space-between; }
 .tc-rival { margin-top: auto; border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -4178,37 +4174,39 @@
 .tc-dot--on i { background: var(--warning); }
 .tc-launch { position: relative; width: 100%; display: flex; justify-content: center; }
 .tc-locked { position: absolute; inset: 0; z-index: 10; background: rgba(238, 241, 245, 0.78); display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; font-weight: 800; font-size: 15px; color: var(--text); border-radius: 12px; }
+/* Sin sitio de sobra (useLaunchLayout → wide:false, ver useIsPhone.js): igual que la
+   demo aprobada — el lanzamiento a tamaño fijo y la fila compacta de 6 debajo. */
 .tc-launchrow { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .tc-launchmain { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 /* PARADA/GOL, un poco más grandes en tablet (ancho ya fijado por la portería; solo alto). */
 .tc-launchmain .shp-final-btn { height: 62px; font-size: 15px; }
-/* Dorsales rivales con esa sanción, debajo de AMARILLA/EXCLUSIÓN 2'/ROJA en la columna
-   ancha (ver @container): se puede tocar uno para seleccionarlo, como un acceso directo. */
-.tc-sanpill { height: 26px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-alt); font-weight: 800; font-size: 11px; font-family: var(--font-mono); cursor: pointer; }
+
+/* Con sitio de sobra (2026-09-22, según el dibujo del usuario): CAMBIO/ROBO/PÉRDIDA/
+   AMARILLA/EXCLUSIÓN 2'/ROJA se agrupan en una columna angosta a la IZQUIERDA del
+   lanzamiento (.tc-launchcol), con los dorsales rivales sancionados debajo en dos
+   columnas — amarilla y roja (exclusiones y rojas juntas) — empujadas hacia abajo
+   (margin-top:auto), a la altura donde vive la información del rival en la columna de
+   jugadores. El lanzamiento (.tc-launchmain) deja de tener un ancho fijo: crece para
+   ocupar el ancho que deja libre esa columna — la portería y la cancha en sí crecen con
+   él (--k/--gk calculados en useLaunchLayout, según cuánto sobre; nunca por debajo del
+   tamaño de siempre). align-items:stretch (por defecto) hace que la columna ocupe el
+   mismo alto que el lanzamiento, para poder empujar los sancionados al fondo. */
+.tc-launchrow--wide { max-width: none; width: 100%; flex-direction: row; justify-content: center; gap: 14px; }
+.tc-launchcol { width: 150px; flex: none; display: flex; flex-direction: column; }
+.tc-lcol-buttons { display: flex; flex-direction: column; gap: 6px; }
+.tc-lcol-buttons .tc-act { font-size: 12px; padding: 0 6px; }
+.tc-lcol-buttons .tc-act--excl { box-shadow: inset -5px 0 0 var(--text); }
+.tc-lcol-buttons .tc-act--yellow { box-shadow: inset -5px 0 0 var(--card-yellow); }
+.tc-lcol-buttons .tc-act--red { box-shadow: inset -5px 0 0 #7a1d14; }
+.tc-lcol-sanc { display: flex; gap: 6px; margin-top: auto; padding-top: 10px; }
+.tc-lcol-sancol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.tc-launchrow--wide .tc-launchmain { width: auto; flex: 1 1 auto; min-width: 0; }
+/* Dorsales rivales con esa sanción: se puede tocar uno para seleccionarlo, como un
+   acceso directo. */
+.tc-sanpill { height: 26px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-alt); font-weight: 800; font-size: 11px; font-family: var(--font-mono); cursor: pointer; white-space: nowrap; }
 .tc-sanpill--yellow { border-color: var(--card-yellow); background: var(--card-yellow-dim); }
 .tc-sanpill--excl { border-color: var(--danger); background: var(--danger-dim); color: #8a2117; }
 .tc-sanpill--red { border-color: #7a1d14; background: #7a1d14; color: #fff; }
-
-/* 2026-09-22, a partir de 800px de ancho REAL en la columna central (no de ventana: con
-   la izquierda y la derecha ya responsive, el ancho de la ventana no dice cuánto le
-   queda al centro) — la fila compacta de acciones pasa a ser una columna angosta a la
-   izquierda del lanzamiento, con espacio para los dorsales rivales sancionados. Por
-   debajo de eso, se queda tal cual la demo aprobada: la fila de 6 debajo del lanzamiento,
-   sin los dorsales sancionados (no caben sin que la página entera necesite scroll). */
-@container (min-width: 800px) {
-  .tc-launchrow { max-width: 960px; flex-direction: row; align-items: flex-start; justify-content: center; }
-  .tc-launchmain { width: 600px; flex: none; }
-  .tc-actions { display: flex; flex-direction: column; gap: 6px; width: 170px; flex: none; }
-  .tc-act { font-size: 12px; padding: 0 6px; }
-  .tc-act--excl { box-shadow: inset -5px 0 0 var(--text); order: 3; }
-  .tc-act--yellow { box-shadow: inset -5px 0 0 var(--card-yellow); order: 1; }
-  .tc-act--red { box-shadow: inset -5px 0 0 #7a1d14; order: 5; }
-  .tc-act--dark, .tc-act--camon { order: -1; }
-  .tc-sanclist { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 2px; padding-left: 2px; }
-  .tc-sanclist--yellow { order: 2; }
-  .tc-sanclist--excl { order: 4; }
-  .tc-sanclist--red { order: 6; }
-}
 
 /* Columna derecha de tablet: Pasivo y Resumen como en el mockup (2026-09-21) */
 .tc-selected-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
