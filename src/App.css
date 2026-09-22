@@ -4203,6 +4203,11 @@
    ser exacto. */
 .tc-launchrow--wide { max-width: none; width: 100%; flex-direction: row; align-items: stretch; justify-content: center; gap: 10px; }
 .tc-launchcol { width: 140px; flex: none; display: flex; flex-direction: column; }
+/* Separador entre los botones/amonestados y el lanzamiento (2026-09-22, según el
+   dibujo del usuario): solo la línea, alto completo de la fila (align-items:stretch en
+   .tc-launchrow--wide). 1px de ancho, iguales 10px de gap a cada lado que el resto de
+   la fila: 21px en total, ya contados en TC_GAP de useLaunchLayout() (useIsPhone.js). */
+.tc-launchdivider { width: 1px; flex: none; align-self: stretch; background: var(--border); }
 .tc-lcol-buttons { display: flex; flex-direction: column; gap: 6px; }
 .tc-lcol-buttons .tc-act { font-size: 12px; padding: 0 6px; }
 .tc-lcol-buttons .tc-act--excl { box-shadow: inset -5px 0 0 var(--text); }
@@ -4213,7 +4218,7 @@
    quedaba demasiado abajo — se sube justo debajo de los botones, más cerca de esa
    cabecera. */
 .tc-lcol-sancwrap { margin-top: 14px; }
-.tc-lcol-sancwrap .tc-h2 { margin-bottom: 4px; }
+.tc-lcol-sancwrap .tc-h2 { margin-bottom: 4px; line-height: 1.35; }
 .tc-lcol-sanc { display: flex; gap: 6px; }
 .tc-lcol-sancol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .tc-launchrow--wide .tc-launchmain { width: auto; flex: 1 1 auto; min-width: 0; }
@@ -4251,10 +4256,14 @@
 .tc-note { margin: 0; font-size: 11px; color: var(--text-dim); line-height: 1.3; }
 
 /* Consola de tablet: mensaje de lo registrado, modo cambio y marcas de sanción (2026-09-21) */
-/* El mismo ancho que .tc-launchrow (ocupa la zona de lanzamiento, ni más ni menos)
-   en las dos disposiciones — 640px de siempre, o el ancho completo con sitio de sobra. */
+/* El mismo ancho que la zona de tiro (portería + cancha, .tc-launchmain) — 640px de
+   siempre (ahí coincide con .tc-launchrow entero, sin columna de botones); con sitio de
+   sobra, en cambio, NO coincide con .tc-launchrow (que incluye también la columna de
+   botones y su separador): se desplaza esos 161px (140 + 10 + 1 + 10, iguales a
+   TC_GREEN_W + TC_GAP*2 + TC_DIVIDER_W de useLaunchLayout en useIsPhone.js) para quedar
+   justo encima de la portería y la cancha, no de toda la fila. */
 .tc-top { width: 100%; max-width: 640px; min-height: 56px; display: flex; align-items: center; flex: none; }
-.tc-top--wide { max-width: none; }
+.tc-top--wide { max-width: none; width: calc(100% - 161px); margin-left: 161px; }
 .tc-done { width: 100%; min-height: 52px; border-radius: 12px; background: #dcf1e6; border: 1px solid #16794b; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .tc-done-l1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tc-done-ok { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: #16794b; padding: 2px 10px; border-radius: 999px; }

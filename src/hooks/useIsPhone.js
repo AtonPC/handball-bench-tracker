@@ -52,11 +52,13 @@ export function useTabletZoom() {
 // el ancho real de .tc-center con ResizeObserver, pero tampoco disparaba su callback
 // en las pruebas — en vez de eso, se mide directamente con clientWidth (igual que
 // useTabletZoom más arriba, que sí funciona) cada vez que la ventana cambia de tamaño.
-// Estos dos números tienen que ser iguales a los de App.css (el padding de .tc-center,
-// y .tc-launchcol y el gap de .tc-launchrow--wide) — es la única suposición que queda,
-// y es exacta (no un margen de sobra "por si acaso": eso fue justo lo que sobreestimaba
+// Estos números tienen que ser iguales a los de App.css (el padding de .tc-center,
+// el ancho de .tc-launchcol, el separador .tc-launchdivider entre los botones y el
+// lanzamiento, y el gap de .tc-launchrow--wide, que con el separador de por medio se
+// cuenta DOS veces — uno a cada lado suyo) — es la única suposición que queda, y es
+// exacta (no un margen de sobra "por si acaso": eso fue justo lo que sobreestimaba
 // antes cuánto hacía falta).
-const TC_PAD = 32, TC_GREEN_W = 140, TC_GAP = 10;
+const TC_PAD = 32, TC_GREEN_W = 140, TC_GAP = 10, TC_DIVIDER_W = 1;
 const BOARD_BASE_W = 600, BOARD_MAX_K = 1.2;
 export function useLaunchLayout() {
   const ref = useRef(null);
@@ -67,7 +69,7 @@ export function useLaunchLayout() {
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
-  const avail = width - TC_PAD - TC_GREEN_W - TC_GAP;
+  const avail = width - TC_PAD - TC_GREEN_W - TC_GAP * 2 - TC_DIVIDER_W;
   const wide = avail >= BOARD_BASE_W;
   const k = wide ? Math.max(1, Math.min(BOARD_MAX_K, avail / BOARD_BASE_W)) : 1;
   return { ref, wide, k, gk: k };

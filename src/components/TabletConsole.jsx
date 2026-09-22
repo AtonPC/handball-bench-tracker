@@ -230,7 +230,7 @@ export default function TabletConsole({
                       jugadores (ver tc-left más arriba). */}
                   {hasSanc && (
                     <div className="tc-lcol-sancwrap">
-                      <h4 className="tc-h2">Amonestados {rivalHeader}</h4>
+                      <h4 className="tc-h2">Amonestados<br />{rivalHeader}</h4>
                       <div className="tc-lcol-sanc">
                         <div className="tc-lcol-sancol tc-lcol-sancol--yellow">
                           {rivalYellowList.map((n) => <button key={n} type="button" className="tc-sanpill tc-sanpill--yellow" onClick={() => pickRival(n)}>#{n}</button>)}
@@ -247,6 +247,7 @@ export default function TabletConsole({
                     </div>
                   )}
                 </div>
+                <div className="tc-launchdivider" aria-hidden="true" />
                 <div className="tc-launchmain">
                   <div className="tc-launch">
                     {!isRunning && <div className="tc-locked"><span>{state.clock.status === 'idle' ? 'Partido no iniciado: pulsa ▶ para poder anotar' : 'Reloj parado: pulsa ▶ para seguir anotando'}</span></div>}
