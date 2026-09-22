@@ -4095,9 +4095,14 @@
 .shp-players--wide .shp-player-name { font-size: 12px; color: var(--text); }
 .shp-dorsal-row--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .shp-dorsal-box.shp-dorsal-box--span { grid-column: span 2; }
-.tc-selected { width: 100%; max-width: 640px; height: 44px; border: 2px solid var(--border); border-radius: 12px; background: var(--panel-alt); display: flex; align-items: center; padding: 0 14px; font-weight: 800; font-size: 15px; }
-.tc-actions { width: 100%; max-width: 640px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.tc-act { height: 46px; border: 1px solid var(--text); border-radius: 10px; background: #fff; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 0; }
+.tc-selected { width: 100%; height: 44px; border: 2px solid var(--border); border-radius: 12px; background: var(--panel-alt); display: flex; align-items: center; padding: 0 14px; font-weight: 800; font-size: 15px; }
+/* 2026-09-22: con auto-fit, este mismo grid vale para las dos formas de las acciones
+   (ROBO, PÉRDIDA, EXCLUSIÓN 2', AMARILLA, ROJA, CAMBIO) — ver .tc-launchrow más abajo:
+   como columna estrecha junto al lanzamiento en pantallas con sitio de sobra (cada
+   celda no cabe más que una, así que salen apiladas), o como fila ancha debajo cuando
+   no lo hay (varias por fila, como antes). */
+.tc-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 6px; align-content: start; }
+.tc-act { height: 52px; border: 1px solid var(--text); border-radius: 10px; background: #fff; font-weight: 800; font-size: 11.5px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 0; }
 .tc-act:disabled { opacity: 0.35; cursor: default; }
 .tc-act--excl { box-shadow: inset 0 -5px 0 var(--text); }
 .tc-act--yellow { border-color: var(--card-yellow); box-shadow: inset 0 -5px 0 var(--card-yellow); }
@@ -4163,9 +4168,19 @@
 .tc-dot--on i { background: var(--warning); }
 .tc-launch { position: relative; width: 100%; display: flex; justify-content: center; }
 .tc-locked { position: absolute; inset: 0; z-index: 10; background: rgba(238, 241, 245, 0.78); display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; font-weight: 800; font-size: 15px; color: var(--text); border-radius: 12px; }
+/* 2026-09-22: ROBO/PÉRDIDA/EXCLUSIÓN/AMARILLA/ROJA/CAMBIO se colocan a la derecha del
+   lanzamiento (una cuarta columna) cuando hay sitio de sobra, en vez de siempre debajo
+   — sin JS ni breakpoints: es un flex-wrap. .tc-launchmain no baja de 600px (lo que
+   ocupa el marcador y la portería a tamaño real) y .tc-actions no baja de 130px; si las
+   dos no caben en la misma fila, la segunda pasa a su propia fila entera, donde su
+   grid auto-fit se reparte solo en varias columnas — el mismo resultado de siempre. */
+.tc-launchrow { width: 100%; max-width: 960px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: center; }
+.tc-launchmain { flex: 0 1 596px; min-width: 596px; max-width: 640px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.tc-launchrow .tc-actions { flex: 1 1 130px; min-width: 130px; align-self: stretch; }
+/* PARADA/GOL, un poco más grandes en tablet (ancho ya fijado por la portería; solo alto). */
+.tc-launchmain .shp-final-btn { height: 62px; font-size: 15px; }
 
 /* Columna derecha de tablet: Pasivo y Resumen como en el mockup (2026-09-21) */
-.tc-actions { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .tc-selected { justify-content: space-between; gap: 10px; }
 .tc-selected-l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-side { display: flex; flex: none; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
@@ -4189,7 +4204,7 @@
 .tc-note { margin: 0; font-size: 11px; color: var(--text-dim); line-height: 1.3; }
 
 /* Consola de tablet: mensaje de lo registrado, modo cambio y marcas de sanción (2026-09-21) */
-.tc-top { width: 100%; max-width: 640px; min-height: 56px; display: flex; align-items: center; flex: none; }
+.tc-top { width: 100%; max-width: 960px; min-height: 56px; display: flex; align-items: center; flex: none; }
 .tc-done { width: 100%; min-height: 52px; border-radius: 12px; background: #dcf1e6; border: 1px solid #16794b; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .tc-done-l1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tc-done-ok { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: #16794b; padding: 2px 10px; border-radius: 999px; }
@@ -4222,7 +4237,6 @@
 .shp-players--bench .shp-player-tag { margin-left: 0; height: 12px; line-height: 12px; }
 
 /* Tablet: ROJA, indicador de pasos del lanzamiento (2026-09-21) */
-.tc-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .tc-act--red { border-color: #7a1d14; box-shadow: inset 0 -5px 0 #7a1d14; }
 .tc-steps { display: flex; gap: 6px; width: 100%; }
 .tc-step { flex: 1; height: 34px; border-radius: 9px; display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 12px; font-weight: 800; background: var(--border); color: var(--text-dim); white-space: nowrap; }
@@ -4431,7 +4445,10 @@
 .tsum-team--rival { background: var(--rival); text-align: right; clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%); }
 
 /* ===== LiveStats como el mockup: tabla compacta con resaltado y mapa de calor (2026-09-21) ===== */
-.ls { max-width: 640px; margin: 0 auto; }
+/* 2026-09-22: esta regla se coló sin el ".ls--compact" (solo era para el móvil) y le
+   quitaba a la tablet el ancho de 900px de la regla de arriba — sobraba espacio a los
+   lados de la tabla y del mapa. El límite de 640px es solo para la hoja del móvil. */
+.ls--compact { max-width: 640px; margin: 0 auto; }
 .ls-lead-w { white-space: pre; overflow: hidden; text-overflow: clip; min-height: 13px; }
 .ls-seg--full { width: 100%; }
 .ls-seg--full button { flex: 1; }
