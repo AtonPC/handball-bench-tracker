@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ClipboardList, GitCompare, History, Smartphone, Target, Users } from 'lucide-react';
 import MatchHeader from './MatchHeader';
 import PlayerRow from './PlayerRow';
@@ -20,7 +20,7 @@ import LineupModal from './LineupModal';
 import ShotPanel from './ShotPanel';
 import AssistToast from './AssistToast';
 import { useRivalExclusionsLive, summarizeRivalExclusions } from '../hooks/useRivalExclusions';
-import { useBoardScale, useIsTablet } from '../hooks/useIsPhone';
+import { useBoardScale, useIsTablet, useTabletZoom } from '../hooks/useIsPhone';
 import TabletConsole from './TabletConsole';
 import PhoneConsole from './PhoneConsole';
 import { useRivalMisses } from '../hooks/useRivalMisses';
@@ -87,6 +87,10 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   const [shotPanel, setShotPanel] = useState(null); // { side: 'own' | 'rival' }
   const [assistFor, setAssistFor] = useState(null); // { goalId, scorerId }
   const boardScale = useBoardScale();
+  // El zoom de la consola de tablet se mide contra el alto YA renderizado de
+  // .bench-console (estable, 100svh), no contra window.innerHeight (ver useIsPhone.js).
+  const benchRef = useRef(null);
+  const tabletZoom = useTabletZoom(benchRef);
   const isTablet = useIsTablet();
   // Con la disposición de tablet no hay pestañas superiores ni vistas de móvil.
   const phoneView = isTablet ? null : view;
@@ -283,7 +287,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
   );
 
   return (
-    <div className="bench-console" style={teamColorStyle(team)}>
+    <div className="bench-console" style={teamColorStyle(team)} ref={benchRef}>
       {!isTablet && !phoneHome && (
         <>
       <MatchHeader store={store} team={team} onBack={onBack} onFinish={onFinish} onNeedLineup={() => setShowLineupModal(true)} />
@@ -521,6 +525,7 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           rivalYellowCards={rivalYellowCards}
           statusOf={rivalStatusOf}
           isRunning={isRunning}
+          zoom={tabletZoom}
           actions={tabletActions}
           assistFor={assistFor}
           onAssist={onAssist}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowLeftRight, CircleSlash, Timer, Zap } from 'lucide-react';
 import { opp, useActionFlash } from '../hooks/useActionFlash';
 import TabletRight from './TabletRight';
-import { useLaunchLayout, useTabletZoom } from '../hooks/useIsPhone';
+import { useLaunchLayout } from '../hooks/useIsPhone';
 import { sanctionTag as tagOf } from '../utils/playerTags';
 import { shortTeamName } from '../utils/teamColors';
 import { formatClock } from '../utils/time';
@@ -29,7 +29,7 @@ import ShotPanel, { DorsalChips, DorsalKeys, PlayerButtons, applyKey } from './S
 // funciones (`actions`) que anotan.
 export default function TabletConsole({
   store, team, onBack, onFinish, onNeedLineup,
-  courtPlayers, benchPlayers, shortcuts, statusOf, isRunning,
+  courtPlayers, benchPlayers, shortcuts, statusOf, isRunning, zoom,
   rivalExclusionSummary = [], rivalYellowCards = [],
   actions, assistFor, onAssist, summaryNode, chronologyNode, statsNode,
 }) {
@@ -41,7 +41,6 @@ export default function TabletConsole({
   const [rightTab, setRightTab] = useState('resumen');
   const [swap, setSwap] = useState(null); // modo cambio: { outs: [ids], ins: [ids] }
   const [progress, setProgress] = useState({ shooter: false, origin: false, goal: false, seven: false });
-  const zoom = useTabletZoom();
   // Con sitio de sobra, los botones se agrupan a la izquierda y la portería/cancha
   // crecen para ocupar lo que deja libre esa columna (2026-09-22, según el dibujo del
   // usuario); si no, la fila compacta de siempre, a tamaño fijo (ver useIsPhone.js).

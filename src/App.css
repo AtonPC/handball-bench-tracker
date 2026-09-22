@@ -4080,10 +4080,18 @@
 /* 2026-09-22: se quita el bloque «Sancionados» de aquí (se muestran ahora debajo de
    AMARILLA/EXCLUSIÓN 2'/ROJA, en la columna de acciones del lanzamiento) y ese hueco se
    lo lleva un teclado y unos accesos todavía más grandes. */
-.tc-rival .shp-keys button { height: 60px; font-size: 25px; }
-.tc-rival .shp-chip, .tc-rival .shp-dorsal-box { height: 64px; }
-.tc-rival .shp-chip-n, .tc-rival .shp-dorsal-box-n { font-size: 29px; }
-.tc-rival .shp-chip-s, .tc-rival .shp-dorsal-box-s { font-size: 11px; }
+/* 2026-09-22: el teclado numérico (lo que de verdad hay que tocar rápido y sin fallar)
+   crece todavía más; los accesos de «más usados», en cambio, bajan a su tamaño de
+   siempre — el usuario los pidió más pequeños para hacer sitio (en una tablet real
+   hacía falta scroll para ver el teclado entero). El dorsal ya elegido
+   (`.shp-dorsal-box`) se queda grande: es el que confirma qué se ha tecleado. */
+.tc-rival .shp-keys button { height: 76px; font-size: 32px; }
+.tc-rival .shp-chip { height: 44px; }
+.tc-rival .shp-chip-n { font-size: 18px; }
+.tc-rival .shp-chip-s { font-size: 9px; }
+.tc-rival .shp-dorsal-box { height: 64px; }
+.tc-rival .shp-dorsal-box-n { font-size: 29px; }
+.tc-rival .shp-dorsal-box-s { font-size: 11px; }
 .tc-left, .tc-right { min-height: 0; overflow-y: auto; background: var(--panel); }
 .tc-left { border-right: 1px solid var(--border); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tc-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -4148,8 +4156,11 @@
 .tc-extra { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 6px; display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1; white-space: nowrap; }
 .tc-extra-l { font-family: var(--font-body); font-size: 7.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.05; color: var(--text-dim); text-align: center; }
 .tc-extra-v { font-family: var(--font-mono); font-size: 13px; font-weight: 800; color: var(--danger); }
-.tc-hint { font-size: 11px; font-weight: 700; color: var(--text-dim); }
-.tc-hint--warn { color: #8a5d06; }
+/* Fondo propio (2026-09-22): sin él, el aviso se superponía sin leerse sobre los
+   dígitos del reloj o el «Extra time» (que sobresale del botón del reloj con
+   position:absolute, .tc-extra más abajo — .tc-crow no sabe que ocupa ese hueco). */
+.tc-hint { font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--panel); padding: 3px 8px; border-radius: 8px; position: relative; z-index: 1; }
+.tc-hint--warn { color: #8a5d06; background: var(--warning-dim); }
 .tc-edit { display: flex; gap: 6px; }
 .tc-edit button { flex: 1; height: 38px; border: 1px solid var(--warning); border-radius: 9px; background: var(--warning-dim); font-weight: 800; font-size: 12px; cursor: pointer; }
 .tc-endp { flex: none; border: 2px solid var(--danger); border-radius: 12px; padding: 8px 10px; background: var(--danger-dim); display: flex; flex-direction: column; gap: 6px; }

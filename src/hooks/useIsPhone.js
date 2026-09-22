@@ -27,12 +27,24 @@ export function useIsTablet() {
 // 2026-09-22) el centro necesita un pelín más alto que 800 para caber justo;
 // de lo contrario a exactamente 800px de alto quedaba un scroll interno de
 // sobra en esa columna.
+// 2026-09-22 (más tarde): en una tablet real, hacía falta scroll para ver el teclado y,
+// AL hacer ese scroll, los botones cambiaban de sitio solos — esto medía
+// `window.innerHeight`, que en el navegador del móvil/tablet CRECE cuando la barra de
+// direcciones se oculta (típico al hacer scroll). `.bench-console` ya usa `100svh` (la
+// altura PEQUEÑA, la de con la barra visible — no cambia con el scroll) para su propio
+// alto; medir aquí en cambio `window.innerHeight` (que sí cambia) rehacía el zoom a
+// media pantalla, agrandando de golpe un contenido que ya no cabía en esa altura fija —
+// de ahí el "salto". Ahora se mide el alto YA RENDERIZADO de `.bench-console` (con
+// `ref`, igual que `useLaunchLayout` mide `.tc-center`): ese alto es estable, no depende
+// de si la barra del navegador está visible o no.
 const TABLET_DESIGN_HEIGHT = 830;
-export function useTabletZoom() {
-  const read = () => (typeof window === 'undefined' ? 1 : Math.max(0.6, Math.min(1, window.innerHeight / TABLET_DESIGN_HEIGHT)));
-  const [zoom, setZoom] = useState(read);
+export function useTabletZoom(ref) {
+  const read = () => (ref?.current ? ref.current.clientHeight : typeof window === 'undefined' ? TABLET_DESIGN_HEIGHT : window.innerHeight);
+  const clamp = (h) => Math.max(0.6, Math.min(1, h / TABLET_DESIGN_HEIGHT));
+  const [zoom, setZoom] = useState(() => clamp(read()));
   useEffect(() => {
-    const onResize = () => setZoom(read());
+    const onResize = () => setZoom(clamp(read()));
+    onResize();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
