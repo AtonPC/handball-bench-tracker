@@ -99,6 +99,11 @@ export default function TabletConsole({
     setSwap(null);
   }
 
+  // Nombre del equipo en cada sitio: en la cabecera de la columna sobra ancho de
+  // sobra, así que casi nunca hace falta recortarlo a iniciales; en el
+  // selector Nos|Rival, en cambio, es un botón pequeño y sí hace falta.
+  const ownHeader = shortTeamName(state.ownTeamName, 30);
+  const rivalHeader = shortTeamName(state.rivalName, 30);
   const ownShort = shortTeamName(state.ownTeamName, 10);
   const rivalShort = shortTeamName(state.rivalName, 10);
   const selectedLabel = ownSelected
@@ -126,7 +131,7 @@ export default function TabletConsole({
   return (
     <div className="tc-grid" style={zoom < 1 ? { zoom } : undefined}>
       <aside className="tc-left">
-        <h3 className="tc-h">{shortTeamName(state.ownTeamName, 22)} · en pista</h3>
+        <h3 className="tc-h">{ownHeader} · en pista</h3>
         <PlayerButtons players={courtPlayers} selected={!swap && side === 'own' ? shooter : null} onPick={pickOwn} wide marks={marks} tagOf={tagOf} canPick={canPick} />
         {benchPlayers.length > 0 && (
           <>
@@ -135,7 +140,7 @@ export default function TabletConsole({
           </>
         )}
         <div className="tc-rival">
-          <h3 className="tc-h">{rivalShort} · dorsal</h3>
+          <h3 className="tc-h">{rivalHeader} · dorsal</h3>
           {sanctioned.length > 0 && (
             <>
               <h4 className="tc-h2">Sancionados</h4>
