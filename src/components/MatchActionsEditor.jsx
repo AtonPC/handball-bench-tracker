@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { ArrowUpDown, Trash2 } from 'lucide-react';
 import { GOAL_ZONES, missKindOf, OUT_ZONES, POST_ZONES, SHOT_ZONES } from '../shotZones';
 import { shortTeamName } from '../utils/teamColors';
 import EventIcon from './EventIcon';
@@ -139,6 +139,10 @@ function normalize(values) {
 // los jugadores y el marcador (ver utils/actionEditing.js).
 export default function MatchActionsEditor({ state, players, lists, applyPlan }) {
   const [side, setSide] = useState('all');
+  // Más recientes primero por defecto (2026-09-23): al corregir en directo, lo normal
+  // es que el error esté en lo último anotado — con la flecha se puede invertir para
+  // repasar el partido entero desde el principio.
+  const [newestFirst, setNewestFirst] = useState(true);
   const [editingKey, setEditingKey] = useState(null);
   const [adding, setAdding] = useState(false);
   const [addKind, setAddKind] = useState('ownGoal');
@@ -147,7 +151,8 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
 
   const playersById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p])), [players]);
   const actions = useMemo(() => buildActionList(lists), [lists]);
-  const visible = actions.filter((a) => side === 'all' || ACTION_KINDS[a.kind].side === side);
+  const filtered = actions.filter((a) => side === 'all' || ACTION_KINDS[a.kind].side === side);
+  const visible = newestFirst ? [...filtered].reverse() : filtered;
   // Nombre real de cada equipo en vez de «Nuestro equipo»/«Rival» a secas (2026-09-23).
   const ownLabel = shortTeamName(state.ownTeamName, 24);
   const rivalLabel = shortTeamName(state.rivalName, 24);
@@ -231,12 +236,17 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
         </div>
       )}
 
-      <div className="home-away-toggle att-toggle">
-        {[['all', 'Todas'], ['own', ownLabel], ['rival', rivalLabel]].map(([key, label]) => (
-          <button key={key} type="button" className={`btn btn-timeout${side === key ? ' admin-nav-tab--active' : ''}`} onClick={() => setSide(key)}>
-            {label}
-          </button>
-        ))}
+      <div className="act-toolbar">
+        <div className="home-away-toggle att-toggle">
+          {[['all', 'Todas'], ['own', ownLabel], ['rival', rivalLabel]].map(([key, label]) => (
+            <button key={key} type="button" className={`btn btn-timeout${side === key ? ' admin-nav-tab--active' : ''}`} onClick={() => setSide(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn btn-timeout act-sort-btn" onClick={() => setNewestFirst((v) => !v)}>
+          <ArrowUpDown size={14} /> {newestFirst ? 'Recientes primero' : 'Antiguas primero'}
+        </button>
       </div>
 
       <div className="chrono-rows act-crows">
