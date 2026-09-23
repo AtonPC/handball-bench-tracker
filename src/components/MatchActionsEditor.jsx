@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowUpDown, Trash2 } from 'lucide-react';
 import { GOAL_ZONES, missKindOf, OUT_ZONES, POST_ZONES, SHOT_ZONES } from '../shotZones';
 import { shortTeamName } from '../utils/teamColors';
+import { periodLongLabel, periodOfMinute, withPeriodDividers } from '../utils/periods';
 import EventIcon from './EventIcon';
 import {
   ACTION_KINDS, buildActionList, describeAction, planAdd, planDelete, planEdit, validateActionValues,
@@ -158,13 +159,15 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
   const rivalLabel = shortTeamName(state.rivalName, 24);
 
   const { periodDurationMs, periodCount } = state.clock;
-  const periodOf = (minute) => Math.min(periodCount, Math.max(1, Math.floor(((minute - 1) * 60000) / periodDurationMs) + 1));
+  const periodOf = (minute) => periodOfMinute(minute, periodDurationMs, periodCount);
   const ctx = {
     players: state.players,
     periodOf,
     sevenMeters: lists.rivalSevenMeters,
     rivalYellowNumbers: lists.rivalYellowCards.map((y) => y.number),
   };
+  // Separadores de fin/inicio de cuarto o tiempo entre las acciones (2026-09-23).
+  const rows = withPeriodDividers(visible, (a) => a.minute, periodDurationMs, periodCount);
 
   async function run(plan) {
     if (plan.error) { setError(plan.error); return false; }
@@ -250,7 +253,15 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
       </div>
 
       <div className="chrono-rows act-crows">
-        {visible.map((action) => {
+        {rows.map((row) => {
+          if (row.divider) {
+            return (
+              <div key={row.key} className="chrono-divider">
+                <span>Fin {periodLongLabel(row.lo, periodCount)} · Inicio {periodLongLabel(row.hi, periodCount)}</span>
+              </div>
+            );
+          }
+          const action = row.item;
           const isOwn = ACTION_KINDS[action.kind].side === 'own';
           const who = actionWho(action, playersById);
           const label = actionLabel(action);

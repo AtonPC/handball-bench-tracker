@@ -6,6 +6,7 @@ import { useRivalSevenMeters } from '../hooks/useRivalSevenMeters';
 import { useTeamActionEvents } from '../hooks/useTeamActionEvents';
 import { useAssistEvents } from '../hooks/useAssistEvents';
 import { buildChronology } from '../utils/followerHelpers';
+import { periodLongLabel, withPeriodDividers } from '../utils/periods';
 import ChronologyRow from './ChronologyRow';
 
 // Pestaña "Cronología" de la consola en directo: todo lo que ha pasado en el
@@ -55,6 +56,11 @@ export default function ConsoleChronology({
 
   const wanted = minute === '' ? null : Number(minute);
   const visible = wanted == null || Number.isNaN(wanted) ? chronology : chronology.filter((e) => e.minute === wanted);
+  // Separadores de fin/inicio de cuarto o tiempo entre los sucesos (2026-09-23).
+  const rows = useMemo(
+    () => withPeriodDividers(visible, (e) => e.minute, state.clock.periodDurationMs, state.clock.periodCount),
+    [visible, state.clock.periodDurationMs, state.clock.periodCount]
+  );
 
   return (
     <div>
@@ -87,9 +93,13 @@ export default function ConsoleChronology({
         <p className="modal-hint">{chronology.length === 0 ? 'Todavía no ha pasado nada.' : `No hay nada anotado en el minuto ${minute}.`}</p>
       ) : (
         <div className="chrono-rows">
-          {visible.map((entry) => (
-            <ChronologyRow key={entry.id} entry={entry} playersById={playersById} authorizedById={{}} />
-          ))}
+          {rows.map((row) => (row.divider ? (
+            <div key={row.key} className="chrono-divider">
+              <span>Fin {periodLongLabel(row.lo, state.clock.periodCount)} · Inicio {periodLongLabel(row.hi, state.clock.periodCount)}</span>
+            </div>
+          ) : (
+            <ChronologyRow key={row.item.id} entry={row.item} playersById={playersById} authorizedById={{}} />
+          )))}
         </div>
       )}
     </div>

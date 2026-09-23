@@ -26,3 +26,33 @@ export function periodLongLabel(period, count) {
 export function periodShortLabel(period, count) {
   return count === 4 ? `${period}C` : `${period}T`;
 }
+
+// De qué periodo es un minuto dado (1-based), acotado a [1, count] — para listas de
+// sucesos por minuto (Cronología, Corregir una acción) que necesitan saber en qué
+// cuarto/tiempo cae cada uno.
+export function periodOfMinute(minute, periodDurationMs, count) {
+  return Math.min(count, Math.max(1, Math.floor(((minute - 1) * 60000) / periodDurationMs) + 1));
+}
+
+// Envuelve una lista YA ORDENADA de sucesos (por minuto, en cualquiera de los dos
+// sentidos — más reciente primero o al revés) en `{ item }` / `{ divider }`, con un
+// separador «Fin de X · Inicio de Y» entre cada dos sucesos consecutivos de periodos
+// distintos (2026-09-23, a petición del usuario: "quiero que se marque cuándo acaba y
+// empieza cada cuarto o tiempo"). Funciona en los dos sentidos porque solo compara cada
+// suceso con el anterior EN EL ORDEN EN QUE YA VIENEN, sin asumir cuál es más nuevo.
+export function withPeriodDividers(items, minuteOf, periodDurationMs, count) {
+  if (count <= 1) return items.map((item) => ({ item }));
+  const out = [];
+  let prevPeriod = null;
+  for (const item of items) {
+    const period = periodOfMinute(minuteOf(item), periodDurationMs, count);
+    if (prevPeriod !== null && period !== prevPeriod) {
+      const lo = Math.min(prevPeriod, period);
+      const hi = Math.max(prevPeriod, period);
+      out.push({ divider: true, key: `div-${lo}-${hi}-${out.length}`, lo, hi });
+    }
+    out.push({ item });
+    prevPeriod = period;
+  }
+  return out;
+}
