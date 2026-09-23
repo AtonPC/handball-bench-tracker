@@ -43,6 +43,11 @@ export default function TabletSummary({
   // Un fallo nuestro que no se va fuera ni da en el palo es una parada del portero rival.
   const ownSaves = sum('saves');
   const rivalSaves = countBy(shotEvents, (e) => e.type === 'miss' && missKindOf(e.goalZone) === 'saved');
+  // % de paradas: tiros a puerta que ha parado el portero, sobre el total de tiros a
+  // puerta que ha recibido (parada + gol en contra) — un tiro que se va fuera o al
+  // palo no cuenta, ese no lo "para" nadie.
+  const ownSaveTotal = ownSaves + rivalGoals.length;
+  const rivalSaveTotal = rivalSaves + ownGoals;
   const ownPosts = countBy(shotEvents, (e) => e.type === 'miss' && missKindOf(e.goalZone) === 'post');
   const rivalPosts = countBy(rivalMisses, (e) => missKindOf(e.goalZone) === 'post');
 
@@ -65,7 +70,7 @@ export default function TabletSummary({
     { label: '7 m', a: pct(own7m.made, own7m.total), as: `${own7m.made}/${own7m.total}`, b: pct(rival7m.made, rival7m.total), bs: `${rival7m.made}/${rival7m.total}` },
     { label: 'Robos', a: ownSteals, b: rivalSteals },
     { label: 'Pérdidas', a: lost('own'), b: lost('rival') },
-    { label: 'Paradas', a: ownSaves, b: rivalSaves },
+    { label: 'Paradas', a: pct(ownSaves, ownSaveTotal), as: `${ownSaves}/${ownSaveTotal}`, b: pct(rivalSaves, rivalSaveTotal), bs: `${rivalSaves}/${rivalSaveTotal}` },
     { label: 'Tiros al palo', a: ownPosts, b: rivalPosts },
     { label: 'Contraataque', a: `${ownCounterGoals}/${ownCounterAll}`, b: `${rivalCounterGoals}/${rivalCounterAll}` },
     { label: 'Posesiones', a: possessions.own, b: possessions.rival },

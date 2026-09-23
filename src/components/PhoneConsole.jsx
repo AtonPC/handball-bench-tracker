@@ -320,10 +320,7 @@ export default function PhoneConsole({
       </div>
 
       <div className="ph-more">
-        <span>Más:</span>
-        {[['datos', 'Datos (clásica)'], ['partido', 'Partido'], ['acciones', 'Acciones'], ['cronologia', 'Cronología']].map(([key, label]) => (
-          <button key={key} type="button" onClick={() => onMore(key)}>{label}</button>
-        ))}
+        <button type="button" onClick={() => onMore('datos')}>Vista clásica (Datos)</button>
       </div>
 
       {sheet?.kind === 'pick' && <Sheet title={`${ACTION_TITLE[sheet.action]} · ${shortTeamName(sheet.team === 'own' ? ownTeamName : rivalName, 14)}`} onClose={close}>{renderPick()}</Sheet>}

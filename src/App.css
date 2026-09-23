@@ -1080,6 +1080,51 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* «Corregir una acción» (MatchActionsEditor, 2026-09-23): la misma fila que Cronología
+   (a un lado u otro según el equipo), pero tocable — abre el formulario de corregir
+   debajo de la fila en vez de en una ventana aparte. Cada acción va en su propio
+   envoltorio (.act-crow-wrap) en vez de que .chrono-row sea hijo directo de .chrono-rows,
+   para que el listado impar/par de Cronología (`.chrono-row:nth-child(odd)`) no cuente
+   también el panel de edición cuando está abierto — aquí el rayado se hace sobre el
+   envoltorio en su lugar. */
+.act-crow-wrap:nth-child(odd) .chrono-row {
+  background: var(--panel-alt);
+}
+.chrono-row.act-crow {
+  cursor: pointer;
+}
+.chrono-row.act-crow:hover, .chrono-row.act-crow:focus-visible {
+  background: var(--accent-dim);
+  outline: none;
+}
+.chrono-row.act-crow--editing {
+  background: var(--accent-dim);
+}
+.act-crow-edit {
+  padding: 10px 14px 14px;
+  border-top: 1px dashed var(--border);
+  background: var(--panel-alt);
+}
+.act-crow-del {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  border-radius: 9px;
+  background: var(--danger-dim);
+  color: #8a2117;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.act-crow-del:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Ticker compacto del marcador en directo: sigue viviendo dentro del panel
    oscuro (.follower-scoreboard), por eso no usa los tokens de tema —
    hereda el blanco de .follower-ticker p. */

@@ -1,12 +1,48 @@
 import { useMemo, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
-import { GOAL_ZONES, OUT_ZONES, POST_ZONES, SHOT_ZONES } from '../shotZones';
+import { Trash2 } from 'lucide-react';
+import { GOAL_ZONES, missKindOf, OUT_ZONES, POST_ZONES, SHOT_ZONES } from '../shotZones';
+import { shortTeamName } from '../utils/teamColors';
+import EventIcon from './EventIcon';
 import {
   ACTION_KINDS, buildActionList, describeAction, planAdd, planDelete, planEdit, validateActionValues,
 } from '../utils/actionEditing';
 
 const OWN_KINDS = ['ownGoal', 'ownMiss', 'ownSave', 'ownRecovery', 'ownExclusion', 'ownYellow'];
 const RIVAL_KINDS = ['rivalGoal', 'rivalMiss', 'rivalExclusion', 'rivalSevenMeter', 'rivalYellow'];
+
+// Icono, quién y etiqueta de una fila — igual que ChronologyRow (Cronología), para que
+// la lista de aquí se lea igual (2026-09-23, a petición del usuario: "quiero se parezca
+// a la cronología"). No se reutiliza ChronologyRow tal cual porque trabaja con la forma
+// de un suceso de Cronología (type/side sueltos, missKind ya calculado); aquí la acción
+// trae su propio `kind` (ya lleva el equipo dentro, ownGoal/rivalGoal...) y sin missKind.
+function actionIconType(action) {
+  const { kind, data } = action;
+  switch (kind) {
+    case 'ownGoal': case 'rivalGoal': return 'goal';
+    case 'ownMiss': case 'rivalMiss': return missKindOf(data.goalZone) === 'saved' ? 'miss-saved' : 'miss-out';
+    case 'ownSave': return 'save';
+    case 'ownRecovery': return 'recovery';
+    case 'ownExclusion': return data.disqualified ? 'card-red' : 'twoFingers';
+    case 'rivalExclusion': return data.red ? 'card-red' : 'twoFingers';
+    case 'ownYellow': case 'rivalYellow': return 'card-yellow';
+    case 'rivalSevenMeter': return 'sevenMeter';
+    default: return null;
+  }
+}
+function actionWho(action, playersById) {
+  const { kind, data } = action;
+  if (ACTION_KINDS[kind].side === 'own') {
+    const p = data.playerId ? playersById[data.playerId] : null;
+    return p ? `#${p.number} ${p.name}` : null;
+  }
+  return data.number != null ? `Rival #${data.number}` : null;
+}
+// «Gol rival» → «Gol»: el lado ya se ve por la posición (izquierda/derecha), como en
+// Cronología — decirlo dos veces sobraba.
+function actionLabel(action) {
+  if (action.kind === 'ownExclusion') return action.data.disqualified ? 'Roja (3ª exclusión)' : 'Exclusión';
+  return ACTION_KINDS[action.kind].label.replace(/ rival$/i, '');
+}
 
 // Formulario común de corregir/añadir una acción: solo enseña los campos
 // que tiene ese tipo de acción.
@@ -112,6 +148,9 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
   const playersById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p])), [players]);
   const actions = useMemo(() => buildActionList(lists), [lists]);
   const visible = actions.filter((a) => side === 'all' || ACTION_KINDS[a.kind].side === side);
+  // Nombre real de cada equipo en vez de «Nuestro equipo»/«Rival» a secas (2026-09-23).
+  const ownLabel = shortTeamName(state.ownTeamName, 24);
+  const rivalLabel = shortTeamName(state.rivalName, 24);
 
   const { periodDurationMs, periodCount } = state.clock;
   const periodOf = (minute) => Math.min(periodCount, Math.max(1, Math.floor(((minute - 1) * 60000) / periodDurationMs) + 1));
@@ -181,10 +220,10 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
       {adding && (
         <div className="act-add">
           <select className="player-form-input" value={addKind} onChange={(e) => setAddKind(e.target.value)}>
-            <optgroup label="Nuestro equipo">
+            <optgroup label={ownLabel}>
               {OWN_KINDS.map((k) => <option key={k} value={k}>{ACTION_KINDS[k].label}</option>)}
             </optgroup>
-            <optgroup label="Rival">
+            <optgroup label={rivalLabel}>
               {RIVAL_KINDS.map((k) => <option key={k} value={k}>{ACTION_KINDS[k].label}</option>)}
             </optgroup>
           </select>
@@ -193,41 +232,68 @@ export default function MatchActionsEditor({ state, players, lists, applyPlan })
       )}
 
       <div className="home-away-toggle att-toggle">
-        {[['all', 'Todas'], ['own', 'Nuestro equipo'], ['rival', 'Rival']].map(([key, label]) => (
+        {[['all', 'Todas'], ['own', ownLabel], ['rival', rivalLabel]].map(([key, label]) => (
           <button key={key} type="button" className={`btn btn-timeout${side === key ? ' admin-nav-tab--active' : ''}`} onClick={() => setSide(key)}>
             {label}
           </button>
         ))}
       </div>
 
-      <div className="admin-list">
+      <div className="chrono-rows act-crows">
         {visible.map((action) => {
-          const d = describeAction(action, playersById);
+          const isOwn = ACTION_KINDS[action.kind].side === 'own';
+          const who = actionWho(action, playersById);
+          const label = actionLabel(action);
+          const iconType = actionIconType(action);
           const editing = editingKey === action.key;
           return (
-            <div key={action.key} className={`act-item act-item--${ACTION_KINDS[action.kind].side}`}>
-              <div className="admin-row act-row">
-                <div className="admin-user-info">
-                  <span className="admin-user-name"><span className="act-minute">{action.minute}'</span> {d.title}</span>
-                  {d.detail && <span className="admin-user-email">{d.detail}</span>}
+            <div key={action.key} className="act-crow-wrap">
+              <div
+                className={`chrono-row act-crow${isOwn ? '' : ' chrono-row--rival'}${editing ? ' act-crow--editing' : ''}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => { setEditingKey(editing ? null : action.key); setAdding(false); setError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingKey(editing ? null : action.key); } }}
+              >
+                <div className="chrono-row-side">
+                  {isOwn && (
+                    <>
+                      {iconType && <span className="chrono-row-icon"><EventIcon type={iconType} /></span>}
+                      <span className="chrono-row-text">
+                        {who && <span className="chrono-row-who">{who}</span>}
+                        <span className="chrono-row-label">{label}</span>
+                      </span>
+                    </>
+                  )}
                 </div>
-                <div className="player-form-actions">
-                  <button className="btn-icon" disabled={busy} onClick={() => { setEditingKey(editing ? null : action.key); setAdding(false); setError(''); }} title="Corregir" aria-label="Corregir acción">
-                    <Pencil size={18} />
-                  </button>
-                  <button className="btn-icon btn-icon--danger" disabled={busy} onClick={() => handleDelete(action)} title="Borrar" aria-label="Borrar acción">
-                    <Trash2 size={18} />
-                  </button>
+                <div className="chrono-row-mid">
+                  <span className="chrono-row-minute">{action.minute}&apos;</span>
+                </div>
+                <div className="chrono-row-side chrono-row-side--rival">
+                  {!isOwn && (
+                    <>
+                      <span className="chrono-row-text chrono-row-text--rival">
+                        {who && <span className="chrono-row-who">{who}</span>}
+                        <span className="chrono-row-label">{label}</span>
+                      </span>
+                      {iconType && <span className="chrono-row-icon"><EventIcon type={iconType} /></span>}
+                    </>
+                  )}
                 </div>
               </div>
               {editing && (
-                <ActionForm
-                  kind={action.kind}
-                  initial={initialValues(action.kind, action)}
-                  players={players}
-                  onSubmit={(values) => handleEdit(action, values)}
-                  onCancel={() => setEditingKey(null)}
-                />
+                <div className="act-crow-edit">
+                  <ActionForm
+                    kind={action.kind}
+                    initial={initialValues(action.kind, action)}
+                    players={players}
+                    onSubmit={(values) => handleEdit(action, values)}
+                    onCancel={() => setEditingKey(null)}
+                  />
+                  <button type="button" className="act-crow-del" disabled={busy} onClick={() => handleDelete(action)}>
+                    <Trash2 size={16} /> Borrar esta acción
+                  </button>
+                </div>
               )}
             </div>
           );

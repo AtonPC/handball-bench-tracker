@@ -42,7 +42,8 @@ export function DorsalChips({ shortcuts, statusOf, selected, onPick }) {
   return shortcuts.map((d) => {
     const st = statusOf(d.number);
     const cls = st.red ? ' shp-chip--red' : st.excludedMs ? ' shp-chip--excl' : st.yellow ? ' shp-chip--yellow' : '';
-    const sub = st.red ? 'R' : st.excludedMs ? formatClock(st.excludedMs) : st.yellow ? 'A' : d.count > 0 ? `×${d.count}` : '';
+    // Roja y amarilla, sin letra — el color del chip (shp-chip--red/--yellow) ya lo dice.
+    const sub = st.red ? '' : st.excludedMs ? formatClock(st.excludedMs) : st.yellow ? '' : d.count > 0 ? `×${d.count}` : '';
     return (
       <button key={d.number} type="button" className={`shp-chip${cls}${selected === d.number ? ' shp-chip--sel' : ''}`} onClick={() => onPick(d.number)}>
         <span className="shp-chip-n">{d.number}</span>
