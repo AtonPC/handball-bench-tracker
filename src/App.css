@@ -1928,11 +1928,14 @@
   padding: 16px;
   width: 100%;
   max-width: 420px;
-  max-height: 80svh;
+  max-height: 80vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+@supports (height: 100svh) {
+  .modal { max-height: 80svh; }
 }
 .modal > * {
   flex-shrink: 0;
@@ -1950,6 +1953,13 @@
   font-size: 13px;
   color: var(--text-dim);
 }
+/* Corregir una acción en directo (2026-09-22, TabletConsole.jsx): un modal ancho para
+   caber la lista + el formulario de edición, con su propia cabecera (título + cerrar) —
+   no se reutiliza .modal--wide porque esa segunda regla asume un hijo .multisub-rows
+   concreto para el scroll interno; aquí basta con el overflow-y:auto de base de .modal. */
+.act-editor-modal { max-width: 640px; }
+.act-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.act-editor-head h2 { font-size: 17px; }
 .link-button {
   background: none;
   border: none;
@@ -3308,8 +3318,11 @@
    de confirmar/cancelar se quedan siempre a la vista (en el móvil, con 7
    filas, confirmar exigía bajar hasta el final del modal). */
 .modal--wide {
-  max-height: 92svh;
+  max-height: 92vh;
   overflow: hidden;
+}
+@supports (height: 100svh) {
+  .modal--wide { max-height: 92svh; }
 }
 .modal--wide > .multisub-rows {
   flex-shrink: 1;
@@ -4418,8 +4431,12 @@
 
 /* hojas que suben desde abajo */
 .ph-back { position: fixed; inset: 0; background: rgba(22, 33, 62, 0.5); z-index: 59; }
-.ph-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; max-height: 88svh; z-index: 60; background: #fff; border-radius: 20px 20px 0 0; padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -8px 24px rgba(22, 33, 62, 0.25); }
-.ph-sheet--full { height: 92svh; max-height: 92svh; }
+.ph-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; max-height: 88vh; z-index: 60; background: #fff; border-radius: 20px 20px 0 0; padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -8px 24px rgba(22, 33, 62, 0.25); }
+.ph-sheet--full { height: 92vh; max-height: 92vh; }
+@supports (height: 100svh) {
+  .ph-sheet { max-height: 88svh; }
+  .ph-sheet--full { height: 92svh; max-height: 92svh; }
+}
 .ph-grab { align-self: center; width: 44px; height: 5px; border-radius: 3px; background: #cfd6e0; flex: none; }
 .ph-trow { display: flex; align-items: center; justify-content: space-between; flex: none; }
 .ph-trow h2 { margin: 0; font-size: 18px; font-weight: 800; }
@@ -4501,7 +4518,10 @@
 .ls { min-width: 0; box-sizing: border-box; }
 .ls > * { min-width: 0; max-width: 100%; }
 /* ===== Equipo titular (LineupModal, mockup aprobado, 2026-09-21) ===== */
-.modal.lu-modal { width: min(840px, 96vw); max-width: 840px; max-height: 94svh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.modal.lu-modal { width: min(840px, 96vw); max-width: 840px; max-height: 94vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+@supports (height: 100svh) {
+  .modal.lu-modal { max-height: 94svh; }
+}
 .lu-modal h2 { margin: 0; font-size: 20px; font-weight: 800; }
 .lu-hint { margin: 0; font-size: 13px; font-weight: 600; color: #3d4a66; }
 .lu-grid { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 18px; }

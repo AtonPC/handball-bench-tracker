@@ -4,7 +4,6 @@ import BallIcon from './BallIcon';
 import ShotPanel, { DorsalChips, DorsalKeys, applyKey } from './ShotPanel';
 import { timeoutDots, useClockControls } from '../hooks/useClockControls';
 import { useActionFlash } from '../hooks/useActionFlash';
-import { useRecentEvents } from '../hooks/useRecentEvents';
 import { sanctionTag } from '../utils/playerTags';
 import { periodClockDisplay } from '../utils/time';
 import { shortTeamName, teamInitials } from '../utils/teamColors';
@@ -70,13 +69,12 @@ function Sheet({ title, onClose, full, children }) {
 export default function PhoneConsole({
   store, team, onBack, onFinish, onNeedLineup,
   courtPlayers, benchPlayers, shortcuts, sanctioned = [], statusOf, isRunning,
-  scale, actions, assistFor, onAssist, statsNode, onMore,
+  scale, actions, assistFor, onAssist, statsNode, summaryNode, actionsEditorNode, onMore,
 }) {
   const { state } = store;
   const { clock, score, possession, ownTeamName, rivalName, rivalCrestUrl, isHome, alevinRules, lineups } = state;
   const ctl = useClockControls(store, { onNeedLineup, onFinish });
   const fl = useActionFlash({ store, actions, courtPlayers, assistFor, onAssist });
-  const recent = useRecentEvents(store.matchId, 3);
   const [sheet, setSheet] = useState(null); // { kind: 'pick', action, team, step, who } | { kind: 'swap', outs, ins } | { kind: 'stats' }
   const [benchOpen, setBenchOpen] = useState(false);
   const [typed, setTyped] = useState(''); // dorsal rival escrito en la hoja
@@ -236,8 +234,6 @@ export default function PhoneConsole({
   const assistCandidates = assistFor
     ? courtPlayers.filter((p) => !p.excluded && !p.disqualified && p.id !== assistFor.scorerId).sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
     : [];
-  const eventWho = (e) => (e.playerIds.length === 1 && state.players[e.playerIds[0]] ? ` · #${state.players[e.playerIds[0]].number} ${state.players[e.playerIds[0]].name}` : '');
-
   const quickRow = (t) => (
     <div className="ph-qk" key={t}>
       <span>{t === 'own' ? ownShort : rivalShort}</span>
@@ -253,7 +249,7 @@ export default function PhoneConsole({
       <div className="ph-hb">
         <button type="button" className="ph-ib" onClick={onBack}><ArrowLeft size={14} /> PARTIDOS</button>
         <span className="ph-pp">{ctl.longLabel(ctl.ended ? clock.period + 1 : clock.period)}</span>
-        <button type="button" className="ph-ib ph-ib--r" onClick={ctl.handleUndo} disabled={!store.canUndo}><Undo2 size={14} /> DESHACER</button>
+        <button type="button" className="ph-ib ph-ib--r" onClick={() => open({ kind: 'actions' })} disabled={!store.canUndo}><Undo2 size={14} /> DESHACER</button>
       </div>
 
       <div className="ph-sb">
@@ -319,22 +315,20 @@ export default function PhoneConsole({
       </div>
 
       <div className="ph-last">
-        <h3 className="ph-h">Últimas acciones</h3>
-        {recent.length === 0 && <div className="ph-note">Todavía no hay acciones.</div>}
-        {recent.map((e) => (
-          <div key={e.id}><b>{ctl.shortLabel(e.period || 1)}</b>{e.label}{eventWho(e)}</div>
-        ))}
+        <h3 className="ph-h">Resumen</h3>
+        {summaryNode}
       </div>
 
       <div className="ph-more">
         <span>Más:</span>
-        {[['datos', 'Datos (clásica)'], ['jugadores', 'Jugadores'], ['partido', 'Partido'], ['acciones', 'Acciones'], ['cronologia', 'Cronología']].map(([key, label]) => (
+        {[['datos', 'Datos (clásica)'], ['partido', 'Partido'], ['acciones', 'Acciones'], ['cronologia', 'Cronología']].map(([key, label]) => (
           <button key={key} type="button" onClick={() => onMore(key)}>{label}</button>
         ))}
       </div>
 
       {sheet?.kind === 'pick' && <Sheet title={`${ACTION_TITLE[sheet.action]} · ${shortTeamName(sheet.team === 'own' ? ownTeamName : rivalName, 14)}`} onClose={close}>{renderPick()}</Sheet>}
       {sheet?.kind === 'swap' && <Sheet title="Cambio" onClose={close}>{renderSwap()}</Sheet>}
+      {sheet?.kind === 'actions' && <Sheet title="Corregir una acción" onClose={close} full>{actionsEditorNode}</Sheet>}
       {sheet?.kind === 'stats' && <Sheet title="Estadísticas" onClose={close} full>{statsNode}</Sheet>}
 
       {shotSide && (
@@ -370,7 +364,7 @@ export default function PhoneConsole({
                 <button type="button" className="ph-link" onClick={() => { onAssist(null); fl.setDone(null); }}>Sin asistente</button>
               </>
             )}
-            <button type="button" className="ph-link ph-link--undo" onClick={fl.undoLast}>Deshacer</button>
+            <button type="button" className="ph-link ph-link--undo" onClick={() => { fl.setDone(null); open({ kind: 'actions' }); }}>Deshacer</button>
           </div>
         </div>
       )}

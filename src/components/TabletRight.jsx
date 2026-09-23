@@ -22,7 +22,7 @@ import BallIcon from './BallIcon';
 // muda dentro de Estadísticas (LiveStats), que ya tiene su propio scroll acotado
 // (.tc-center, con overflow-y:auto y min-height:0) — por ahora aquí solo queda Resumen.
 export default function TabletRight({
-  store, team, onBack, onFinish, onNeedLineup, center, onCenter, summaryNode, isRunning, onPassive, onFlash,
+  store, team, onBack, onFinish, onNeedLineup, center, onCenter, summaryNode, isRunning, onPassive, onFlash, onOpenActions,
 }) {
   const { clock, score, possession, ownTeamName, rivalName, rivalCrestUrl, isHome, alevinRules, lineups } = store.state;
   const ctl = useClockControls(store, { onNeedLineup, onFinish });
@@ -77,7 +77,7 @@ export default function TabletRight({
 
       <div className="tc-toprow">
         <button type="button" className="tc-mini" onClick={onBack}><ArrowLeft size={14} /> Partidos</button>
-        <button type="button" className="tc-mini" onClick={ctl.handleUndo} disabled={!store.canUndo}><Undo2 size={14} /> Deshacer</button>
+        <button type="button" className="tc-mini" onClick={onOpenActions} disabled={!store.canUndo}><Undo2 size={14} /> Deshacer</button>
         <button type="button" className="tc-mini tc-mini--finish" onClick={ctl.handleFinish}>Finalizar</button>
       </div>
 

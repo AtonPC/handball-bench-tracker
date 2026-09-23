@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeftRight, CircleSlash, Timer, Zap } from 'lucide-react';
+import { ArrowLeftRight, CircleSlash, Timer, X, Zap } from 'lucide-react';
 import { opp, useActionFlash } from '../hooks/useActionFlash';
 import TabletRight from './TabletRight';
 import { useLaunchLayout } from '../hooks/useIsPhone';
@@ -32,7 +32,7 @@ export default function TabletConsole({
   store, team, onBack, onFinish, onNeedLineup,
   courtPlayers, benchPlayers, shortcuts, statusOf, isRunning,
   rivalExclusionSummary = [], rivalYellowCards = [],
-  actions, assistFor, onAssist, summaryNode, statsNode,
+  actions, assistFor, onAssist, summaryNode, statsNode, actionsEditorNode,
 }) {
   const { state } = store;
   const [side, setSide] = useState('own');
@@ -40,6 +40,7 @@ export default function TabletConsole({
   const [draftKey, setDraftKey] = useState(0); // cambia al registrar: el panel vuelve a empezar
   const [center, setCenter] = useState('launch'); // 'launch' | 'stats'
   const [swap, setSwap] = useState(null); // modo cambio: { outs: [ids], ins: [ids] }
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [progress, setProgress] = useState({ shooter: false, origin: false, goal: false, seven: false });
   // Con sitio de sobra, los botones se agrupan a la izquierda y la portería/cancha
   // crecen para ocupar lo que deja libre esa columna (2026-09-22, según el dibujo del
@@ -60,7 +61,7 @@ export default function TabletConsole({
   const rivalSelected = side === 'rival' && shooter ? shooter : null;
   const rivalStatus = rivalSelected ? statusOf(rivalSelected) : null;
 
-  const { done, setDone, flash, shotMessage, teamAction: registerTeamAction, sanction: registerSanction, passive: registerPassive, substitution, undoLast } = useActionFlash({ store, actions, courtPlayers, assistFor, onAssist });
+  const { done, setDone, flash, shotMessage, teamAction: registerTeamAction, sanction: registerSanction, passive: registerPassive, substitution } = useActionFlash({ store, actions, courtPlayers, assistFor, onAssist });
 
   function pickOwn(id) {
     if (swap) {
@@ -218,7 +219,7 @@ export default function TabletConsole({
                         <button type="button" className="tc-link" onClick={() => { onAssist(null); setDone(null); }}>Sin asistente</button>
                       </>
                     )}
-                    <button type="button" className="tc-link tc-link--undo" onClick={undoLast}>Deshacer</button>
+                    <button type="button" className="tc-link tc-link--undo" onClick={() => { setDone(null); setActionsOpen(true); }}>Deshacer</button>
                   </div>
                 </div>
               ) : null}
@@ -359,7 +360,20 @@ export default function TabletConsole({
         onPassive={passive}
         onFlash={(text, detail) => flash(text, detail, 'Posesión igual')}
         summaryNode={summaryNode}
+        onOpenActions={() => setActionsOpen(true)}
       />
+
+      {actionsOpen && (
+        <div className="modal-backdrop" onClick={() => setActionsOpen(false)}>
+          <div className="modal act-editor-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Corregir una acción">
+            <div className="act-editor-head">
+              <h2>Corregir una acción</h2>
+              <button type="button" className="shp-close" onClick={() => setActionsOpen(false)} aria-label="Cerrar"><X size={20} /></button>
+            </div>
+            {actionsEditorNode}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

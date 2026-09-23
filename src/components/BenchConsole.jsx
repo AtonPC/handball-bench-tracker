@@ -15,6 +15,7 @@ import MatchSummaryView from './MatchSummaryView';
 import TabletSummary from './TabletSummary';
 import ActionStatsView from './ActionStatsView';
 import LiveStats from './LiveStats';
+import LiveActionsEditor from './LiveActionsEditor';
 import ConsoleChronology from './ConsoleChronology';
 import LineupModal from './LineupModal';
 import ShotPanel from './ShotPanel';
@@ -282,6 +283,34 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
       compact={!isTablet}
     />
   );
+  // Resumen rápido del partido (columna derecha de la tablet y, ahora también, la
+  // consola de móvil — 2026-09-22, mismo componente, mismo estilo en las dos).
+  const summaryNode = (
+    <TabletSummary
+      statePlayers={state.players}
+      shotEvents={shotEvents}
+      rivalGoals={rivalGoals}
+      rivalMisses={rivalMisses}
+      rivalExclusions={rivalExclusionsLive}
+      rivalYellowCards={rivalYellowCards}
+      teamActions={teamActions}
+      possessions={state.possessions}
+    />
+  );
+  // Corregir cualquier acción ya anotada, no solo deshacer la última (2026-09-22, ver
+  // LiveActionsEditor.jsx) — accesible desde «Deshacer» en tablet y en móvil.
+  const actionsEditorNode = (
+    <LiveActionsEditor
+      matchId={matchId}
+      state={state}
+      shotEvents={shotEvents}
+      saveEvents={saveEvents}
+      rivalGoals={rivalGoals}
+      rivalMisses={rivalMisses}
+      rivalExclusions={rivalExclusionsLive}
+      rivalYellowCards={rivalYellowCards}
+    />
+  );
 
   return (
     <div className="bench-console" style={teamColorStyle(team)}>
@@ -334,6 +363,8 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           assistFor={assistFor}
           onAssist={onAssist}
           statsNode={statsNode}
+          summaryNode={summaryNode}
+          actionsEditorNode={actionsEditorNode}
           onMore={setView}
         />
       )}
@@ -525,19 +556,9 @@ export default function BenchConsole({ store, onBack, onFinish, team }) {
           actions={tabletActions}
           assistFor={assistFor}
           onAssist={onAssist}
-          summaryNode={(
-            <TabletSummary
-              statePlayers={state.players}
-              shotEvents={shotEvents}
-              rivalGoals={rivalGoals}
-              rivalMisses={rivalMisses}
-              rivalExclusions={rivalExclusionsLive}
-              rivalYellowCards={rivalYellowCards}
-              teamActions={teamActions}
-              possessions={state.possessions}
-            />
-          )}
+          summaryNode={summaryNode}
           statsNode={statsNode}
+          actionsEditorNode={actionsEditorNode}
         />
       )}
 
