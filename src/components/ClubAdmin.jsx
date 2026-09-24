@@ -12,6 +12,12 @@ const emptyForm = {
 };
 const emptyRivalClubForm = { clubName: '', teamName: '', category: CATEGORIES[0], leagueId: '', crestUrl: '' };
 
+// Edición masiva (2026-09-24, a petición del usuario): con varios equipos marcados
+// solo tiene sentido tocar de golpe lo que es "de la ficha del partido", no los
+// datos propios del club (nombre, escudo, colores, frase de gol) — esos siguen
+// necesitando EDITAR uno a uno.
+const emptyBulkForm = { category: CATEGORIES[0], leagueId: '', isClub: true, isRival: false };
+
 // Campo con su etiqueta SIEMPRE visible encima — mismo patrón que Plantilla
 // (PlayersAdmin.jsx), reutilizado aquí para el mismo aspecto de marca.
 function Field({ label, children }) {
@@ -56,7 +62,8 @@ export default function ClubAdmin({ clubId }) {
   const { user } = useAuth();
 
   // null (menú de 2 botones) | 'club' (Equipos del club) | 'rival' (Rivales) |
-  // 'form' (añadir/editar un equipo propio) | 'newRivalClub' (fichar un club rival).
+  // 'form' (añadir/editar un equipo propio) | 'newRivalClub' (fichar un club rival) |
+  // 'bulkEdit' (editar categoría/liga/club-rival de varios equipos a la vez).
   const [screen, setScreen] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -64,6 +71,9 @@ export default function ClubAdmin({ clubId }) {
   const [rivalClubForm, setRivalClubForm] = useState(emptyRivalClubForm);
   const [rivalClubBusy, setRivalClubBusy] = useState(false);
   const [rivalClubError, setRivalClubError] = useState('');
+  const [bulkEditFrom, setBulkEditFrom] = useState('club'); // a qué lista volver al cerrar
+  const [bulkForm, setBulkForm] = useState(emptyBulkForm);
+  const [bulkEditBusy, setBulkEditBusy] = useState(false);
 
   const leagueName = (leagueId) => leagues.find((l) => l.id === leagueId)?.name || '';
 
@@ -132,6 +142,31 @@ export default function ClubAdmin({ clubId }) {
     if (!confirm(`¿Borrar ${n} equipo${n === 1 ? '' : 's'}? No se puede deshacer.`)) return;
     for (const id of selectedIds) await removeTeam(id);
     setSelectedIds([]);
+  }
+
+  // Con varios equipos marcados, solo se pueden tocar de golpe categoría, liga
+  // y si son club/rival — no los datos propios de cada uno (nombre, escudo,
+  // colores, frase de gol). Se parte de los valores del primero marcado, como
+  // punto de partida, no como "sin cambios" por campo.
+  function openBulkEdit(list) {
+    const first = list.find((t) => t.id === selectedIds[0]);
+    setBulkForm({
+      category: first?.category || CATEGORIES[0],
+      leagueId: first?.leagueId || '',
+      isClub: first ? first.isClub !== false : true,
+      isRival: !!first?.isRival,
+    });
+    setBulkEditFrom(list === rivalTeams ? 'rival' : 'club');
+    setScreen('bulkEdit');
+  }
+
+  async function applyBulkEdit() {
+    setBulkEditBusy(true);
+    const data = { category: bulkForm.category, leagueId: bulkForm.leagueId || null, isClub: bulkForm.isClub, isRival: bulkForm.isRival };
+    for (const id of selectedIds) await updateTeam(id, data);
+    setBulkEditBusy(false);
+    setSelectedIds([]);
+    setScreen(bulkEditFrom);
   }
 
   async function handleCreateRivalClub(e) {
@@ -258,6 +293,55 @@ export default function ClubAdmin({ clubId }) {
         </div>
       )}
 
+      {screen === 'bulkEdit' && (
+        <div className="modal-backdrop" onClick={() => setScreen(bulkEditFrom)}>
+          <div className="modal plantilla-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Edición masiva">
+            <div className="plantilla-modal-head">
+              <h2>Edición masiva ({selectedIds.length} equipos)</h2>
+              <button type="button" className="shp-close" onClick={() => setScreen(bulkEditFrom)} aria-label="Cerrar"><X size={20} /></button>
+            </div>
+            <form
+              className="plantilla-form"
+              onSubmit={(e) => { e.preventDefault(); applyBulkEdit(); }}
+            >
+              <p className="modal-hint" style={{ margin: 0 }}>
+                Solo se puede cambiar de golpe la categoría, la liga y si son club/rival — el nombre, el escudo, los
+                colores y la frase de gol son propios de cada equipo y se editan uno a uno.
+              </p>
+              <Field label="Categoría">
+                <select className="player-form-input" value={bulkForm.category} onChange={(e) => setBulkForm({ ...bulkForm, category: e.target.value })}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="Liga">
+                <select className="player-form-input" value={bulkForm.leagueId} onChange={(e) => setBulkForm({ ...bulkForm, leagueId: e.target.value })}>
+                  <option value="">Sin liga</option>
+                  {leagues.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Estos equipos son…">
+                <div className="plantilla-check-row">
+                  <label className="player-form-checkbox">
+                    <input type="checkbox" checked={bulkForm.isClub} onChange={(e) => setBulkForm({ ...bulkForm, isClub: e.target.checked })} />
+                    Club (mío, aparece en el selector de equipo)
+                  </label>
+                  <label className="player-form-checkbox">
+                    <input type="checkbox" checked={bulkForm.isRival} onChange={(e) => setBulkForm({ ...bulkForm, isRival: e.target.checked })} />
+                    Rival (se puede elegir como rival al crear un partido)
+                  </label>
+                </div>
+              </Field>
+              <div className="player-form-actions">
+                <button className="btn btn-clock btn-start" type="submit" disabled={bulkEditBusy}>
+                  {bulkEditBusy ? 'APLICANDO…' : `APLICAR A ${selectedIds.length}`}
+                </button>
+                <button type="button" className="modal-cancel" onClick={() => setScreen(bulkEditFrom)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {screen === 'newRivalClub' && (
         <div className="modal-backdrop" onClick={() => setScreen('rival')}>
           <div className="modal plantilla-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Fichar club rival">
@@ -347,6 +431,11 @@ export default function ClubAdmin({ clubId }) {
                     <Settings size={16} /> EDITAR
                   </button>
                 )}
+                {selectedIds.length > 1 && (
+                  <button type="button" className="btn btn-timeout" onClick={() => openBulkEdit(clubTeams)}>
+                    <Settings size={16} /> EDICIÓN MASIVA
+                  </button>
+                )}
                 <button type="button" className="btn btn-danger" onClick={deleteSelected}>
                   BORRAR{selectedIds.length > 1 ? ` (${selectedIds.length})` : ''}
                 </button>
@@ -392,6 +481,11 @@ export default function ClubAdmin({ clubId }) {
                 {selectedIds.length === 1 && (
                   <button type="button" className="btn btn-timeout" onClick={() => editSelected(rivalTeams)}>
                     <Settings size={16} /> EDITAR
+                  </button>
+                )}
+                {selectedIds.length > 1 && (
+                  <button type="button" className="btn btn-timeout" onClick={() => openBulkEdit(rivalTeams)}>
+                    <Settings size={16} /> EDICIÓN MASIVA
                   </button>
                 )}
                 <button type="button" className="btn btn-danger" onClick={deleteSelected}>
