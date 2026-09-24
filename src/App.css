@@ -833,6 +833,98 @@
   color: var(--danger);
 }
 
+/* Plantilla (2026-09-24, a petición del usuario): menú de 3 botones grandes en vez del
+   formulario siempre a la vista — cada uno abre su pantalla (modal) con el mismo
+   lenguaje visual ya establecido (tipografía en mayúsculas pequeñas para las etiquetas,
+   igual que .tc-h/.ph-h/.chrono-row-label). Solo son clases NUEVAS, con prefijo
+   plantilla-/pf- — no se toca .admin-row/.player-form-input/.btn-icon, compartidas con
+   Partidos/Club/Sistema/el editor de partido finalizado, para no cambiarles el aspecto
+   sin que se haya pedido. */
+.plantilla-head {
+  padding: 4px 4px 14px;
+}
+.plantilla-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.plantilla-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.plantilla-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plantilla-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.plantilla-card:hover {
+  background: var(--panel-alt);
+  border-color: var(--accent);
+}
+.plantilla-card-t {
+  font-size: 15px;
+  font-weight: 800;
+}
+.plantilla-card-d {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.plantilla-modal {
+  max-width: 480px;
+}
+.plantilla-modal--wide {
+  max-width: 640px;
+}
+.plantilla-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.plantilla-modal-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.plantilla-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Etiqueta SIEMPRE visible encima del campo (no solo el placeholder, que desaparece en
+   cuanto hay algo escrito) — mismo estilo de mayúscula pequeña que .tc-h/.ph-h. */
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
 .stats-view {
   flex: 1;
   min-height: 0;
