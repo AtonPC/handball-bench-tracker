@@ -1712,6 +1712,16 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+/* Borrar en bloque (Plantilla, 2026-09-24): mismo tono que .act-crow-del
+   (Corregir una acción), para que "borrar" se lea siempre igual en la app. */
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--danger-dim);
+  border-color: var(--danger);
+  color: #8a2117;
+}
 .btn-pause {
   background: var(--danger-dim);
   border-color: var(--danger);

@@ -108,6 +108,7 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkPosition, setBulkPosition] = useState('');
   const [bulkPositionBusy, setBulkPositionBusy] = useState(false);
+  const [bulkDeleteBusy, setBulkDeleteBusy] = useState(false);
   const [moveClubId, setMoveClubId] = useState('');
   const [moveTeamId, setMoveTeamId] = useState('');
   const [moveBusy, setMoveBusy] = useState(false);
@@ -222,6 +223,29 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
     setMoveBusy(false);
     setSelectedIds([]);
     setMoveTeamId('');
+  }
+
+  // Marca varios y bórralos de golpe (2026-09-24, a petición del usuario) — o marca
+  // uno solo para editarlo (más abajo, editSelected). Con confirmación: a diferencia
+  // de borrar uno con el cubo de la fila, aquí se puede borrar a toda la plantilla de
+  // una vez.
+  async function applyBulkDelete() {
+    const n = selectedIds.length;
+    if (!confirm(`¿Borrar ${n} jugador${n === 1 ? '' : 'es'}? No se puede deshacer.`)) return;
+    setBulkDeleteBusy(true);
+    for (const id of selectedIds) {
+      await removePlayer(id);
+    }
+    setBulkDeleteBusy(false);
+    setSelectedIds([]);
+  }
+
+  function editSelected() {
+    const p = players.find((x) => x.id === selectedIds[0]);
+    if (p) {
+      startEdit(p);
+      setSelectedIds([]);
+    }
   }
 
   async function handleSubmit(e) {
@@ -456,6 +480,24 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
               </label>
             )}
 
+            {/* Acción principal de la selección (2026-09-24, a petición del usuario): marcar
+                varios y borrarlos de golpe, o marcar uno solo y editarlo — sustituye a los
+                iconos de lápiz/cubo que había antes en cada fila. */}
+            {selectedIds.length > 0 && (
+              <div className="player-form" style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span className="modal-hint" style={{ margin: 0 }}>{selectedIds.length} seleccionado{selectedIds.length === 1 ? '' : 's'}:</span>
+                {selectedIds.length === 1 && (
+                  <button type="button" className="btn btn-timeout" onClick={editSelected}>
+                    <Settings size={16} /> EDITAR
+                  </button>
+                )}
+                <button type="button" className="btn btn-danger" disabled={bulkDeleteBusy} onClick={applyBulkDelete}>
+                  <Trash2 size={16} /> {bulkDeleteBusy ? 'BORRANDO…' : `BORRAR${selectedIds.length > 1 ? ` (${selectedIds.length})` : ''}`}
+                </button>
+                <button type="button" className="modal-cancel" onClick={() => setSelectedIds([])}>Cancelar selección</button>
+              </div>
+            )}
+
             {selectedIds.length > 0 && (
               <div className="player-form" style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span className="modal-hint" style={{ margin: 0 }}>Poner posición a {selectedIds.length} jugador{selectedIds.length === 1 ? '' : 'es'}:</span>
@@ -473,7 +515,6 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
                 >
                   {bulkPositionBusy ? 'APLICANDO…' : 'APLICAR'}
                 </button>
-                <button type="button" className="modal-cancel" onClick={() => setSelectedIds([])}>Cancelar selección</button>
               </div>
             )}
 
@@ -526,12 +567,6 @@ export default function PlayersAdmin({ clubId, teamId, teamName }) {
                     <span className="admin-user-name">#{p.number} {p.displayName}{p.imageAuthorized === false ? ' (sin imagen)' : ''}</span>
                     <span className="admin-user-email">{p.firstName} {p.lastName} · {POSITION_ABBR[p.position] || p.position || 'Sin posición'}</span>
                   </div>
-                  <button className="btn-icon" onClick={() => startEdit(p)} title="Editar" aria-label="Editar jugador/a">
-                    <Settings size={18} />
-                  </button>
-                  <button className="btn-icon btn-icon--danger" onClick={() => removePlayer(p.id)} title="Borrar" aria-label="Borrar jugador/a">
-                    <Trash2 size={18} />
-                  </button>
                 </div>
               ))}
               {players.length === 0 && <p className="modal-hint">No hay jugadores en este equipo todavía.</p>}
