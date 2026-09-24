@@ -924,6 +924,14 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
+/* Casillas Club/Rival de un equipo (ClubAdmin.jsx, 2026-09-24) — una al lado de la
+   otra, se pueden marcar las dos (dos equipos del mismo club en la misma liga son
+   rivales entre sí). */
+.plantilla-check-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 .stats-view {
   flex: 1;

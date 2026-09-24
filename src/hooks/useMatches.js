@@ -27,12 +27,16 @@ export function useMatches(clubId, teamId) {
     return unsub;
   }, [teamId]);
 
-  const createMatch = useCallback(async ({ rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, rivalDorsals, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount, alevinRules }) => {
+  const createMatch = useCallback(async ({ rivalTeamId, rivalName, isHome, venue, scheduledAt, ownTeamName, jornada, rivalCrestUrl, rivalDorsals, callUpPlayerIds, startingLineupIds, startingGoalkeeperId, periodDurationMs, periodCount, alevinRules }) => {
     const count = periodCount === 4 ? 4 : 2;
     const zeroTimeouts = Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 0]));
     const ref = await addDoc(matchesCol, {
       clubId,
       teamId,
+      // De qué equipo (colección teams, marcado isRival) viene el rival — para
+      // preseleccionarlo si se vuelve a editar el partido (2026-09-24). `null` en
+      // partidos de antes de esto, o si no estaba en la lista.
+      rivalTeamId: rivalTeamId || null,
       rivalName,
       isHome,
       venue,

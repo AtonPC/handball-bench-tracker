@@ -23,6 +23,15 @@ export function useClubs(enabled) {
     return addDoc(clubsCol, { name, managerUids: [], createdAt: Date.now() });
   }, []);
 
+  // Fichar un club rival nuevo (2026-09-24, MatchesAdmin.jsx): a diferencia de
+  // addClub (Administrador de Sistema, sin gestor todavía), aquí quien lo crea
+  // queda como su gestor — hace falta para que las reglas de Firestore lo
+  // permitan (un gestor de club normal solo puede crear un club si él mismo
+  // queda en managerUids, ver firestore.rules) y para poder corregirlo después.
+  const addClubAsManager = useCallback((name, uid) => {
+    return addDoc(clubsCol, { name, managerUids: [uid], createdAt: Date.now() });
+  }, []);
+
   const renameClub = useCallback((clubId, name) => {
     return updateDoc(doc(db, 'clubs', clubId), { name });
   }, []);
@@ -37,5 +46,5 @@ export function useClubs(enabled) {
 
   const removeClub = useCallback((id) => deleteDoc(doc(db, 'clubs', id)), []);
 
-  return { clubs, addClub, renameClub, addManager, removeManager, removeClub };
+  return { clubs, addClub, addClubAsManager, renameClub, addManager, removeManager, removeClub };
 }

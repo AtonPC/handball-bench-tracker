@@ -75,17 +75,22 @@ export function accessibleClubs(identity) {
 
 // Todos los equipos a los que la persona tiene algún tipo de acceso de
 // gestión: por membresía de staff, o porque gestiona el club dueño del equipo.
+// Un equipo sin isClub (todos los de antes de 2026-09-24) cuenta como propio —
+// solo los marcados isClub:false explícitamente (equipos rivales fichados desde
+// Crear partido, ver useTeams.js) se excluyen del desplegable "de qué equipo soy".
+const isOwnClubTeam = (team) => team.isClub !== false;
+
 export function accessibleTeams(identity) {
   if (!identity) return [];
-  if (isSystemAdmin(identity)) return identity.allTeams || [];
+  if (isSystemAdmin(identity)) return (identity.allTeams || []).filter(isOwnClubTeam);
   const byId = new Map();
   for (const team of identity.allTeams || []) {
-    if (identity.managedClubIds.includes(team.clubId)) byId.set(team.id, team);
+    if (identity.managedClubIds.includes(team.clubId) && isOwnClubTeam(team)) byId.set(team.id, team);
   }
   for (const m of identity.staffMemberships || []) {
     if (!m.active) continue;
     const team = identity.teamsById?.[m.teamId];
-    if (team) byId.set(team.id, team);
+    if (team && isOwnClubTeam(team)) byId.set(team.id, team);
   }
   return [...byId.values()];
 }
