@@ -1,34 +1,13 @@
 import { useState } from 'react';
 import { LINEUP_FIELD_ZONES } from '../utils/lineups';
-import { BOARD_H, BOARD_W, boardPoint, zoneOutline } from '../utils/shotBoard';
 
-// Recorte de una zona en PORCENTAJE (no en px como zoneClipPath, pensado para
-// el panel de tiro a tamaño fijo) — así la cancha de este tablero puede ser
-// fluida (width:100%, aspect-ratio) sin desalinear el recorte con el tamaño
-// real ya renderizado.
-function zoneClipPathPct(def) {
-  const pts = zoneOutline(def).map(([x, y]) => `${((x / BOARD_W) * 100).toFixed(2)}% ${((y / BOARD_H) * 100).toFixed(2)}%`);
-  return `polygon(${pts.join(',')})`;
-}
-
-// Punto (en %) donde va el contenido (etiqueta/jugador) de una zona. El propio
-// div de la zona ocupa TODA la cancha (solo el clip-path lo recorta visual y
-// también a efectos de qué zona responde al toque en cada punto) — su
-// contenido no puede ir centrado con flexbox porque las 6 zonas comparten la
-// misma caja y todo el texto quedaría amontonado en el centro; se posiciona
-// aparte, en el punto de etiqueta propio de cada zona (mismo `lu`/`lk` que ya
-// usa el panel de tiro para lo mismo, ver zoneLabelPoint en utils/shotBoard.js).
-function zoneContentPointPct(def) {
-  const [x, y] = boardPoint(def.lu, def.lk);
-  return [(x / BOARD_W) * 100, (y / BOARD_H) * 100];
-}
-
-// Cancha arrastrable para elegir el equipo titular (2026-09-26, a petición
-// del usuario): "una plantilla como la de tiro, sin portería, arrastrando a
-// cada puesto el jugador que quiero poner". `ids` es SIEMPRE un array de 7
-// (el índice 0 el portero, el resto en el orden fijo de LINEUP_FIELD_ZONES —
-// ver utils/lineups.js), igual que ya usaban MatchesAdmin/LineupModal, así
-// que no hace falta ningún cambio de esquema en Firestore.
+// Cancha de dos líneas de 3 para elegir el equipo titular (2026-09-26, a
+// petición del usuario — primera versión con la geometría del panel de tiro
+// se sustituye por esto: "la distribución tiene que ocupar dos líneas de 3").
+// `ids` es SIEMPRE un array de 7 (el índice 0 el portero, el resto en el
+// orden fijo de LINEUP_FIELD_ZONES — ver utils/lineups.js), igual que ya
+// usaban MatchesAdmin/LineupModal, así que no hace falta ningún cambio de
+// esquema en Firestore.
 //  - `prevIds` (opcional, mismo formato): equipo del periodo anterior — se
 //    usa para el aviso "antes #N" en cada puesto que haya cambiado, y quien
 //    llama a este componente puede pasar `ids` ya precargado con `prevIds`
@@ -37,6 +16,8 @@ function zoneContentPointPct(def) {
 //    siguiendo el dedo/cursor) O tocar un puesto y luego a quien lo ocupa
 //    (igual que el LineupModal de antes) — lo segundo sigue funcionando por
 //    si arrastrar resulta incómodo en algún dispositivo.
+//  - Los convocados de abajo se ven como en el partido: dorsal en un círculo
+//    azul + nombre (mismas clases `.shp-player*` que ya usa ShotPanel.jsx).
 export default function LineupBoard({ ids, onChange, roster, prevIds }) {
   const [active, setActive] = useState(null); // puesto tocado, a la espera de jugador
   const [ghost, setGhost] = useState(null); // { x, y, id } — jugador siendo arrastrado
@@ -134,7 +115,6 @@ export default function LineupBoard({ ids, onChange, roster, prevIds }) {
       </div>
 
       <div className="lnb-court">
-        <div className="lnb-six" />
         {LINEUP_FIELD_ZONES.map((z, idx) => {
           const i = idx + 1;
           const id = ids[i];
@@ -142,24 +122,15 @@ export default function LineupBoard({ ids, onChange, roster, prevIds }) {
             <div
               key={z.key}
               data-lnb-slot={i}
-              className={`lnb-zone lnb-zone--${z.key === 'EI' || z.key === 'ED' ? 'w' : 'n'}${id ? ' lnb-zone--filled' : ''}${active === i ? ' lnb-slot--act' : ''}${overSlot === i ? ' lnb-slot--over' : ''}`}
-              style={{ clipPath: zoneClipPathPct(z.def) }}
+              className={`lnb-cell${id ? ' lnb-cell--filled' : ''}${active === i ? ' lnb-slot--act' : ''}${overSlot === i ? ' lnb-slot--over' : ''}`}
               onClick={() => handleSlotTap(i)}
               onPointerDown={id ? (e) => startDrag(id, i, e) : undefined}
               role="button"
               tabIndex={0}
               aria-label={`${z.name}: ${id ? `#${numberOf(id)} ${nameOf(id)}` : 'vacío'}`}
-            />
-          );
-        })}
-        {LINEUP_FIELD_ZONES.map((z, idx) => {
-          const i = idx + 1;
-          const id = ids[i];
-          const [x, y] = zoneContentPointPct(z.def);
-          return (
-            <div key={`c-${z.key}`} className="lnb-zone-content" style={{ left: `${x}%`, top: `${y}%` }}>
-              <span className="lnb-zone-label">{z.label}</span>
-              {id ? <span className="lnb-zone-player">#{numberOf(id)} {nameOf(id)}</span> : <span className="lnb-empty">{z.name}</span>}
+            >
+              <span className="lnb-cell-label">{z.label}</span>
+              {id ? <span className="lnb-cell-player">#{numberOf(id)} {nameOf(id)}</span> : <span className="lnb-empty">{z.name}</span>}
               {prevHint(i) && <small className="lnb-prev">{prevHint(i)}</small>}
             </div>
           );
@@ -171,11 +142,12 @@ export default function LineupBoard({ ids, onChange, roster, prevIds }) {
           <button
             key={p.id}
             type="button"
-            className="lnb-rp"
+            className="shp-player lnb-rp"
             onPointerDown={(e) => startDrag(p.id, null, e)}
             onClick={() => handleRosterTap(p.id)}
           >
-            <b>{p.number}</b>{(p.displayName || p.name || '').split(' ')[0]}
+            <span className="shp-player-n">{p.number}</span>
+            <span className="shp-player-name">{(p.displayName || p.name || '').split(' ')[0]}</span>
           </button>
         ))}
         {freeRoster.length === 0 && <p className="modal-hint" style={{ margin: 0 }}>Todos los convocados están ya colocados.</p>}
