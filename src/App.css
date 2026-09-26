@@ -279,6 +279,21 @@
   flex-direction: column;
   min-width: 0;
 }
+/* Estrella de "equipo favorito" en "Equipos del club" (2026-09-26) — el
+   mismo tono que la tarjeta amarilla de verdad (--card-yellow), para que se
+   lea claramente como "marcado" sin confundirse con un aviso o sanción. */
+.team-fav {
+  border: 0;
+  background: none;
+  padding: 4px;
+  margin: -4px;
+  cursor: pointer;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.team-fav--on { color: var(--card-yellow); }
 .admin-user-name {
   font-weight: 600;
   font-size: 14px;
@@ -777,11 +792,6 @@
   display: flex;
   gap: 8px;
 }
-/* 3 pestañas de "Crear/editar partido" (2026-09-26) — a diferencia del resto
-   de usos de .home-away-toggle (siempre 2 botones que caben en una fila),
-   estas 3 etiquetas son más largas y necesitan poder bajar de línea en
-   pantallas estrechas. */
-.match-form-tabs { flex-wrap: wrap; }
 /* Local/Visitante (2026-09-26): antes usaba el mismo resaltado tenue de
    cualquier pestaña seleccionada (admin-nav-tab--active), poco visible y sin
    dejar claro que la pregunta es sobre EL EQUIPO PROPIO. Ahora un botón

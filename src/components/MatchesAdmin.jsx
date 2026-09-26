@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarClock, ChevronRight, History, Plus, Settings, Trash2, X } from 'lucide-react';
+import { CalendarClock, ChevronRight, ClipboardList, History, LayoutGrid, Plus, Settings, Trash2, Users, X } from 'lucide-react';
 import { findLastVenueForRival, useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 import { addRivalTeam, useRivalTeams } from '../hooks/useTeams';
@@ -14,6 +14,7 @@ import { CATEGORIES } from '../categories';
 import LineupBoard from './LineupBoard';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
+const FORM_SECTION_TITLES = { details: 'Detalles del partido', callup: 'Convocados', lineup: 'Alineación titular' };
 const emptyForm = { rivalTeamId: '', rivalName: '', isHome: true, venue: '', scheduledAt: '', periodFormat: 'halves', periodDurationMinutes: PERIOD_FORMATS.halves.minutes, alevinRules: false, jornada: '', rivalCrestUrl: '', rivalDorsalsText: '' };
 const emptyRivalClubForm = { clubName: '', teamName: '', category: CATEGORIES[0], leagueId: '', crestUrl: '' };
 
@@ -89,10 +90,12 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
   const [createFrom, setCreateFrom] = useState(null);
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  // Las 3 secciones del formulario de partido, como pestañas (2026-09-26, a
-  // petición del usuario) — antes era un único formulario larguísimo con todo
-  // seguido.
-  const [formSection, setFormSection] = useState('details'); // 'details' | 'callup' | 'lineup'
+  // Menú de 3 botones grandes, igual que el resto de la app (2026-09-26,
+  // corregido tras la primera vuelta con pestañas) — null muestra el menú
+  // (Detalles del partido / Convocados / Alineación titular); cada botón
+  // abre su propia pantalla, y volver de ella (la X de la cabecera) regresa
+  // a este menú, NUNCA cierra todo el "Crear/editar partido" de golpe.
+  const [formSection, setFormSection] = useState(null); // null | 'details' | 'callup' | 'lineup'
   // Fichar un club rival nuevo al crear el partido — mismo flujo que "Rivales
   // del club" en ClubAdmin.jsx, en un modal aparte encima del formulario.
   const [showNewRivalClub, setShowNewRivalClub] = useState(false);
@@ -260,7 +263,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     setForm(emptyForm);
     setCallUpIds([]);
     setBoardIds(Array(LINEUP_SIZE).fill(''));
-    setFormSection('details');
+    setFormSection(null);
     setCreateFrom(screen === 'scheduled' ? 'scheduled' : null);
     setScreen('create');
   }
@@ -287,7 +290,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     const gk = m.startingGoalkeeperId || '';
     const rest = (m.startingLineupIds || []).filter((id) => id !== gk);
     setBoardIds([gk, ...rest, ...Array(LINEUP_SIZE).fill('')].slice(0, LINEUP_SIZE));
-    setFormSection('details');
+    setFormSection(null);
     setCreateFrom('scheduled');
     setScreen('create');
   }
@@ -301,6 +304,17 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     setRivalClubForm(emptyRivalClubForm);
     setRivalClubError('');
     setScreen(createFrom);
+  }
+
+  // La X de la cabecera (y el fondo del modal) siempre "sube un nivel": si
+  // hay una sección abierta (Detalles/Convocados/Alineación), vuelve al menú
+  // de "Crear/editar partido" sin perder lo ya rellenado; solo si ya se está
+  // en ese menú, cierra el modal entero (cancelForm) — 2026-09-26, a petición
+  // del usuario: "no debe salirse al menú principal de partidos, sino al
+  // submenú anterior".
+  function closeCreateLayer() {
+    if (formSection !== null) setFormSection(null);
+    else cancelForm();
   }
 
   async function handleSubmit(e) {
@@ -360,20 +374,38 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     <form className="player-form" onSubmit={handleSubmit}>
       <p className="modal-hint">Mi equipo: <strong>{ownTeamName}</strong></p>
 
-      {/* 3 pestañas en vez de un único formulario larguísimo (2026-09-26, a
-          petición del usuario) — cada una se abre por separado, con sus
-          propios campos. */}
-      <div className="home-away-toggle match-form-tabs">
-        <button type="button" className={`btn btn-timeout${formSection === 'details' ? ' admin-nav-tab--active' : ''}`} onClick={() => setFormSection('details')}>
-          Detalles del partido
-        </button>
-        <button type="button" className={`btn btn-timeout${formSection === 'callup' ? ' admin-nav-tab--active' : ''}`} onClick={() => setFormSection('callup')}>
-          Convocados{callUpIds.length > 0 ? ` (${callUpIds.length})` : ''}
-        </button>
-        <button type="button" className={`btn btn-timeout${formSection === 'lineup' ? ' admin-nav-tab--active' : ''}`} onClick={() => setFormSection('lineup')}>
-          Alineación titular{boardIds.filter(Boolean).length > 0 ? ` (${boardIds.filter(Boolean).length}/7)` : ''}
-        </button>
-      </div>
+      {/* Menú de 3 botones grandes, igual que el resto de la app (2026-09-26,
+          corregido tras la primera vuelta con pestañas pequeñas). Volver de
+          cada pantalla (la X de la cabecera del modal, ver más abajo en el
+          return) trae de vuelta aquí — nunca cierra todo el "Crear/editar
+          partido" de golpe. */}
+      {formSection === null && (
+        <>
+          <div className="plantilla-menu">
+            <button type="button" className="plantilla-card" onClick={() => setFormSection('details')}>
+              <ClipboardList size={22} />
+              <span className="plantilla-card-t">Detalles del partido</span>
+              <span className="plantilla-card-d">{form.rivalName ? `vs ${form.rivalName}` : 'Rival, lugar, fecha, formato…'}</span>
+            </button>
+            <button type="button" className="plantilla-card" onClick={() => setFormSection('callup')}>
+              <Users size={22} />
+              <span className="plantilla-card-t">Convocados</span>
+              <span className="plantilla-card-d">{callUpIds.length} jugador{callUpIds.length === 1 ? '' : 'es'} convocado{callUpIds.length === 1 ? '' : 's'}</span>
+            </button>
+            <button type="button" className="plantilla-card" onClick={() => setFormSection('lineup')}>
+              <LayoutGrid size={22} />
+              <span className="plantilla-card-t">Alineación titular</span>
+              <span className="plantilla-card-d">{boardIds.filter(Boolean).length}/7 puestos elegidos</span>
+            </button>
+          </div>
+          <div className="player-form-actions">
+            <button className="btn btn-clock btn-start" type="submit">
+              {editingMatchId ? 'GUARDAR CAMBIOS' : 'CREAR PARTIDO'}
+            </button>
+            <button type="button" className="modal-cancel" onClick={cancelForm}>Cancelar</button>
+          </div>
+        </>
+      )}
 
       {formSection === 'details' && (
         <>
@@ -568,16 +600,9 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
             />
           </>
         ) : (
-          <p className="modal-hint">Elige primero la convocatoria en la pestaña «Convocados».</p>
+          <p className="modal-hint">Elige primero la convocatoria en «Convocados».</p>
         )
       )}
-
-      <div className="player-form-actions">
-        <button className="btn btn-clock btn-start" type="submit">
-          {editingMatchId ? 'GUARDAR CAMBIOS' : 'CREAR PARTIDO'}
-        </button>
-        <button type="button" className="modal-cancel" onClick={cancelForm}>Cancelar</button>
-      </div>
     </form>
   );
 
@@ -770,11 +795,11 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       </div>
 
       {screen === 'create' && (
-        <div className="modal-backdrop" onClick={cancelForm}>
-          <div className="modal plantilla-modal plantilla-modal--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={editingMatchId ? 'Editar partido' : 'Crear partido'}>
+        <div className="modal-backdrop" onClick={closeCreateLayer}>
+          <div className="modal plantilla-modal plantilla-modal--wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={formSection ? FORM_SECTION_TITLES[formSection] : (editingMatchId ? 'Editar partido' : 'Crear partido')}>
             <div className="plantilla-modal-head">
-              <h2>{editingMatchId ? 'Editar partido' : 'Crear partido'}</h2>
-              <button type="button" className="shp-close" onClick={cancelForm} aria-label="Cerrar"><X size={20} /></button>
+              <h2>{formSection ? FORM_SECTION_TITLES[formSection] : (editingMatchId ? 'Editar partido' : 'Crear partido')}</h2>
+              <button type="button" className="shp-close" onClick={closeCreateLayer} aria-label={formSection ? 'Volver' : 'Cerrar'}><X size={20} /></button>
             </div>
             {matchForm}
           </div>

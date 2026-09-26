@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Shield, Swords, X } from 'lucide-react';
+import { Settings, Shield, Star, Swords, X } from 'lucide-react';
 import { useTeams, useRivalTeams } from '../hooks/useTeams';
 import { useLeagues } from '../hooks/useLeagues';
 import { useClubs } from '../hooks/useClubs';
@@ -31,12 +31,26 @@ function Field({ label, children }) {
 
 // Ficha de un club/liga/categoría, con escudo — misma fila para "Equipos del club"
 // y "Rivales" (2026-09-24, a petición del usuario: mismo listado con nombre, escudo,
-// liga y categoría en los dos sitios).
-function TeamRow({ t, leagueName, selected, onToggle, selectable }) {
+// liga y categoría en los dos sitios). La estrella de favorito (2026-09-26) solo se
+// pasa desde "Equipos del club" — no tiene sentido marcar un rival como equipo por
+// defecto de la app.
+function TeamRow({ t, leagueName, selected, onToggle, selectable, isDefault, onToggleDefault }) {
   return (
     <div className="admin-row">
       {selectable && (
         <input type="checkbox" checked={selected} onChange={onToggle} />
+      )}
+      {onToggleDefault && (
+        <button
+          type="button"
+          className={`team-fav${isDefault ? ' team-fav--on' : ''}`}
+          onClick={(e) => { e.stopPropagation(); onToggleDefault(); }}
+          aria-label={isDefault ? `${t.name}: equipo favorito (por defecto)` : `Marcar ${t.name} como favorito`}
+          aria-pressed={!!isDefault}
+          title={isDefault ? 'Equipo favorito — aparece por defecto al entrar' : 'Marcar como favorito'}
+        >
+          <Star size={18} fill={isDefault ? 'currentColor' : 'none'} />
+        </button>
       )}
       {t.crestUrl ? (
         <img className="player-thumb" src={t.crestUrl} alt="" />
@@ -142,6 +156,19 @@ export default function ClubAdmin({ clubId }) {
     if (!confirm(`¿Borrar ${n} equipo${n === 1 ? '' : 's'}? No se puede deshacer.`)) return;
     for (const id of selectedIds) await removeTeam(id);
     setSelectedIds([]);
+  }
+
+  // Equipo favorito del club (2026-09-26, a petición del usuario): el que
+  // aparece por defecto al entrar en la app (App.jsx lo prioriza sobre el
+  // primero de la lista, que hasta ahora era arbitrario — orden de creación,
+  // no una elección real). Solo uno a la vez: marcar uno desmarca al anterior;
+  // volver a tocar el ya marcado lo quita (sin favorito, vuelve al primero).
+  async function setDefaultTeam(t) {
+    const turningOn = !t.isDefault;
+    for (const other of clubTeams) {
+      if (other.id !== t.id && other.isDefault) await updateTeam(other.id, { isDefault: false });
+    }
+    await updateTeam(t.id, { isDefault: turningOn });
   }
 
   // Con varios equipos marcados, solo se pueden tocar de golpe categoría, liga
@@ -408,6 +435,10 @@ export default function ClubAdmin({ clubId }) {
               <h2>Equipos del club</h2>
               <button type="button" className="shp-close" onClick={() => { setScreen(null); setSelectedIds([]); }} aria-label="Cerrar"><X size={20} /></button>
             </div>
+            <p className="modal-hint" style={{ margin: 0 }}>
+              <Star size={13} style={{ verticalAlign: -2 }} /> marca el equipo favorito — el que aparece por defecto
+              al entrar en la app.
+            </p>
             <div className="player-form-actions">
               <button type="button" className="btn btn-clock btn-start" onClick={openAdd}>+ AÑADIR EQUIPO</button>
             </div>
@@ -452,6 +483,8 @@ export default function ClubAdmin({ clubId }) {
                   selected={selectedIds.includes(t.id)}
                   onToggle={() => toggleSelected(t.id)}
                   selectable
+                  isDefault={!!t.isDefault}
+                  onToggleDefault={() => setDefaultTeam(t)}
                 />
               ))}
               {clubTeams.length === 0 && <p className="modal-hint">Todavía no hay equipos en este club.</p>}

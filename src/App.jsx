@@ -60,7 +60,14 @@ export default function App() {
       if (activeTeamId) setActiveTeamId('');
       return;
     }
-    if (!teamsInActiveClub.some((t) => t.id === activeTeamId)) setActiveTeamId(teamsInActiveClub[0].id);
+    if (!teamsInActiveClub.some((t) => t.id === activeTeamId)) {
+      // El equipo por defecto es el marcado como favorito en Club (2026-09-26,
+      // a petición del usuario — antes era siempre el primero de la lista, un
+      // orden arbitrario de creación, no una elección real); si ninguno está
+      // marcado, se mantiene el primero de siempre.
+      const preferred = teamsInActiveClub.find((t) => t.isDefault) || teamsInActiveClub[0];
+      setActiveTeamId(preferred.id);
+    }
   }, [teamsInActiveClub, activeTeamId]);
 
   const activeTeam = teamsInActiveClub.find((t) => t.id === activeTeamId) || null;
