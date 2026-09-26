@@ -777,6 +777,29 @@
   display: flex;
   gap: 8px;
 }
+/* Local/Visitante (2026-09-26): antes usaba el mismo resaltado tenue de
+   cualquier pestaña seleccionada (admin-nav-tab--active), poco visible y sin
+   dejar claro que la pregunta es sobre EL EQUIPO PROPIO. Ahora un botón
+   grande, con --own (el azul de "nosotros" en toda la app) sólido cuando está
+   activo — más un Field con la etiqueta "Mi equipo juega…" encima, en el
+   propio formulario. */
+.home-away-btn {
+  flex: 1;
+  border: 2px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.home-away-btn--active {
+  background: var(--own);
+  border-color: var(--own);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(29, 95, 174, 0.25);
+}
 .call-up-list {
   display: flex;
   flex-direction: column;

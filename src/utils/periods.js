@@ -2,9 +2,13 @@
 // los partidos anteriores a este campo) o 4 cuartos de 10' (Alevín).
 // `periodDurationMs` del partido es siempre la duración de UN periodo, sea
 // tiempo o cuarto — lo que cambia entre formatos es solo cuántos hay.
+// El label ya NO lleva la duración pegada (2026-09-26, a petición del usuario):
+// elegir 2 tiempos o 4 cuartos y elegir la duración de cada uno son dos
+// decisiones independientes en el formulario — `minutes` sigue siendo solo el
+// valor por defecto al elegir el formato, no una etiqueta fija.
 export const PERIOD_FORMATS = {
-  halves: { count: 2, minutes: 20, label: '2 tiempos de 20 min' },
-  quarters: { count: 4, minutes: 10, label: '4 cuartos de 10 min' },
+  halves: { count: 2, minutes: 20, label: '2 tiempos' },
+  quarters: { count: 4, minutes: 10, label: '4 cuartos' },
 };
 
 export function periodFormatOf(match) {
