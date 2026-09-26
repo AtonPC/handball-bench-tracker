@@ -89,6 +89,10 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
   const [createFrom, setCreateFrom] = useState(null);
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  // Las 3 secciones del formulario de partido, como pestañas (2026-09-26, a
+  // petición del usuario) — antes era un único formulario larguísimo con todo
+  // seguido.
+  const [formSection, setFormSection] = useState('details'); // 'details' | 'callup' | 'lineup'
   // Fichar un club rival nuevo al crear el partido — mismo flujo que "Rivales
   // del club" en ClubAdmin.jsx, en un modal aparte encima del formulario.
   const [showNewRivalClub, setShowNewRivalClub] = useState(false);
@@ -256,6 +260,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     setForm(emptyForm);
     setCallUpIds([]);
     setBoardIds(Array(LINEUP_SIZE).fill(''));
+    setFormSection('details');
     setCreateFrom(screen === 'scheduled' ? 'scheduled' : null);
     setScreen('create');
   }
@@ -282,6 +287,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     const gk = m.startingGoalkeeperId || '';
     const rest = (m.startingLineupIds || []).filter((id) => id !== gk);
     setBoardIds([gk, ...rest, ...Array(LINEUP_SIZE).fill('')].slice(0, LINEUP_SIZE));
+    setFormSection('details');
     setCreateFrom('scheduled');
     setScreen('create');
   }
@@ -354,181 +360,216 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     <form className="player-form" onSubmit={handleSubmit}>
       <p className="modal-hint">Mi equipo: <strong>{ownTeamName}</strong></p>
 
-      <Field label="Equipo rival">
-        {/* Sin `required`: un partido de antes de esto puede tener rival (rivalName)
-            sin una ficha de equipo en la lista — no hace falta re-elegirlo para
-            poder guardar el resto de cambios; la validación real (que haya un
-            rivalName) ya está en handleSubmit. */}
-        <select
-          className="player-form-input"
-          value={form.rivalTeamId}
-          onChange={(e) => {
-            if (e.target.value === '__new__') setShowNewRivalClub(true);
-            else selectRivalTeam(e.target.value);
-          }}
-        >
-          <option value="" disabled>
-            {form.rivalTeamId === '' && form.rivalName ? `${form.rivalName} (sin ficha de equipo — elige uno o crea uno nuevo)` : 'Selecciona rival…'}
-          </option>
-          {rivalTeams.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}{t.category ? ` (${t.category})` : ''}</option>
-          ))}
-          <option value="__new__">+ Crear nuevo club…</option>
-        </select>
-      </Field>
-
-      {/* "Se ilumine" y quede claro que es DE MI EQUIPO, no del rival (2026-09-26,
-          a petición del usuario) — antes "Local"/"Visitante" a secas con el mismo
-          resaltado tenue que cualquier pestaña seleccionada de la app; ahora un
-          color sólido propio (--own, el azul de "nosotros" en toda la app) y una
-          etiqueta encima que dice de quién es la pregunta. */}
-      <Field label="Mi equipo juega…">
-        <div className="home-away-toggle">
-          <button
-            type="button"
-            className={`home-away-btn${form.isHome ? ' home-away-btn--active' : ''}`}
-            onClick={() => setForm({ ...form, isHome: true })}
-          >
-            En casa (Local)
-          </button>
-          <button
-            type="button"
-            className={`home-away-btn${!form.isHome ? ' home-away-btn--active' : ''}`}
-            onClick={() => setForm({ ...form, isHome: false })}
-          >
-            Fuera (Visitante)
-          </button>
-        </div>
-      </Field>
-      <Field label="Lugar / pabellón">
-        <input
-          className="player-form-input"
-          placeholder="Lugar / pabellón"
-          value={form.venue}
-          onChange={(e) => setForm({ ...form, venue: e.target.value })}
-        />
-      </Field>
-      <Field label="Fecha y hora">
-        <input
-          className="player-form-input"
-          type="datetime-local"
-          value={form.scheduledAt}
-          onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-        />
-      </Field>
-      <Field label="Jornada (opcional)">
-        <input
-          className="player-form-input player-form-input--number"
-          type="number"
-          placeholder="Jornada (opcional)"
-          value={form.jornada}
-          onChange={(e) => setForm({ ...form, jornada: e.target.value })}
-        />
-      </Field>
-      <Field label="Escudo rival (opcional)">
-        <input
-          className="player-form-input"
-          placeholder="URL del escudo rival (opcional)"
-          value={form.rivalCrestUrl}
-          onChange={(e) => setForm({ ...form, rivalCrestUrl: e.target.value })}
-        />
-      </Field>
-      <Field label="Dorsales rivales conocidos (opcional)">
-        <input
-          className="player-form-input"
-          placeholder="Separados por comas: 3, 7, 11"
-          value={form.rivalDorsalsText}
-          onChange={(e) => setForm({ ...form, rivalDorsalsText: e.target.value })}
-        />
-      </Field>
-
-      {/* Elegir 2 tiempos o 4 cuartos y elegir la duración de cada uno son dos
-          decisiones independientes (2026-09-26) — antes el botón llevaba la
-          duración pegada en el propio texto ("2 tiempos de 20 min"), lo que
-          dejaba de tener sentido en cuanto se cambiaba la duración de abajo. */}
-      <Field label="Formato del partido">
-        <div className="home-away-toggle">
-          {Object.entries(PERIOD_FORMATS).map(([key, fmt]) => (
-            <button
-              key={key}
-              type="button"
-              className={`btn btn-timeout${form.periodFormat === key ? ' admin-nav-tab--active' : ''}`}
-              // Con cuartos se activan por defecto las reglas de Alevín; con
-              // tiempos, no aplican.
-              onClick={() => setForm({ ...form, periodFormat: key, periodDurationMinutes: fmt.minutes, alevinRules: key === 'quarters' })}
-            >
-              {fmt.label}
-            </button>
-          ))}
-        </div>
-      </Field>
-      {form.periodFormat === 'quarters' && (
-        <label className="player-form-checkbox alevin-rules-toggle">
-          <input
-            type="checkbox"
-            checked={form.alevinRules}
-            onChange={(e) => setForm({ ...form, alevinRules: e.target.checked })}
-          />
-          <span>
-            <strong>Reglas Alevín</strong>: antes de iniciar cada cuarto hay que elegir el equipo titular (con la
-            vista de quién empezó los anteriores) y se avisa si se repite algún jugador (solo se puede repetir con
-            menos de 14 convocados). Los avisos nunca impiden confirmarlo ni hacer cambios. Desmárcalo si no quieres
-            este paso (p. ej. en un entrenamiento).
-          </span>
-        </label>
-      )}
-      <Field label={`Duración de cada ${form.periodFormat === 'quarters' ? 'cuarto' : 'tiempo'} (minutos)`}>
-        <input
-          className="player-form-input player-form-input--number"
-          type="number"
-          min="1"
-          value={form.periodDurationMinutes}
-          onChange={(e) => setForm({ ...form, periodDurationMinutes: e.target.value })}
-        />
-      </Field>
-
-      <div className="matches-header">
-        <p className="modal-hint" style={{ margin: 0 }}>Convocatoria ({callUpIds.length} jugadores)</p>
-        <div className="player-form-actions">
-          <button type="button" className="btn btn-timeout" onClick={callUpAll}>Convocar a todos</button>
-          <button type="button" className="btn btn-timeout" onClick={callUpNone}>Quitar a todos</button>
-        </div>
-      </div>
-      {players.length > 0 && (
-        <input
-          className="player-form-input"
-          placeholder="Buscar por nombre, apellidos o dorsal…"
-          value={callUpSearch}
-          onChange={(e) => setCallUpSearch(e.target.value)}
-        />
-      )}
-      <div className="call-up-list">
-        {visibleCallUpPlayers.map((p) => (
-          <label key={p.id} className="call-up-item">
-            <input
-              type="checkbox"
-              checked={callUpIds.includes(p.id)}
-              onChange={() => toggleCallUp(p.id)}
-            />
-            #{p.number} {p.displayName}{p.isGK ? ' (P)' : ''}
-          </label>
-        ))}
-        {players.length === 0 && <p className="modal-hint">No hay jugadores en la plantilla todavía.</p>}
-        {players.length > 0 && visibleCallUpPlayers.length === 0 && <p className="modal-hint">Ningún jugador coincide con la búsqueda.</p>}
+      {/* 3 pestañas en vez de un único formulario larguísimo (2026-09-26, a
+          petición del usuario) — cada una se abre por separado, con sus
+          propios campos. */}
+      <div className="home-away-toggle match-form-tabs">
+        <button type="button" className={`btn btn-timeout${formSection === 'details' ? ' admin-nav-tab--active' : ''}`} onClick={() => setFormSection('details')}>
+          Detalles del partido
+        </button>
+        <button type="button" className={`btn btn-timeout${formSection === 'callup' ? ' admin-nav-tab--active' : ''}`} onClick={() => setFormSection('callup')}>
+          Convocados{callUpIds.length > 0 ? ` (${callUpIds.length})` : ''}
+        </button>
+        <button type="button" className={`btn btn-timeout${formSection === 'lineup' ? ' admin-nav-tab--active' : ''}`} onClick={() => setFormSection('lineup')}>
+          Alineación titular{boardIds.filter(Boolean).length > 0 ? ` (${boardIds.filter(Boolean).length}/7)` : ''}
+        </button>
       </div>
 
-      {callUpIds.length > 0 && (
+      {formSection === 'details' && (
         <>
-          <p className="modal-hint">
-            Equipo titular ({boardIds.filter(Boolean).length}/7) — arrastra a cada convocado a su puesto (o tócalo y
-            luego toca el puesto); hace falta elegir los 7, con portero, antes de poder iniciar el partido
-          </p>
-          <LineupBoard
-            ids={boardIds}
-            onChange={setBoardIds}
-            roster={callUpIds.map((id) => rosterById[id]).filter(Boolean)}
-          />
+          <Field label="Equipo rival">
+            {/* Sin `required`: un partido de antes de esto puede tener rival (rivalName)
+                sin una ficha de equipo en la lista — no hace falta re-elegirlo para
+                poder guardar el resto de cambios; la validación real (que haya un
+                rivalName) ya está en handleSubmit. */}
+            <select
+              className="player-form-input"
+              value={form.rivalTeamId}
+              onChange={(e) => {
+                if (e.target.value === '__new__') setShowNewRivalClub(true);
+                else selectRivalTeam(e.target.value);
+              }}
+            >
+              <option value="" disabled>
+                {form.rivalTeamId === '' && form.rivalName ? `${form.rivalName} (sin ficha de equipo — elige uno o crea uno nuevo)` : 'Selecciona rival…'}
+              </option>
+              {rivalTeams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}{t.category ? ` (${t.category})` : ''}</option>
+              ))}
+              <option value="__new__">+ Crear nuevo club…</option>
+            </select>
+          </Field>
+
+          {/* "Se ilumine" y quede claro que es DE MI EQUIPO, no del rival (2026-09-26,
+              a petición del usuario) — antes "Local"/"Visitante" a secas con el mismo
+              resaltado tenue que cualquier pestaña seleccionada de la app; ahora un
+              color sólido propio (--own, el azul de "nosotros" en toda la app) y una
+              etiqueta encima que dice de quién es la pregunta. */}
+          <Field label="Mi equipo juega…">
+            <div className="home-away-toggle">
+              <button
+                type="button"
+                className={`home-away-btn${form.isHome ? ' home-away-btn--active' : ''}`}
+                onClick={() => setForm({ ...form, isHome: true })}
+              >
+                En casa (Local)
+              </button>
+              <button
+                type="button"
+                className={`home-away-btn${!form.isHome ? ' home-away-btn--active' : ''}`}
+                onClick={() => setForm({ ...form, isHome: false })}
+              >
+                Fuera (Visitante)
+              </button>
+            </div>
+          </Field>
+          <Field label="Lugar / pabellón">
+            <input
+              className="player-form-input"
+              placeholder="Lugar / pabellón"
+              value={form.venue}
+              onChange={(e) => setForm({ ...form, venue: e.target.value })}
+            />
+          </Field>
+          <Field label="Fecha y hora">
+            <input
+              className="player-form-input"
+              type="datetime-local"
+              value={form.scheduledAt}
+              onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+            />
+          </Field>
+          <Field label="Jornada (opcional)">
+            <input
+              className="player-form-input player-form-input--number"
+              type="number"
+              placeholder="Jornada (opcional)"
+              value={form.jornada}
+              onChange={(e) => setForm({ ...form, jornada: e.target.value })}
+            />
+          </Field>
+          <Field label="Escudo rival (opcional)">
+            <input
+              className="player-form-input"
+              placeholder="URL del escudo rival (opcional)"
+              value={form.rivalCrestUrl}
+              onChange={(e) => setForm({ ...form, rivalCrestUrl: e.target.value })}
+            />
+          </Field>
+          <Field label="Dorsales rivales conocidos (opcional)">
+            <input
+              className="player-form-input"
+              placeholder="Separados por comas: 3, 7, 11"
+              value={form.rivalDorsalsText}
+              onChange={(e) => setForm({ ...form, rivalDorsalsText: e.target.value })}
+            />
+          </Field>
+
+          {/* Elegir 2 tiempos o 4 cuartos y elegir la duración de cada uno son dos
+              decisiones independientes (2026-09-26) — antes el botón llevaba la
+              duración pegada en el propio texto ("2 tiempos de 20 min"), lo que
+              dejaba de tener sentido en cuanto se cambiaba la duración de abajo. */}
+          <Field label="Formato del partido">
+            <div className="home-away-toggle">
+              {Object.entries(PERIOD_FORMATS).map(([key, fmt]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`btn btn-timeout${form.periodFormat === key ? ' admin-nav-tab--active' : ''}`}
+                  // Con cuartos se activan por defecto las reglas de Alevín; con
+                  // tiempos, no aplican.
+                  onClick={() => setForm({ ...form, periodFormat: key, periodDurationMinutes: fmt.minutes, alevinRules: key === 'quarters' })}
+                >
+                  {fmt.label}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {form.periodFormat === 'quarters' && (
+            <label className="player-form-checkbox alevin-rules-toggle">
+              <input
+                type="checkbox"
+                checked={form.alevinRules}
+                onChange={(e) => setForm({ ...form, alevinRules: e.target.checked })}
+              />
+              <span>
+                <strong>Reglas Alevín</strong>: antes de iniciar cada cuarto hay que elegir el equipo titular (con la
+                vista de quién empezó los anteriores) y se avisa si se repite algún jugador (solo se puede repetir con
+                menos de 14 convocados). Los avisos nunca impiden confirmarlo ni hacer cambios. Desmárcalo si no quieres
+                este paso (p. ej. en un entrenamiento).
+              </span>
+            </label>
+          )}
+          <Field label={`Duración de cada ${form.periodFormat === 'quarters' ? 'cuarto' : 'tiempo'} (minutos)`}>
+            <input
+              className="player-form-input player-form-input--number"
+              type="number"
+              min="1"
+              value={form.periodDurationMinutes}
+              onChange={(e) => setForm({ ...form, periodDurationMinutes: e.target.value })}
+            />
+          </Field>
         </>
+      )}
+
+      {formSection === 'callup' && (
+        <>
+          <div className="matches-header">
+            <p className="modal-hint" style={{ margin: 0 }}>Convocatoria ({callUpIds.length} jugadores)</p>
+            <div className="player-form-actions">
+              <button type="button" className="btn btn-timeout" onClick={callUpAll}>Convocar a todos</button>
+              <button type="button" className="btn btn-timeout" onClick={callUpNone}>Quitar a todos</button>
+            </div>
+          </div>
+          {players.length > 0 && (
+            <input
+              className="player-form-input"
+              placeholder="Buscar por nombre, apellidos o dorsal…"
+              value={callUpSearch}
+              onChange={(e) => setCallUpSearch(e.target.value)}
+            />
+          )}
+          {/* Mismo aspecto que en el partido: dorsal en círculo azul + nombre
+              (2026-09-26, a petición del usuario) — tocar un convocado lo marca/
+              desmarca, en vez de una casilla aparte. */}
+          <div className="chip-grid">
+            {visibleCallUpPlayers.map((p) => {
+              const sel = callUpIds.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`shp-player${sel ? ' shp-player--sel' : ''}`}
+                  onClick={() => toggleCallUp(p.id)}
+                  aria-pressed={sel}
+                >
+                  <span className="shp-player-n">{p.number}</span>
+                  <span className="shp-player-name">{p.displayName}{p.isGK ? ' (P)' : ''}</span>
+                </button>
+              );
+            })}
+            {players.length === 0 && <p className="modal-hint">No hay jugadores en la plantilla todavía.</p>}
+            {players.length > 0 && visibleCallUpPlayers.length === 0 && <p className="modal-hint">Ningún jugador coincide con la búsqueda.</p>}
+          </div>
+        </>
+      )}
+
+      {formSection === 'lineup' && (
+        callUpIds.length > 0 ? (
+          <>
+            <p className="modal-hint">
+              Equipo titular ({boardIds.filter(Boolean).length}/7) — arrastra a cada convocado a su puesto (o tócalo y
+              luego toca el puesto); hace falta elegir los 7, con portero, antes de poder iniciar el partido
+            </p>
+            <LineupBoard
+              ids={boardIds}
+              onChange={setBoardIds}
+              roster={callUpIds.map((id) => rosterById[id]).filter(Boolean)}
+            />
+          </>
+        ) : (
+          <p className="modal-hint">Elige primero la convocatoria en la pestaña «Convocados».</p>
+        )
       )}
 
       <div className="player-form-actions">

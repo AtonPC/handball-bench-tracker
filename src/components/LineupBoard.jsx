@@ -25,7 +25,12 @@ export default function LineupBoard({ ids, onChange, roster, prevIds }) {
 
   const byId = Object.fromEntries(roster.map((p) => [p.id, p]));
   const numberOf = (id) => byId[id]?.number ?? '?';
-  const nameOf = (id) => (byId[id]?.displayName || byId[id]?.name || '').split(' ')[0];
+  // Nombre COMPLETO de camiseta/panel, sin recortar al primer nombre
+  // (2026-09-26, a petición del usuario: "tengo 3 Alejandros y necesito que
+  // se vea lo que pone en la camiseta" — `displayName` ya es justo ese campo,
+  // "Nombre en camiseta o panel" en Plantilla; cortarlo a la primera palabra
+  // destruía la parte que distingue a cada uno, p. ej. "Alejandro G.").
+  const nameOf = (id) => byId[id]?.displayName || byId[id]?.name || '';
   const freeRoster = roster.filter((p) => !ids.includes(p.id));
 
   function clear(slot) {
@@ -137,17 +142,17 @@ export default function LineupBoard({ ids, onChange, roster, prevIds }) {
         })}
       </div>
 
-      <div className="lnb-roster">
+      <div className="lnb-roster chip-grid">
         {freeRoster.map((p) => (
           <button
             key={p.id}
             type="button"
-            className="shp-player lnb-rp"
+            className="shp-player"
             onPointerDown={(e) => startDrag(p.id, null, e)}
             onClick={() => handleRosterTap(p.id)}
           >
             <span className="shp-player-n">{p.number}</span>
-            <span className="shp-player-name">{(p.displayName || p.name || '').split(' ')[0]}</span>
+            <span className="shp-player-name">{p.displayName || p.name || ''}</span>
           </button>
         ))}
         {freeRoster.length === 0 && <p className="modal-hint" style={{ margin: 0 }}>Todos los convocados están ya colocados.</p>}

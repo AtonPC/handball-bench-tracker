@@ -777,6 +777,11 @@
   display: flex;
   gap: 8px;
 }
+/* 3 pestañas de "Crear/editar partido" (2026-09-26) — a diferencia del resto
+   de usos de .home-away-toggle (siempre 2 botones que caben en una fila),
+   estas 3 etiquetas son más largas y necesitan poder bajar de línea en
+   pantallas estrechas. */
+.match-form-tabs { flex-wrap: wrap; }
 /* Local/Visitante (2026-09-26): antes usaba el mismo resaltado tenue de
    cualquier pestaña seleccionada (admin-nav-tab--active), poco visible y sin
    dejar claro que la pregunta es sobre EL EQUIPO PROPIO. Ahora un botón
@@ -908,10 +913,18 @@
   font-size: 12px;
   color: var(--text-dim);
 }
-.plantilla-modal {
+/* .modal.* en vez de .plantilla-modal* a secas (2026-09-26, fallo real
+   encontrado al construir la rejilla de convocados de 3 columnas: `.modal`
+   (más abajo en este fichero, max-width:420px) le ganaba a estas dos reglas
+   por orden de aparición —empatan en especificidad, un único selector de
+   clase cada una— así que TODOS los modales "anchos" de Plantilla/Club/
+   Partidos llevaban toda la vida abriéndose a 420px, nunca a los 480/640px
+   que decían). Combinar con `.modal` sube la especificidad y ya no depende
+   del orden en el fichero. */
+.modal.plantilla-modal {
   max-width: 480px;
 }
-.plantilla-modal--wide {
+.modal.plantilla-modal--wide {
   max-width: 640px;
 }
 .plantilla-modal-head {
@@ -4811,19 +4824,25 @@
 .lnb-prev { font-size: 9px; font-weight: 700; color: #7a520a; }
 .lnb-gk.lnb-slot--act, .lnb-cell.lnb-slot--act { background: rgba(29, 95, 174, 0.55) !important; }
 .lnb-gk.lnb-slot--over, .lnb-cell.lnb-slot--over { background: rgba(255, 106, 31, 0.55) !important; }
-/* Convocados libres, con el mismo aspecto que en el partido: dorsal en un
+/* Rejilla de convocados, con el mismo aspecto que en el partido: dorsal en un
    círculo azul + nombre (reutiliza .shp-player/-n/-name de ShotPanel.jsx,
    pero en fila — la variante de columna, la de por defecto, es para la
-   rejilla de 7 columnas del panel de lanzamiento, no para esta lista). */
-.lnb-roster { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; justify-content: center; }
-.lnb-roster .lnb-rp.shp-player {
-  flex-direction: row; height: 38px; width: auto; gap: 6px; padding: 0 10px 0 4px; cursor: pointer; touch-action: none;
+   rejilla de 7 columnas del panel de lanzamiento, no para esto). Compartida
+   por "Convocados" (MatchesAdmin.jsx) y el roster libre de LineupBoard.jsx.
+   2026-09-26: antes era `flex-wrap` (cada chip solo tan ancho como su
+   contenido) y con nombres largos el `.shp-player-name` de base —pensado
+   para el panel de tiro, con elipsis— se cortaba y parecía un fallo; ahora es
+   una rejilla de columnas de al menos 130px (2 o 3 por fila según el hueco)
+   y el nombre puede partirse en dos líneas en vez de recortarse. */
+.chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; width: 100%; }
+.chip-grid .shp-player {
+  flex-direction: row; height: auto; min-height: 40px; width: 100%; gap: 6px; padding: 5px 10px 5px 5px; cursor: pointer; touch-action: none;
 }
-.lnb-roster .lnb-rp .shp-player-n {
+.chip-grid .shp-player-n {
   width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center;
   font-size: 12px; flex: none;
 }
-.lnb-roster .lnb-rp .shp-player-name { font-size: 12px; color: var(--text); }
+.chip-grid .shp-player-name { font-size: 12px; color: var(--text); max-width: 100%; overflow: visible; text-overflow: clip; white-space: normal; text-align: left; line-height: 1.15; }
 .lnb-ghost {
   position: fixed; transform: translate(-50%, -60%); pointer-events: none; z-index: 999;
   background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; padding: 6px 10px; border-radius: 10px;
