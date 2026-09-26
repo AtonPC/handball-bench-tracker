@@ -1,3 +1,5 @@
+import { BOARD_ZONES } from './shotBoard';
+
 // Equipo titular de cada periodo y avisos de las reglas de Alevín (2026-09-19).
 // TODO ES OPCIONAL Y NADA BLOQUEA: la app se usa también en entrenamientos y
 // amistosos, así que las reglas solo AVISAN — nunca impiden iniciar un cuarto
@@ -15,6 +17,31 @@
 export const LINEUP_SIZE = 7;
 // Con menos convocados que esto, repetir titulares es inevitable y se permite.
 export const REPEAT_ALLOWED_BELOW = LINEUP_SIZE * 2;
+
+// 6 posiciones de cancha reaprovechando la geometría del panel de tiro
+// (utils/shotBoard.js), renombradas a las posiciones reales de balonmano
+// (2026-09-26, a petición del usuario: "una plantilla como la de tiro, sin
+// portería, arrastrando jugadores a cada puesto"). Los laterales y el central
+// se colocan en la banda de 9 m —de ahí tiran de verdad—, el pivote en la
+// banda cercana central —pegado al área—, y los extremos igual que en el
+// panel de tiro (banda completa, izquierda/derecha como mira quien ve la
+// cancha). El portero no tiene hueco aquí (no es una zona de tiro): se coloca
+// aparte, encima de la cancha, en LineupBoard.jsx.
+// El orden es FIJO y es lo que da continuidad entre periodos sin cambiar el
+// formato de `ids` (sigue siendo un array de 7, el primero el portero): el
+// índice 1 SIEMPRE es EI, el 2 SIEMPRE LI, etc. — comparar ids[i] entre dos
+// periodos consecutivos dice de verdad "quién jugó en ESTE puesto la vez
+// anterior", sin tocar useMatchStore.js/useMatches.js ni el resto de lo que
+// ya lee/escribe `lineups`/`startingLineupIds` como un array plano.
+const byCode = Object.fromEntries(BOARD_ZONES.map((z) => [z.code, z]));
+export const LINEUP_FIELD_ZONES = [
+  { key: 'EI', label: 'EI', name: 'Extremo Izquierdo', def: byCode.EI },
+  { key: 'LI', label: 'LI', name: 'Lateral Izquierdo', def: byCode['LI 9'] },
+  { key: 'C', label: 'C', name: 'Central', def: byCode['C 9'] },
+  { key: 'LD', label: 'LD', name: 'Lateral Derecho', def: byCode['LD 9'] },
+  { key: 'ED', label: 'ED', name: 'Extremo Derecho', def: byCode.ED },
+  { key: 'P', label: 'P', name: 'Pivote', def: byCode.C },
+];
 
 // Pone al portero el primero de la lista.
 export function orderLineup(ids, goalkeeperId) {

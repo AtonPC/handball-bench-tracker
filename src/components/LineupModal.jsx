@@ -1,29 +1,39 @@
 import { useMemo, useState } from 'react';
 import { LINEUP_SIZE, lineupAdvice, validateLineup } from '../utils/lineups';
 import { periodLongLabel, periodShortLabel } from '../utils/periods';
+import LineupBoard from './LineupBoard';
 
 // Equipo titular del siguiente tiempo o cuarto, elegido ANTES de darle al ▶ (mockup
-// aprobado, 2026-09-21). Con las reglas de Alevín puestas es un PASO OBLIGATORIO: sin
-// confirmarlo no se puede iniciar el periodo. Lo que se elija aquí NUNCA se bloquea:
-// repetir a quienes empezaron el anterior solo avisa (la app se usa también en
-// entrenamientos y amistosos; el interruptor del partido lo desactiva entero).
+// aprobado, 2026-09-21; tablero arrastrable desde 2026-09-26). Con las reglas de
+// Alevín puestas es un PASO OBLIGATORIO: sin confirmarlo no se puede iniciar el
+// periodo. Lo que se elija aquí NUNCA se bloquea: repetir a quienes empezaron el
+// anterior solo avisa (la app se usa también en entrenamientos y amistosos; el
+// interruptor del partido lo desactiva entero).
 //  - Izquierda: los equipos titulares de los periodos ya jugados (solo dorsales; la
 //    primera fila es el portero) para no repetir de un periodo a otro.
-//  - Derecha: los 7 puestos (el primero, el portero) y la plantilla debajo. Se toca un
-//    puesto y luego a quien lo ocupa; el siguiente puesto libre se marca solo. Quien
-//    empezó el periodo anterior sale marcado («empezó 1C»).
+//  - Derecha: LineupBoard.jsx — una cancha con los 6 puestos (EI/LI/C/LD/ED/Pivote)
+//    más el portero aparte, precargada con quién empezó el periodo anterior; se
+//    arrastra a cada convocado a su puesto (o se toca el puesto y luego a quien lo
+//    ocupa) para sustituirlo en el sitio.
 //  - Con menos de 7 jugadores se pide una segunda confirmación.
 // Con las reglas de Alevín, se avisa de quien repite: con 14 o más convocados no se
 // debería repetir a nadie; con menos, sí se puede y se recuerda cuántos hay que
 // repetir como mínimo.
 export default function LineupModal({ period, periodCount, players, lineups, alevinRules, convocados, onConfirm, onCancel }) {
   const prevIds = lineups[period - 1] || [];
+  // Se precarga con el equipo del periodo anterior si este todavía no se ha
+  // tocado (2026-09-26, a petición del usuario) — así solo hace falta
+  // arrastrar a quien sustituye, no rehacer el equipo entero cada vez.
   const [ids, setIds] = useState(() => {
-    const existing = lineups[period];
-    return existing ? [...existing, ...Array(LINEUP_SIZE).fill('')].slice(0, LINEUP_SIZE) : Array(LINEUP_SIZE).fill('');
+    const existing = lineups[period] || prevIds;
+    return existing && existing.length ? [...existing, ...Array(LINEUP_SIZE).fill('')].slice(0, LINEUP_SIZE) : Array(LINEUP_SIZE).fill('');
   });
-  const [active, setActive] = useState(0); // puesto que se está rellenando
   const [checking, setChecking] = useState(false); // segunda confirmación (menos de 7)
+
+  function handleIdsChange(next) {
+    setIds(next);
+    setChecking(false);
+  }
   // Los expulsados (roja) no pueden volver a jugar: no se ofrecen.
   const roster = useMemo(
     () => Object.values(players).filter((p) => !p.disqualified).sort((a, b) => (a.number ?? 0) - (b.number ?? 0)),
@@ -36,22 +46,6 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
   const dorsales = (list) => list.map((id) => `#${numberOf(id)}`).join(', ');
   const filled = ids.filter(Boolean);
   const past = Array.from({ length: period - 1 }, (_, i) => i + 1);
-
-  // Toca a un jugador: ocupa el puesto activo (si ya estaba en otro, lo deja libre; si
-  // ya ocupaba el activo, lo quita) y el siguiente puesto libre pasa a ser el activo.
-  function pick(id) {
-    setChecking(false);
-    if (ids[active] === id) {
-      setIds((prev) => prev.map((x, i) => (i === active ? '' : x)));
-      return;
-    }
-    const next = ids.map((x) => (x === id ? '' : x));
-    next[active] = id;
-    let nx = next.findIndex((x, i) => i > active && !x);
-    if (nx < 0) nx = next.findIndex((x) => !x);
-    setIds(next);
-    setActive(nx < 0 ? active : nx);
-  }
 
   function handleConfirm() {
     if (check.complete) onConfirm(ids);
@@ -81,35 +75,7 @@ export default function LineupModal({ period, periodCount, players, lineups, ale
               ))}
             </div>
           )}
-          <div className="lu-pick">
-            <div className="lu-slots">
-              {ids.map((id, i) => {
-                const rep = id && prevIds.includes(id);
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`lu-slot${i === 0 ? ' lu-slot--gk' : ''}${active === i ? ' lu-slot--act' : ''}${rep ? ' lu-slot--rep' : ''}`}
-                    onClick={() => { setActive(i); setChecking(false); }}
-                    aria-label={`${i === 0 ? 'Portero' : `Puesto ${i + 1}`}: ${id ? `#${numberOf(id)} ${players[id]?.name}` : 'vacío'}`}
-                  >
-                    <i>{i === 0 ? 'P' : ''}</i>{id ? `#${numberOf(id)} ${players[id]?.name}` : '—'}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="lu-roster">
-              {roster.map((p) => {
-                const inn = ids.includes(p.id);
-                const rep = prevIds.includes(p.id);
-                return (
-                  <button key={p.id} type="button" className={`lu-rp${inn ? ' lu-rp--in' : ''}${rep ? ' lu-rp--rep' : ''}`} onClick={() => pick(p.id)}>
-                    <b>{p.number}</b>{(p.name || '').split(' ')[0]}<small>{rep ? `empezó ${short(period - 1)}` : ''}</small>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <LineupBoard ids={ids} onChange={handleIdsChange} roster={roster} prevIds={prevIds.length ? prevIds : undefined} />
         </div>
 
         {adviceText && (

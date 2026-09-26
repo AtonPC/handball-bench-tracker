@@ -4758,18 +4758,6 @@
 .lu-pc { height: 32px; border-radius: 8px; background: var(--panel-alt); display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #3d4a66; }
 .lu-pc--gk { background: #cfeef4; color: #0e7490; }
 .lu-pc--rep { background: #fff3d6; color: #7a520a; box-shadow: inset 0 0 0 2px #c98a12; }
-.lu-slots { display: flex; flex-direction: column; gap: 5px; }
-.lu-slot { height: 36px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-alt); display: flex; align-items: center; gap: 8px; padding: 0 10px; font-weight: 800; font-size: 13px; text-align: left; cursor: pointer; min-width: 0; overflow: hidden; white-space: nowrap; }
-.lu-slot i { font-style: normal; width: 22px; flex: none; font-size: 11px; color: #0e7490; }
-.lu-slot--act { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-dim); }
-.lu-slot--gk { background: #e6f6f9; }
-.lu-slot--rep { border-color: #c98a12; background: #fff3d6; }
-.lu-roster { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
-.lu-rp { display: flex; flex-direction: column; align-items: center; gap: 1px; height: 52px; border: 1px solid var(--border); border-radius: 10px; background: #fff; font-weight: 700; font-size: 11px; padding: 3px 2px; justify-content: center; cursor: pointer; min-width: 0; }
-.lu-rp b { font-size: 15px; font-weight: 800; color: var(--accent); }
-.lu-rp small { font-size: 10px; font-weight: 700; color: #7a520a; height: 12px; }
-.lu-rp--in { background: #dcf1e6; border-color: #16794b; }
-.lu-rp--rep b { color: #7a520a; }
 .lu-adv { border-radius: 10px; padding: 8px 12px; font-size: 12.5px; font-weight: 700; background: #fff3d6; color: #7a520a; border: 1px solid #c98a12; }
 .lu-adv em { font-style: normal; font-weight: 600; }
 .lu-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -4781,8 +4769,68 @@
 @media (max-width: 699px) {
   .lu-modal { padding: 14px; }
   .lu-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .lu-roster { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .lu-pc { height: 26px; font-size: 12px; }
+}
+
+/* ===== LineupBoard: cancha arrastrable para elegir el equipo titular
+   (2026-09-26) — reutilizada en "Crear/editar partido" (MatchesAdmin.jsx) y
+   en "Equipo titular" entre periodos (LineupModal.jsx, arriba). Geometría de
+   las 6 zonas de cancha (EI/LI/C/LD/ED/Pivote) reaprovechada del panel de
+   tiro (.sb-zone) pero en PORCENTAJE, no en px fijos, para que esta cancha
+   sea fluida dentro del modal — ver zoneClipPathPct en LineupBoard.jsx. */
+.lnb { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.lnb-gk {
+  width: min(220px, 60%); min-height: 44px; border-radius: 10px; border: 2px solid var(--gk); background: var(--gk-dim);
+  display: flex; align-items: center; justify-content: center; gap: 6px; flex-direction: column; padding: 6px 10px;
+  font-weight: 800; font-size: 13px; color: #0e7490; cursor: pointer; touch-action: none; text-align: center;
+}
+.lnb-gk i { font-style: normal; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.lnb-gk--filled { background: #fff; }
+.lnb-court {
+  position: relative; width: 100%; max-width: 600px; aspect-ratio: 600 / 290; background: #e9eff7; overflow: hidden;
+  border-radius: 14px;
+}
+.lnb-six {
+  position: absolute; left: 12.5%; top: 0; width: 75%; height: 34.5%; background: var(--accent);
+  border-radius: 0 0 30% 30% / 0 0 100% 100%;
+}
+.lnb-zone {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; padding: 0; cursor: pointer; touch-action: none;
+  background: rgba(29, 95, 174, 0.12);
+}
+.lnb-zone--w { background: rgba(14, 116, 144, 0.22); }
+.lnb-zone:hover { background: rgba(29, 95, 174, 0.32); }
+.lnb-zone--filled { background: rgba(255, 255, 255, 0.85); }
+/* El contenido (etiqueta/jugador) va en un elemento APARTE, posicionado en el
+   punto de etiqueta propio de la zona (zoneContentPointPct) — no puede ir
+   centrado con flexbox dentro de .lnb-zone porque las 6 zonas comparten la
+   misma caja de 100%x100% (solo el clip-path las diferencia) y todo el texto
+   quedaría amontonado en el centro. pointer-events:none para que los toques
+   sigan llegando a la zona recortada de debajo, no a esta etiqueta flotante. */
+.lnb-zone-content {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none; display: flex; flex-direction: column;
+  align-items: center; gap: 2px; font-weight: 800; font-size: 12px; color: var(--text); text-align: center; white-space: nowrap;
+}
+.lnb-zone-label { font-size: 10px; letter-spacing: 0.08em; color: var(--text-dim); }
+.lnb-zone-player { font-size: 12px; }
+.lnb-empty { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.lnb-prev { font-size: 10px; font-weight: 700; color: #7a520a; }
+/* No usa `outline` (no respeta el clip-path: dibujaría un rectángulo sobre
+   toda la cancha en vez de ceñirse a la forma de la zona) — un color de
+   fondo más intenso sí queda recortado correctamente, igual que .sb-zone--sel
+   en el panel de tiro. */
+.lnb-gk.lnb-slot--act, .lnb-zone.lnb-slot--act { background: rgba(29, 95, 174, 0.55) !important; }
+.lnb-gk.lnb-slot--over, .lnb-zone.lnb-slot--over { background: rgba(255, 106, 31, 0.55) !important; }
+.lnb-roster { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; justify-content: center; }
+.lnb-rp {
+  display: flex; align-items: center; gap: 5px; height: 38px; border: 1px solid var(--border); border-radius: 10px;
+  background: #fff; font-weight: 700; font-size: 12px; padding: 0 10px; cursor: pointer; touch-action: none;
+}
+.lnb-rp b { font-size: 14px; font-weight: 800; color: var(--accent); }
+.lnb-ghost {
+  position: fixed; transform: translate(-50%, -60%); pointer-events: none; z-index: 999;
+  background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; padding: 6px 10px; border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* Resumen de 11 filas en las vistas de Seguidor y partido acabado (2026-09-21) */

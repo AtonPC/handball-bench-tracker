@@ -9,7 +9,9 @@ import { useAuth } from '../hooks/useAuth';
 import { teamInitials } from '../utils/teamColors';
 import { parseRivalDorsals } from '../utils/rivalDorsals';
 import { PERIOD_FORMATS, periodCountOf, periodFormatOf, periodLongLabel } from '../utils/periods';
+import { LINEUP_SIZE } from '../utils/lineups';
 import { CATEGORIES } from '../categories';
+import LineupBoard from './LineupBoard';
 
 const LIFECYCLE_LABELS = { scheduled: 'Programado', live: 'En directo', finished: 'Finalizado' };
 const emptyForm = { rivalTeamId: '', rivalName: '', isHome: true, venue: '', scheduledAt: '', periodFormat: 'halves', periodDurationMinutes: PERIOD_FORMATS.halves.minutes, alevinRules: false, jornada: '', rivalCrestUrl: '', rivalDorsalsText: '' };
@@ -94,8 +96,11 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
   const [rivalClubBusy, setRivalClubBusy] = useState(false);
   const [rivalClubError, setRivalClubError] = useState('');
   const [callUpIds, setCallUpIds] = useState([]);
-  const [startingIds, setStartingIds] = useState([]);
-  const [startingGoalkeeperId, setStartingGoalkeeperId] = useState('');
+  // Equipo titular como un tablero de 7 (el índice 0 el portero, el resto en
+  // el orden fijo de LineupBoard.jsx) — mismo formato que ya usa `lineups` del
+  // partido en directo, así que editar el partido y "Equipo titular" entre
+  // periodos comparten componente y no hace falta tocar el esquema.
+  const [boardIds, setBoardIds] = useState(Array(LINEUP_SIZE).fill(''));
   const [callUpSearch, setCallUpSearch] = useState('');
 
   const rosterById = useMemo(() => {
@@ -183,9 +188,8 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     const isRemoving = callUpIds.includes(id);
     setCallUpIds((prev) => (isRemoving ? prev.filter((x) => x !== id) : [...prev, id]));
     if (isRemoving) {
-      // Si se quita de la convocatoria, no puede seguir de titular ni de portero.
-      setStartingIds((prev) => prev.filter((x) => x !== id));
-      setStartingGoalkeeperId((prev) => (prev === id ? '' : prev));
+      // Si se quita de la convocatoria, no puede seguir de titular.
+      setBoardIds((prev) => prev.map((x) => (x === id ? '' : x)));
     }
   }
 
@@ -195,20 +199,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
 
   function callUpNone() {
     setCallUpIds([]);
-    setStartingIds([]);
-    setStartingGoalkeeperId('');
-  }
-
-  // El portero es una designación de este partido, no de la ficha del
-  // jugador (position.isGK) — cualquier convocado puede ser el portero hoy.
-  function toggleStarter(id) {
-    if (startingIds.includes(id)) {
-      setStartingIds((prev) => prev.filter((x) => x !== id));
-      setStartingGoalkeeperId((prev) => (prev === id ? '' : prev));
-      return;
-    }
-    if (startingIds.length >= 7) return;
-    setStartingIds((prev) => [...prev, id]);
+    setBoardIds(Array(LINEUP_SIZE).fill(''));
   }
 
   // Elegir un rival de la lista: rellena nombre/escudo desde su ficha y, si el
@@ -264,8 +255,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     setEditingMatchId(null);
     setForm(emptyForm);
     setCallUpIds([]);
-    setStartingIds([]);
-    setStartingGoalkeeperId('');
+    setBoardIds(Array(LINEUP_SIZE).fill(''));
     setCreateFrom(screen === 'scheduled' ? 'scheduled' : null);
     setScreen('create');
   }
@@ -286,8 +276,12 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       rivalDorsalsText: (m.rivalDorsals || []).join(', '),
     });
     setCallUpIds(m.callUpPlayerIds || []);
-    setStartingIds(m.startingLineupIds || []);
-    setStartingGoalkeeperId(m.startingGoalkeeperId || '');
+    // El portero siempre en el índice 0 — el resto, en el orden en que ya
+    // estuvieran guardados (partidos de antes de LineupBoard no tienen una
+    // posición real por puesto, así que es solo un punto de partida razonable).
+    const gk = m.startingGoalkeeperId || '';
+    const rest = (m.startingLineupIds || []).filter((id) => id !== gk);
+    setBoardIds([gk, ...rest, ...Array(LINEUP_SIZE).fill('')].slice(0, LINEUP_SIZE));
     setCreateFrom('scheduled');
     setScreen('create');
   }
@@ -296,8 +290,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     setEditingMatchId(null);
     setForm(emptyForm);
     setCallUpIds([]);
-    setStartingIds([]);
-    setStartingGoalkeeperId('');
+    setBoardIds(Array(LINEUP_SIZE).fill(''));
     setShowNewRivalClub(false);
     setRivalClubForm(emptyRivalClubForm);
     setRivalClubError('');
@@ -318,8 +311,8 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       rivalCrestUrl: form.rivalCrestUrl.trim(),
       rivalDorsals: parseRivalDorsals(form.rivalDorsalsText),
       callUpPlayerIds: callUpIds,
-      startingLineupIds: startingIds,
-      startingGoalkeeperId: startingGoalkeeperId || null,
+      startingLineupIds: boardIds.filter(Boolean),
+      startingGoalkeeperId: boardIds[0] || null,
       periodCount: PERIOD_FORMATS[form.periodFormat].count,
       alevinRules: form.periodFormat === 'quarters' && form.alevinRules,
       periodDurationMs: (Number(form.periodDurationMinutes) || PERIOD_FORMATS[form.periodFormat].minutes) * 60000,
@@ -332,8 +325,7 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
     setEditingMatchId(null);
     setForm(emptyForm);
     setCallUpIds([]);
-    setStartingIds([]);
-    setStartingGoalkeeperId('');
+    setBoardIds(Array(LINEUP_SIZE).fill(''));
     setShowNewRivalClub(false);
     setRivalClubForm(emptyRivalClubForm);
     setRivalClubError('');
@@ -528,32 +520,14 @@ export default function MatchesAdmin({ clubId, teamId, ownTeamName, ownCrestUrl,
       {callUpIds.length > 0 && (
         <>
           <p className="modal-hint">
-            Titulares ({startingIds.length}/7) — hace falta elegir los 7 antes de poder iniciar el partido
+            Equipo titular ({boardIds.filter(Boolean).length}/7) — arrastra a cada convocado a su puesto (o tócalo y
+            luego toca el puesto); hace falta elegir los 7, con portero, antes de poder iniciar el partido
           </p>
-          <div className="call-up-list">
-            {callUpIds.map((id) => {
-              const p = rosterById[id];
-              if (!p) return null;
-              return (
-                <label key={id} className="call-up-item">
-                  <input type="checkbox" checked={startingIds.includes(id)} onChange={() => toggleStarter(id)} />
-                  #{p.number} {p.displayName}
-                </label>
-              );
-            })}
-          </div>
-
-          <p className="modal-hint">
-            Portero de este partido (independiente de la ficha del jugador) — hace falta elegirlo antes de poder iniciar el partido
-          </p>
-          <select className="player-form-input" value={startingGoalkeeperId} onChange={(e) => setStartingGoalkeeperId(e.target.value)}>
-            <option value="">Sin elegir</option>
-            {callUpIds.map((id) => {
-              const p = rosterById[id];
-              if (!p) return null;
-              return <option key={id} value={id}>#{p.number} {p.displayName}</option>;
-            })}
-          </select>
+          <LineupBoard
+            ids={boardIds}
+            onChange={setBoardIds}
+            roster={callUpIds.map((id) => rosterById[id]).filter(Boolean)}
+          />
         </>
       )}
 
